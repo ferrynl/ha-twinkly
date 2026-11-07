@@ -1,0 +1,30 @@
+# Twinkly Kerst voor Home Assistant
+
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.0 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+
+## Installeren
+
+1. Open in Home Assistant **Instellingen → Apps → Appwinkel → ⋮ → Repositories**.
+2. Voeg `https://github.com/ferrynl/ha-twinkly` toe. Zoek **Twinkly Kerst**, installeer de app en start hem.
+3. Open de webinterface en kies **Zoeken op netwerk**. Broadcast werkt binnen hetzelfde subnet. Gebruik **IP toevoegen** bij gemiste apparaten en reserveer de adressen in DHCP.
+4. Test aan/uit, kleur en dimmen per apparaat. **Aan** gebruikt de opgeslagen Twinkly-playlist of -film als die beschikbaar is. Gebruik **Kleur** voor een vaste RGB-kleur.
+
+## Music Assistant en LedFx
+
+1. Installeer LedFx met Sendspin-ondersteuning die past bij je Music Assistant-versie. Zie de [Sendspin-handleiding van LedFx](https://docs.ledfx.app/en/latest/settings/sendspin.html).
+2. Voeg in LedFx onder **Settings → Features** een Sendspin-server toe. Selecteer die onder **Settings → Audio**. Zet de LedFx-speler aan in Music Assistant en voeg hem toe aan een afspeelgroep met een compatibele speaker.
+3. Maak in LedFx één **DDP**-apparaat met **120 pixels**, **RGB**, poort **18490** en als doel **127.0.0.1** als LedFx en Twinkly Kerst dezelfde host-netwerkruimte gebruiken. Stel een audio-effect in op dat DDP-apparaat.
+4. Draait LedFx op een andere host, stel dan als DDP-doel het LAN-IP van Home Assistant in. Zet in de configuratie van Twinkly Kerst `ddp_source` op het IPv4-bronadres van LedFx zoals Home Assistant het ontvangt, en herstart de app.
+5. Start muziek in Music Assistant en kies **Muziek** bij één lamp of bij **Alle lampen**. De status bovenaan toont of er DDP-frames binnenkomen. **Stop muziek** probeert de voorgaande modus te herstellen. Bij wegvallende frames gebeurt dit ook. Bij stilte kan LedFx zwarte frames blijven sturen.
+
+DDP is UDP zonder authenticatie. Laat de poort binnen het lokale netwerk en gebruik een vertrouwde LedFx-bron. De webinterface loopt via Home Assistant Ingress. Gebruik bij voorkeur één app tegelijk om de modus van een lamp te wijzigen.
+
+## Netwerk en caching
+
+- Apparaatnaam, ledprofiel, pixelcount en IP-adres blijven in `/data/devices.json` bewaard. Een statusupdate van het webpaneel leest alleen de cache.
+- Eén DDP-frame voedt alle lampen. Elke lamp houdt zijn eigen lokale sessie en een vooraf berekende pixelmapping. Alleen het nieuwste frame wordt bewaard.
+- Standaard maximaal 20 frames per seconde per lamp, instelbaar van 5 tot 25. Een lokaal UDP-pakket gaat naar elke lamp of per fragment bij grotere apparaten. De realtime modus wordt ongeveer elke twee seconden gecontroleerd.
+- Tot acht gelijktijdige apparaatoperaties. Bij een netwerkfout wacht de lamp vijf seconden voordat ze weer frames probeert te verwerken. De overige lampen houden hun eigen uitzendlus.
+- Gedeelde animatie over maximaal 40 geregistreerde controllers, met 20 als beoogde opstelling. Praktische framerate hangt af van wifi, firmware en de lengte van de strings.
+
+De app verdeelt hetzelfde effect over de ledvolgorde per controller. Ruimtelijke 2D/3D-mapping, Twinkly-groepsbeheer en de Twinkly Music-dongle vallen buiten deze proefversie.
