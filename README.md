@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.7 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.8 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -34,3 +34,9 @@ De app verdeelt hetzelfde effect over de ledvolgorde per controller. Via **Ledka
 ## Als zoeken of bedienen niet werkt
 
 Stel indien nodig `discovery_broadcast` in op het broadcastadres van je eigen LAN en herstart de app. Gebruik vanuit de Home Assistant Terminal `curl -v --max-time 5 http://TWINKLY_IP/xled/v1/gestalt` en vervang TWINKLY_IP door het adres van de lamp. Als toevoegen lukt maar bedienen faalt, toont de webinterface de fout per apparaat.
+
+## Groepen en effectafbeeldingen
+
+Maak onder **Groepen** een groep met een naam en de gewenste lampen. Bedien aan/uit, kleur, helderheid en muziek voor die selectie, of pas de leden later aan.
+
+Kies bij een effect **Afbeelding uploaden** en selecteer een JPG, PNG of WebP van maximaal 10 MB. De browser verkleint de afbeelding naar een stilstaand JPEG-voorbeeld. Groepen en voorbeelden blijven in de appdata staan en zijn zichtbaar op andere apparaten die dezelfde Home Assistant-installatie gebruiken.

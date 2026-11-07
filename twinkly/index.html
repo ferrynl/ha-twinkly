@@ -5,6 +5,7 @@
 *{box-sizing:border-box}body{margin:0;color:#fff7e9;background:radial-gradient(ellipse at 85% 0,#304e43 0,transparent 42%),#0b1616;font:16px system-ui}main{max-width:1140px;margin:auto;padding:clamp(16px,4vw,44px)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}h1{font:700 clamp(2.6rem,7vw,5rem) Georgia;margin:0;color:#ffe2a5}h2,h3,p{margin:0 0 12px}p{color:#c5d8d2}section,article{padding:20px;border:1px solid #3b5951;border-radius:22px;background:linear-gradient(145deg,#1c3430,#122422);box-shadow:0 12px 26px #0005}section{margin-top:18px}.eyebrow{letter-spacing:.16em;font-size:.78rem;color:#facb7e;text-transform:uppercase}.status{display:inline-block;border-radius:100px;background:#213e34;padding:8px 14px;margin:12px 0 0}#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:18px}.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select,input{font:inherit;border:1px solid #66877b;background:#213c34;color:#fff7e9;border-radius:10px;padding:8px 11px;max-width:100%}button{cursor:pointer}button:hover{background:#38584a}.primary{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.primary:hover{background:#ffdfa6}button:disabled{opacity:.55}input[type=color]{width:48px;height:40px;padding:4px}input[type=number]{width:76px}.gap{margin-top:14px}#message{margin:12px 0 0;overflow-wrap:anywhere}.effects{margin-top:12px;width:100%}.error{color:#ffb5a0;overflow-wrap:anywhere}
 .power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
 .led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
+#group-cards{display:grid;gap:12px;margin-top:14px}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
@@ -14,6 +15,9 @@
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
 <p id="message" role="status"></p></section>
+<section><h2 id="group-title"></h2><form id="group-form">
+<div class="controls"><input id="group-name" maxlength="60" required><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
+<div class="controls gap" id="group-members"></div></form><div id="group-cards"></div></section>
 <div id="devices"></div>
 </main>
 <script>
@@ -42,6 +46,13 @@ const layoutLabels = {
  es:['Cargar mapa LED','No se recibieron posiciones LED','posiciones LED','Diseño generado','Girar mapa LED'],
  de:['LED-Karte laden','Keine LED-Positionen empfangen','LED-Positionen','Berechnetes Layout','LED-Karte drehen']
 };
+const extraLabels = {
+ nl:['Groepen','Groepsnaam','Groep opslaan','Annuleren','Bewerken','Verwijderen','Selecteer minstens één lamp.','Afbeelding uploaden','Afbeelding verwijderen','Kies een JPG, PNG of WebP van maximaal 10 MB.'],
+ en:['Groups','Group name','Save group','Cancel','Edit','Delete','Select at least one light.','Upload image','Remove image','Choose a JPG, PNG or WebP up to 10 MB.'],
+ es:['Grupos','Nombre del grupo','Guardar grupo','Cancelar','Editar','Eliminar','Selecciona al menos una luz.','Subir imagen','Quitar imagen','Elige un JPG, PNG o WebP de hasta 10 MB.'],
+ de:['Gruppen','Gruppenname','Gruppe speichern','Abbrechen','Bearbeiten','Löschen','Wähle mindestens ein Licht aus.','Bild hochladen','Bild entfernen','Wähle ein JPG, PNG oder WebP bis 10 MB.']
+};
+const extra = index => extraLabels[lang.value][index];
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -75,22 +86,36 @@ function button(parent, key, action, primary = false) {
   parent.append(el);
   return el;
 }
-async function run(id, action, value) {
-  const result = await request('control', {id, action, value});
+async function run(id, action, value, group) {
+  const result = await request('control', {id, action, value, group});
   return result.failed.length ? result.failed.join(' · ') : t('done');
 }
-function controls(parent, id) {
+function controls(parent, id, group) {
   const power = {};
-  for (const key of ['on','off','music','stop']) power[key] = button(parent, key, () => run(id,key));
+  for (const key of ['on','off','music','stop']) power[key] = button(parent, key, () => run(id,key,undefined,group));
   const color = document.createElement('input');
   color.type = 'color'; color.value = '#e8a043'; color.dataset.label = 'color';
   color.setAttribute('aria-label',t('color'));
-  parent.append(color); button(parent,'color', () => run(id,'color',color.value));
+  parent.append(color); button(parent,'color', () => run(id,'color',color.value,group));
   const level = document.createElement('input');
   level.type = 'number'; level.min = 0; level.max = 100; level.value = 65; level.dataset.label = 'brightness';
   level.setAttribute('aria-label',t('brightness'));
-  parent.append(level); button(parent,'brightness', () => run(id,'brightness',level.valueAsNumber));
+  parent.append(level); button(parent,'brightness', () => run(id,'brightness',level.valueAsNumber,group));
   return power;
+}
+async function encodeImage(file) {
+  if (!file || !['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 10_000_000) throw Error(extra(9));
+  const bitmap = await createImageBitmap(file);
+  try {
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1,480/Math.max(bitmap.width,bitmap.height));
+    canvas.width = Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height = Math.max(1,Math.round(bitmap.height*scale));
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#111'; context.fillRect(0,0,canvas.width,canvas.height);
+    context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL('image/jpeg',.82).split(',')[1];
+  } finally { bitmap.close(); }
 }
 function renderEffects(card) {
   card.grid.replaceChildren();
@@ -120,7 +145,38 @@ function renderEffects(card) {
       title.textContent = value || original;
       byId('message').textContent = t('done');
     };
-    tile.append(title, playButton, name, saveButton);
+    const imagePath = 'effect-image?' + new URLSearchParams({id:card.id,kind:entry.kind,index:entry.id});
+    const image = document.createElement('img');
+    image.className = 'effect-image'; image.alt = title.textContent; image.hidden = true;
+    const remove = document.createElement('button');
+    remove.textContent = extra(8); remove.hidden = true;
+    image.onload = () => { image.hidden = false; remove.hidden = false; };
+    image.onerror = () => { image.hidden = true; remove.hidden = true; };
+    const upload = document.createElement('input');
+    upload.type = 'file'; upload.accept = 'image/jpeg,image/png,image/webp';
+    upload.setAttribute('aria-label',extra(7));
+    const uploadLabel = document.createElement('label');
+    uploadLabel.textContent = extra(7); uploadLabel.append(upload);
+    upload.onchange = () => {
+      if (!upload.files.length) return;
+      perform(upload, async () => {
+        const encoded = await encodeImage(upload.files[0]);
+        await request(imagePath,{image:encoded});
+        upload.value = '';
+        entry.has_image = true;
+        image.src = './' + imagePath + '&v=' + Date.now();
+        return t('done');
+      });
+    };
+    remove.onclick = () => perform(remove, async () => {
+      await request(imagePath,{image:null});
+      entry.has_image = false;
+      image.hidden = true; remove.hidden = true;
+      image.removeAttribute('src');
+      return t('done');
+    });
+    if (entry.has_image) image.src = './' + imagePath;
+    tile.append(title, image, playButton, name, saveButton, uploadLabel, remove);
     card.grid.append(tile);
   }
 }
@@ -153,7 +209,69 @@ function drawLayout(card) {
     ctx.fill();
   }
 }
+let editingGroup = null, groupSignature = '', memberSignature = '';
+function editGroup(id, group) {
+  editingGroup = id;
+  byId('group-name').value = group?.name || '';
+  byId('group-cancel').hidden = !id;
+  for (const input of byId('group-members').querySelectorAll('input')) {
+    input.checked = group?.members.includes(input.value) || false;
+  }
+}
+function renderGroups() {
+  const devices = status?.devices || [];
+  const groups = status?.groups || {};
+  const members = JSON.stringify(devices.map(({id,name}) => [id,name]));
+  const signature = JSON.stringify([lang.value,members,groups]);
+  if (members !== memberSignature) {
+    memberSignature = members;
+    const parent = byId('group-members');
+    const selected = new Set([...parent.querySelectorAll('input:checked')].map(el => el.value));
+    parent.replaceChildren();
+    for (const device of devices) {
+      const label = document.createElement('label'), input = document.createElement('input');
+      input.type = 'checkbox'; input.value = device.id; input.checked = selected.has(device.id);
+      label.append(input,device.name);
+      parent.append(label);
+    }
+  }
+  if (signature === groupSignature) return;
+  groupSignature = signature;
+  const parent = byId('group-cards');
+  parent.replaceChildren();
+  for (const [id,group] of Object.entries(groups)) {
+    const card = document.createElement('article'), title = document.createElement('h3');
+    const info = document.createElement('p'), actions = document.createElement('div');
+    title.textContent = group.name;
+    info.textContent = devices.filter(d => group.members.includes(d.id)).map(d => d.name).join(' · ');
+    actions.className = 'controls';
+    controls(actions,undefined,id);
+    const edit = document.createElement('button'), remove = document.createElement('button');
+    edit.textContent = extra(4); remove.textContent = extra(5);
+    edit.onclick = () => editGroup(id,group);
+    remove.onclick = () => perform(remove, async () => {
+      await request('groups',{id,delete:true});
+      if (editingGroup === id) editGroup(null);
+      return t('done');
+    });
+    actions.append(edit,remove);
+    card.append(title,info,actions);
+    parent.append(card);
+  }
+}
+byId('group-cancel').onclick = () => editGroup(null);
+byId('group-form').onsubmit = event => {
+  event.preventDefault();
+  perform(byId('group-save'), async () => {
+    const members = [...byId('group-members').querySelectorAll('input:checked')].map(el => el.value);
+    if (!members.length) return extra(6);
+    await request('groups',{id:editingGroup,name:byId('group-name').value,members});
+    editGroup(null);
+    return t('done');
+  });
+};
 function render() {
+  renderGroups();
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
   for (const d of status?.devices || []) {
     if (!cards.has(d.id)) {
@@ -229,6 +347,11 @@ button(byId('scan'),'add', () => register(byId('ip').value.trim()));
 button(byId('scan'),'scan', () => register(''));
 function translate() {
   document.documentElement.lang = lang.value;
+  byId('group-title').textContent = extra(0);
+  byId('group-name').placeholder = extra(1);
+  byId('group-name').setAttribute('aria-label',extra(1));
+  byId('group-save').textContent = extra(2);
+  byId('group-cancel').textContent = extra(3);
   const labels = musicStyles[lang.value];
   const selected = styleSelect.value || 'energy';
   byId('style-label').textContent = labels[0];

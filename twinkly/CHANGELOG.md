@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.8
+
+- Maak, bewerk en verwijder groepen en bedien de gekozen lampen tegelijk.
+- Upload, vervang en verwijder eigen afbeeldingen bij lokale effecten.
+- Groepen en afbeeldingen blijven bewaard in de appdata.
+
 ## 0.1.7
 
 - Lees per controller de opgeslagen ledposities uit en toon die in een ledkaart.

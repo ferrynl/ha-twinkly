@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import hashlib
+import uuid
 import colorsys
 import math
 from requests.exceptions import HTTPError
@@ -18,6 +21,8 @@ from aiohttp import ClientError, ClientSession, ClientTimeout, web
 from xled import HighControlInterface
 
 DATA = Path("/data/devices.json")
+GROUPS = DATA.with_name("groups.json")
+IMAGES = DATA.with_name("effect-images")
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
 MAX_DEVICES = 40
@@ -264,6 +269,7 @@ class Controller:
         self.broadcast = local_ip(options.get("discovery_broadcast", "255.255.255.255"))
         self.limit = asyncio.Semaphore(8)
         self.devices = {}
+        self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
         self.music = set()
         self.edit = asyncio.Lock()
         self.music_setup = asyncio.Lock()
@@ -362,6 +368,7 @@ class Controller:
     async def status(self, request):
         return web.json_response({
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
+            "groups": self.groups,
             "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error)
                         for k, d in self.devices.items()],
         })
@@ -378,6 +385,63 @@ class Controller:
         return web.json_response({"added": sum(isinstance(x, dict) for x in results),
                                   "errors": [f"{host}: {result}" for host, result in zip(hosts, results)
                                              if isinstance(result, Exception)]})
+
+    async def save_group(self, request):
+        data = await request.json()
+        group_id = data.get("id")
+        async with self.edit:
+            groups = self.groups.copy()
+            if group_id is not None and (not isinstance(group_id, str) or group_id not in groups):
+                raise web.HTTPNotFound()
+            if data.get("delete") is True and group_id is not None:
+                del groups[group_id]
+            else:
+                name, members = data.get("name"), data.get("members")
+                if (not isinstance(name, str) or not 1 <= len(name.strip()) <= 60
+                        or not isinstance(members, list) or not 1 <= len(members) <= MAX_DEVICES
+                        or any(not isinstance(key, str) or key not in self.devices for key in members)):
+                    raise web.HTTPBadRequest()
+                if group_id is None and len(groups) >= MAX_DEVICES:
+                    raise web.HTTPBadRequest()
+                groups[group_id or uuid.uuid4().hex] = {"name": name.strip(), "members": list(dict.fromkeys(members))}
+            temp = GROUPS.with_suffix(".tmp")
+            temp.write_text(json.dumps(groups), encoding="utf-8")
+            temp.replace(GROUPS)
+            self.groups = groups
+        return web.json_response({"ok": True})
+
+    @staticmethod
+    def image_path(key, kind, index):
+        fingerprint = hashlib.sha256(f"{key}/{kind}/{index}".encode()).hexdigest()
+        return IMAGES / (fingerprint + ".jpg")
+
+    async def effect_image(self, request):
+        key = request.query.get("id")
+        kind = request.query.get("kind")
+        index = request.query.get("index", "")
+        if key not in self.devices or kind not in ("movie", "effect") or not re.fullmatch(r"[0-9]{1,3}", index):
+            raise web.HTTPNotFound()
+        path = self.image_path(key, kind, int(index))
+        if request.method == "GET":
+            if not path.is_file():
+                raise web.HTTPNotFound()
+            return web.FileResponse(path, headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
+        data = await request.json()
+        image = data.get("image")
+        if image is None:
+            path.unlink(missing_ok=True)
+        else:
+            try:
+                raw = base64.b64decode(image, validate=True)
+            except (ValueError, TypeError):
+                raise web.HTTPBadRequest()
+            if not 4 <= len(raw) <= 160_000 or not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
+                raise web.HTTPBadRequest()
+            IMAGES.mkdir(exist_ok=True)
+            temp = path.with_suffix(".tmp")
+            temp.write_bytes(raw)
+            temp.replace(path)
+        return web.json_response({"ok": True})
 
     async def control(self, request):
         data = await request.json()
@@ -397,7 +461,13 @@ class Controller:
                     or not 0 <= value[1] <= 255 or data.get("id") == "*"):
                 raise web.HTTPBadRequest()
         async with self.edit:
-            keys = list(self.devices) if data.get("id") == "*" else [data.get("id")]
+            group_id = data.get("group")
+            if group_id is not None:
+                if not isinstance(group_id, str) or group_id not in self.groups or action == "effect":
+                    raise web.HTTPBadRequest()
+                keys = self.groups[group_id]["members"]
+            else:
+                keys = list(self.devices) if data.get("id") == "*" else [data.get("id")]
             if any(key not in self.devices for key in keys):
                 raise web.HTTPNotFound()
             if action == "music":
@@ -424,7 +494,9 @@ class Controller:
         if device is None:
             raise web.HTTPNotFound()
         ok = await device.run(device.load_effects)
-        return web.json_response({"effects": device.effects, "error": None if ok else device.error})
+        catalog = [dict(entry, has_image=self.image_path(device.row["id"], entry["kind"], entry["id"]).is_file())
+                   for entry in device.effects] if ok else []
+        return web.json_response({"effects": catalog, "error": None if ok else device.error})
 
     async def setup_music(self, request):
         data = await request.json()
@@ -447,7 +519,7 @@ class Controller:
 
     def app(self):
         self.edit_scan = asyncio.Lock()
-        app = web.Application(middlewares=[ingress_only], client_max_size=8192)
+        app = web.Application(middlewares=[ingress_only], client_max_size=240_000)
         app.cleanup_ctx.append(self.stream)
         app.router.add_get("/", lambda _: web.FileResponse("index.html"))
         app.router.add_get("/status", self.status)
@@ -455,6 +527,9 @@ class Controller:
         app.router.add_get("/layout", self.layout)
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
+        app.router.add_post("/groups", self.save_group)
+        app.router.add_get("/effect-image", self.effect_image)
+        app.router.add_post("/effect-image", self.effect_image)
         app.router.add_post("/setup-music", self.setup_music)
         return app
 
