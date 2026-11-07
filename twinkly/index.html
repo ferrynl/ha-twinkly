@@ -28,6 +28,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .device-info dt,.device-info dd{margin:0;padding:7px;background:#122422;overflow-wrap:anywhere;font-size:.86rem}.device-info dt{color:#d1e6df}.device-info dd{color:#ffe4a8}
 @media(max-width:760px){.desk-grid{grid-template-columns:1fr}.desk-controls button{flex:1 1 auto}.mixdesk{border-radius:16px}}
 .product-card{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #45645a;border-radius:12px;background:#101f1c}.product-card[hidden],.product-card img[hidden]{display:none}.product-card img{width:clamp(106px,32%,148px);height:105px;object-fit:contain;background:#fff;border-radius:7px}.product-card small{display:block;margin-top:3px;overflow-wrap:anywhere}
+.scene-pad{display:inline-flex;gap:4px;padding:5px;border:1px solid #617587;border-radius:11px;background:#121922}.mixdesk .scene-pad button:first-child{background:linear-gradient(#673f82,#382549);border-color:#ab82c0}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
@@ -40,9 +41,13 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
 </div></div><div class="controls gap desk-scan" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
+<div class="desk-channel gap"><h2 id="show-title"></h2>
+<div class="controls desk-fader"><label id="master-label" for="master-level"></label><input id="master-level" type="range" min="0" max="100" value="100"><output id="master-value">100%</output><button id="master-save"></button></div>
+<div class="controls gap" id="scene-pads"></div>
+<form class="controls gap" id="scene-form"><input id="scene-name" maxlength="60" required><select id="scene-group"></select><select id="scene-mode"></select><button id="scene-save" type="submit"></button></form></div>
 <p id="message" role="status"></p></section>
 <section><h2 id="group-title"></h2><form id="group-form">
-<div class="controls"><input id="group-name" maxlength="60" required><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
+<div class="controls"><input id="group-name" maxlength="60" required><label id="silence-label" for="group-silence"></label><select id="group-silence"></select><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
 <div class="controls gap" id="group-members"></div></form><div id="group-cards"></div></section>
 <div id="devices"></div>
 </main>
@@ -141,6 +146,13 @@ function drawProduct(card, device) {
   }
   card.product.append(body);
 }
+const showText = {
+ nl:['Scènepads','Master muzieklicht','Toepassen','Scènenaam','Scène opslaan','Stiltegedrag','Vorige modus herstellen','Warm wit','Uitfaden','Kerst rustig','Trance','Alles uit','Muziek aan','Groep ontbreekt'],
+ en:['Scene pads','Music light master','Apply','Scene name','Save scene','Silence behaviour','Restore previous mode','Warm white','Fade out','Calm Christmas','Trance','All off','Music on','Group missing'],
+ es:['Pads de escenas','Intensidad musical','Aplicar','Nombre de escena','Guardar escena','Al quedar en silencio','Restaurar modo anterior','Blanco cálido','Atenuar hasta apagar','Navidad tranquila','Trance','Apagar todo','Música activa','Falta el grupo'],
+ de:['Szenenpads','Master für Musiklicht','Anwenden','Szenenname','Szene speichern','Verhalten bei Stille','Vorherigen Modus wiederherstellen','Warmweiß','Ausblenden','Ruhige Weihnachten','Trance','Alles aus','Musik ein','Gruppe fehlt']
+};
+const showLabel = index => showText[lang.value][index];
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -279,7 +291,7 @@ function renderEffects(card) {
     card.grid.append(tile);
   }
 }
-function drawLayout(card) {
+function drawLayout(card, frame = liveFrame) {
   const [load, empty, positions, synthetic, rotate] = layoutLabels[lang.value];
   card.mapButton.textContent = load;
   if (!card.layout) return;
@@ -302,7 +314,11 @@ function drawLayout(card) {
   const scale = Math.min((width-30)/(maxX-minX || 1),(height-30)/(maxY-minY || 1));
   const radius = Math.max(1.7,Math.min(5,100/Math.sqrt(points.length)));
   for (const [id,x,y] of projected) {
-    ctx.fillStyle = 'hsl(' + (40 + 145*id/Math.max(1,points.length-1)) + ' 75% 65%)';
+    const device = status?.devices.find(d => d.id === card.id);
+    const offset = 3*Math.floor(id * 120 / (device?.leds || points.length));
+    ctx.fillStyle = device?.music && frame.length > offset+2
+      ? 'rgb(' + frame[offset] + ',' + frame[offset+1] + ',' + frame[offset+2] + ')'
+      : 'hsl(' + (40 + 145*id/Math.max(1,points.length-1)) + ' 75% 65%)';
     ctx.beginPath();
     ctx.arc(width/2 + (x-(minX+maxX)/2)*scale,height/2 - (y-(minY+maxY)/2)*scale,radius,0,Math.PI*2);
     ctx.fill();
@@ -312,6 +328,7 @@ let editingGroup = null, groupSignature = '', memberSignature = '';
 function editGroup(id, group) {
   editingGroup = id;
   byId('group-name').value = group?.name || '';
+  byId('group-silence').value = group?.silence || 'restore';
   byId('group-cancel').hidden = !id;
   for (const input of byId('group-members').querySelectorAll('input')) {
     input.checked = group?.members.includes(input.value) || false;
@@ -364,7 +381,7 @@ byId('group-form').onsubmit = event => {
   perform(byId('group-save'), async () => {
     const members = [...byId('group-members').querySelectorAll('input:checked')].map(el => el.value);
     if (!members.length) return extra(6);
-    await request('groups',{id:editingGroup,name:byId('group-name').value,members});
+    await request('groups',{id:editingGroup,name:byId('group-name').value,members,silence:byId('group-silence').value});
     editGroup(null);
     return t('done');
   });
@@ -388,6 +405,7 @@ function drawDetails(card) {
 function render() {
   renderActiveStyle();
   renderGroups();
+  renderShow();
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
   for (const d of status?.devices || []) {
     if (!cards.has(d.id)) {
@@ -422,6 +440,7 @@ function render() {
         if (result.error) return result.error;
         card.layout = result.layout;
         drawLayout(card);
+        schedulePreview();
         return t('done');
       });
       rotation.oninput = () => drawLayout(card);
@@ -500,31 +519,46 @@ function updatePreviewLabels() {
   byId('music-gif').alt = labels[0];
   byId('music-preview').setAttribute('aria-label',labels[0]);
 }
+let liveFrame = [];
+let previewRunning = false;
+function previewNeeded() {
+  return !livePanel.hidden || [...cards.values()].some(card => card.layout?.points.length);
+}
+function schedulePreview() {
+  if (!previewTimer && !previewRunning && previewNeeded()) {
+    previewTimer = setTimeout(paintPreview,125);
+  }
+}
 async function paintPreview() {
-  if (livePanel.hidden) return;
-  if (!document.hidden) {
-    const canvas = byId('music-preview'), ctx = canvas.getContext('2d');
-    let frame = [];
+  previewTimer = undefined;
+  if (!previewNeeded()) return;
+  previewRunning = true;
+  try {
+    if (document.hidden) return;
+    liveFrame = [];
     try {
       const response = await fetch('./music-preview',{cache:'no-store'});
-      if (response.ok) frame = new Uint8Array(await response.arrayBuffer());
+      if (response.ok) liveFrame = new Uint8Array(await response.arrayBuffer());
     } catch {}
+    for (const card of cards.values()) if (card.layout) drawLayout(card);
     if (livePanel.hidden) return;
+    const canvas = byId('music-preview'), ctx = canvas.getContext('2d');
     ctx.fillStyle = '#0b1616';
     ctx.fillRect(0,0,canvas.width,canvas.height);
-    byId('music-preview-status').textContent = frame.length ? '' : previewText[lang.value][4];
-    for (let i=0; i+2<frame.length; i+=3) {
-      ctx.fillStyle = 'rgb(' + frame[i] + ',' + frame[i+1] + ',' + frame[i+2] + ')';
+    byId('music-preview-status').textContent = liveFrame.length ? '' : previewText[lang.value][4];
+    for (let i=0; i+2<liveFrame.length; i+=3) {
+      ctx.fillStyle = 'rgb(' + liveFrame[i] + ',' + liveFrame[i+1] + ',' + liveFrame[i+2] + ')';
       ctx.fillRect(i,0,3,canvas.height);
     }
+  } finally {
+    previewRunning = false;
+    schedulePreview();
   }
-  previewTimer = setTimeout(paintPreview,125);
 }
 previewButton.onclick = () => {
   livePanel.hidden = !livePanel.hidden;
-  clearTimeout(previewTimer);
   updatePreviewLabels();
-  if (!livePanel.hidden) paintPreview();
+  schedulePreview();
 };
 gifButton.onclick = () => perform(gifButton, async () => {
   byId('message').textContent = previewText[lang.value][5];
@@ -546,8 +580,87 @@ async function register(ip) {
 byId('ip').dataset.label = 'ip';
 button(byId('scan'),'add', () => register(byId('ip').value.trim()));
 button(byId('scan'),'scan', () => register(''));
+const master = byId('master-level');
+let masterDraft = false, showSignature = '';
+function updateMaster() { byId('master-value').textContent = master.value + '%'; }
+master.oninput = () => { masterDraft = true; updateMaster(); };
+byId('master-save').onclick = () => perform(byId('master-save'), async () => {
+  await request('show',{master:master.valueAsNumber});
+  masterDraft = false;
+  return t('done');
+});
+async function applyScene(scene) {
+  if (scene.group !== '*' && !status?.groups?.[scene.group]) return showLabel(13);
+  const target = scene.group === '*' ? {id:'*'} : {group:scene.group};
+  if (scene.mode === 'music') {
+    const setup = await request('setup-music',{style:scene.style});
+    if (!setup.ok) return setup.message;
+    await request('show',{master:scene.level});
+    masterDraft = false;
+    draftStyle = false;
+  }
+  const result = await request('control',{...target,action:scene.mode});
+  return result.failed.length ? result.failed.join(' · ') : t('done');
+}
+function renderShow() {
+  const show = status?.show;
+  if (show && !masterDraft) { master.value = show.master; updateMaster(); }
+  const groups = status?.groups || {};
+  const signature = JSON.stringify([lang.value,groups,show?.scenes]);
+  if (showSignature === signature) return;
+  showSignature = signature;
+  const group = byId('scene-group'), current = group.value;
+  group.replaceChildren(new Option(t('all'),'*'),...Object.entries(groups).map(([id,value]) => new Option(value.name,id)));
+  group.value = Object.hasOwn(groups,current) ? current : '*';
+  const pads = byId('scene-pads');
+  pads.replaceChildren();
+  const presets = [
+    {name:showLabel(9),group:'*',style:'wavelength',level:35,mode:'music'},
+    {name:showLabel(10),group:'*',style:'blade_power_plus',level:80,mode:'music'},
+    {name:showLabel(11),group:'*',mode:'off'}
+  ];
+  for (const [id,scene] of [...presets.map(scene => [null,scene]),...Object.entries(show?.scenes || {})]) {
+    const pad = document.createElement('div'), play = document.createElement('button');
+    pad.className = 'scene-pad';
+    play.textContent = scene.name;
+    play.onclick = () => perform(play,() => applyScene(scene));
+    pad.append(play);
+    if (id) {
+      const remove = document.createElement('button');
+      remove.textContent = '×';
+      remove.setAttribute('aria-label',extra(5) + ' ' + scene.name);
+      remove.onclick = () => perform(remove,async () => { await request('show',{delete:id}); return t('done'); });
+      pad.append(remove);
+    }
+    pads.append(pad);
+  }
+}
+byId('scene-form').onsubmit = event => {
+  event.preventDefault();
+  perform(byId('scene-save'),async () => {
+    await request('show',{name:byId('scene-name').value,group:byId('scene-group').value,
+      mode:byId('scene-mode').value,style:styleSelect.value,level:master.valueAsNumber});
+    byId('scene-name').value = '';
+    return t('done');
+  });
+};
 function translate() {
   document.documentElement.lang = lang.value;
+  byId('show-title').textContent = showLabel(0);
+  byId('master-label').textContent = showLabel(1);
+  byId('master-save').textContent = showLabel(2);
+  byId('scene-name').placeholder = showLabel(3);
+  byId('scene-name').setAttribute('aria-label',showLabel(3));
+  byId('scene-save').textContent = showLabel(4);
+  byId('scene-group').setAttribute('aria-label',extra(0));
+  const mode = byId('scene-mode'), previousMode = mode.value || 'music';
+  mode.setAttribute('aria-label',t('music'));
+  mode.replaceChildren(new Option(showLabel(12),'music'),new Option(t('off'),'off'));
+  mode.value = previousMode;
+  byId('silence-label').textContent = showLabel(5);
+  const silence = byId('group-silence'), previousSilence = silence.value || 'restore';
+  silence.replaceChildren(...['restore','warm','fade'].map((value,index) => new Option(showLabel(6+index),value)));
+  silence.value = previousSilence;
   byId('desk-music-title').textContent = detailsText[lang.value][0];
   byId('group-title').textContent = extra(0);
   byId('group-name').placeholder = extra(1);

@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.15
+
+- Voeg scènepads en eigen scènes per groep toe.
+- Bewaar een centrale masterhelderheid voor muzieklicht.
+- Toon muziekframes op de ledkaart en voeg stiltegedrag per groep toe.
+
 ## 0.1.14
 
 - Bewaar de actieve muziekstijl centraal en toon die op alle browsers en na herstarts.

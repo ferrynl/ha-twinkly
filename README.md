@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.14 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.15 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -52,3 +52,9 @@ Klik op **Apparaatinfo laden** bij een lamp. De app leest model, firmware, ledge
 Modelkaarten gebruiken de productcode uit de Twinkly-API. Voor bekende Strings RGB+W- en Line-codes toont de kaart een officiële foto van de productreeks, bij het eerste gebruik opgehaald vanaf Twinkly en daarna uit de lokale appdata geladen. Een reeksfoto kan een andere uitvoering tonen. Onbekende codes krijgen alleen hun modelcode.
 
 De actieve muziekstijl wordt na een geslaagde LedFX-koppeling of stijlwijziging centraal bewaard. Andere browsers tonen deze stijl automatisch. Na een update vanaf een oudere versie verschijnt de status zodra je een stijl toepast of Music Assistant opnieuw koppelt.
+
+## Scènes, masterfader en stilte
+
+De scènepads bevatten Kerst rustig, Trance en Alles uit. Sla ook eigen scènes op met de gekozen groep, muziekstijl en masterstand. De master regelt de helderheid van alle muziekframes. Klik op Toepassen om een gewijzigde stand op te slaan. Een geopende ledkaart toont muziekframes op de gemeten ledposities.
+
+Kies in de groepsinstellingen wat er gebeurt bij wegvallende of enkele seconden volledig zwarte LedFX-frames: vorige modus, warm wit of uitfaden. Bij overlappende groepen wint de eerste ingestelde afwijkende regel. Als LedFX tijdens stilte gekleurde frames blijft sturen, kan de app de stilte niet herkennen.

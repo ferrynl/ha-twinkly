@@ -24,6 +24,8 @@ from xled import HighControlInterface
 DATA = Path("/data/devices.json")
 GROUPS = DATA.with_name("groups.json")
 MUSIC_STATE = DATA.with_name("music-state.json")
+SHOW_STATE = DATA.with_name("show-state.json")
+SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
 PRODUCT_PHOTO_URLS = {
@@ -66,6 +68,7 @@ class DDP(asyncio.DatagramProtocol):
         self.source = source
         self.frame = None
         self.received = 0.0
+        self.lit_at = 0.0
         self.buffer = bytearray(FRAME_BYTES)
         self.size = 0
 
@@ -90,6 +93,8 @@ class DDP(asyncio.DatagramProtocol):
             if end == FRAME_BYTES:
                 self.frame = bytes(self.buffer)
                 self.received = time.monotonic()
+                if any(self.frame):
+                    self.lit_at = self.received
             self.size = 0
 
 
@@ -335,6 +340,8 @@ class Controller:
         self.limit = asyncio.Semaphore(8)
         self.realtime_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.devices = {}
+        self.show = (json.loads(SHOW_STATE.read_text(encoding="utf-8")) if SHOW_STATE.exists()
+                     else {"master": 100, "scenes": {}})
         self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
         self.music = set()
         self.edit = asyncio.Lock()
@@ -388,24 +395,61 @@ class Controller:
         temp.write_text(json.dumps([d.row for d in self.devices.values()]), encoding="utf-8")
         temp.replace(DATA)
 
+    @staticmethod
+    def dim_frame(frame, level):
+        return frame if level == 100 else bytes(channel * level // 100 for channel in frame)
+
+    def silence_mode(self, key):
+        # For overlapping groups, the first configured non-default rule wins.
+        return next((group["silence"] for group in self.groups.values()
+                     if key in group["members"] and group.get("silence", "restore") != "restore"), "restore")
+
     async def output(self, device):
         key = device.row["id"]
+        last_output = None
+        fade_started = None
         while self.devices.get(key) is device:
             now = time.monotonic()
-            active = key in self.music and self.ddp.frame is not None and now - self.ddp.received < 1.5
+            armed = key in self.music
+            active = (armed and self.ddp.frame is not None and now - self.ddp.received < 1.5
+                      and now - self.ddp.lit_at < 3)
+            fading = False
             if now >= device.retry:
                 if active:
-                    await device.run(device.send, self.ddp.frame)
+                    fade_started = None
+                    frame = self.dim_frame(self.ddp.frame, self.show["master"])
+                    if any(frame):
+                        last_output = frame
+                    await device.run(device.send, frame)
                 elif device.restore is not None:
-                    await device.run(device.command, "stop", None)
-                    device.rt_check = 0
+                    rule = self.silence_mode(key) if armed else "restore"
+                    if rule == "fade" and last_output is not None:
+                        fade_started = fade_started or now
+                        remaining = max(0, 100 - int((now - fade_started) * 100))
+                        if remaining:
+                            fading = True
+                            await device.run(device.send, self.dim_frame(last_output, remaining))
+                        elif await device.run(device.set_mode, "off"):
+                            device.restore = None
+                    elif rule == "fade":
+                        if await device.run(device.set_mode, "off"):
+                            device.restore = None
+                    elif rule == "warm":
+                        if await device.run(device.color, (255, 190, 110)):
+                            device.restore = None
+                    else:
+                        await device.run(device.command, "stop", None)
+                    if not fading:
+                        device.rt_check = 0
+                        last_output = None
+                        fade_started = None
                 elif now >= device.mode_check:
                     device.mode_check = now + 30
                     if not await device.run(device.read_mode):
                         device.mode = None
                     elif not device.model_checked:
                         await device.run(device.read_product_code)
-            await asyncio.sleep(1 / self.fps if active else 0.2)
+            await asyncio.sleep(1 / self.fps if active or fading else 0.2)
 
     async def stream(self, app):
         loop = asyncio.get_running_loop()
@@ -443,6 +487,7 @@ class Controller:
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
             "groups": self.groups,
             "active_music_style": self.active_style,
+            "show": self.show,
             "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code)
                         for k, d in self.devices.items()],
         })
@@ -459,6 +504,38 @@ class Controller:
         return web.json_response({"added": sum(isinstance(x, dict) for x in results),
                                   "errors": [f"{host}: {result}" for host, result in zip(hosts, results)
                                              if isinstance(result, Exception)]})
+
+    async def save_show(self, request):
+        data = await request.json()
+        async with self.edit:
+            show = {"master": self.show["master"], "scenes": self.show["scenes"].copy()}
+            scenes = show["scenes"]
+            if "master" in data:
+                level = data["master"]
+                if type(level) is not int or not 0 <= level <= 100:
+                    raise web.HTTPBadRequest()
+                show["master"] = level
+            elif "delete" in data:
+                scene = data["delete"]
+                if not isinstance(scene, str) or scene not in scenes:
+                    raise web.HTTPNotFound()
+                del scenes[scene]
+            else:
+                name, group = data.get("name"), data.get("group")
+                style, level, mode = data.get("style"), data.get("level"), data.get("mode")
+                if (not isinstance(name, str) or not 1 <= len(name.strip()) <= 60
+                        or not isinstance(group, str) or (group != "*" and group not in self.groups)
+                        or not isinstance(style, str) or style not in MUSIC_STYLES
+                        or type(level) is not int or not 0 <= level <= 100
+                        or mode not in ("music", "off") or len(scenes) >= MAX_DEVICES):
+                    raise web.HTTPBadRequest()
+                scenes[uuid.uuid4().hex] = {"name": name.strip(), "group": group, "style": style,
+                                           "level": level, "mode": mode}
+            temp = SHOW_STATE.with_suffix(".tmp")
+            temp.write_text(json.dumps(show), encoding="utf-8")
+            temp.replace(SHOW_STATE)
+            self.show = show
+        return web.json_response({"ok": True})
 
     async def save_group(self, request):
         data = await request.json()
@@ -477,7 +554,12 @@ class Controller:
                     raise web.HTTPBadRequest()
                 if group_id is None and len(groups) >= MAX_DEVICES:
                     raise web.HTTPBadRequest()
-                groups[group_id or uuid.uuid4().hex] = {"name": name.strip(), "members": list(dict.fromkeys(members))}
+                silence = data.get("silence", "restore")
+                if silence not in SILENCE_MODES:
+                    raise web.HTTPBadRequest()
+                groups[group_id or uuid.uuid4().hex] = {
+                    "name": name.strip(), "members": list(dict.fromkeys(members)), "silence": silence
+                }
             temp = GROUPS.with_suffix(".tmp")
             temp.write_text(json.dumps(groups), encoding="utf-8")
             temp.replace(GROUPS)
@@ -618,7 +700,8 @@ class Controller:
 
     async def music_preview(self, request):
         frame = self.music_frame()
-        return web.Response(body=frame or b"", content_type="application/octet-stream",
+        return web.Response(body=self.dim_frame(frame, self.show['master']) if frame else b"",
+                            content_type="application/octet-stream",
                             headers={"Cache-Control": "no-store"})
 
     @staticmethod
@@ -680,6 +763,7 @@ class Controller:
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
         app.router.add_post("/groups", self.save_group)
+        app.router.add_post("/show", self.save_show)
         app.router.add_get("/product-photo/{key}", self.product_photo)
         app.router.add_get("/effect-image", self.effect_image)
         app.router.add_post("/effect-image", self.effect_image)
