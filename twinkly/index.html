@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Twinkly Kerst</title>
+<style>
+*{box-sizing:border-box} body{font:16px system-ui;background:#0a1714;color:#f3eee3;margin:0}
+main{max-width:1100px;margin:auto;padding:clamp(14px,4vw,40px)}
+h1{font-size:clamp(2rem,6vw,4rem);margin:0;color:#f7d591}
+p{color:#c8dbd3} section,article{background:#152a24;border:1px solid #335347;border-radius:18px;padding:18px}
+#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,305px),1fr));gap:14px;margin-top:14px}
+button,input{font:inherit;background:#233d34;border:1px solid #6b897d;border-radius:8px;color:white;padding:8px}
+button{cursor:pointer} button:disabled{opacity:.5} button:hover{background:#38574a}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center} input[type=color]{height:40px;width:48px}
+input[type=number]{width:72px} #message{min-height:1.5em;overflow-wrap:anywhere} h2,h3{margin:0}
+</style>
+<main><h1>Twinkly Kerst</h1><p id="audio">Status laden…</p>
+<section><h2>Alle lampen</h2><p>Bedien alle gevonden Twinkly’s tegelijk.</p>
+<div class="controls" id="all"></div><hr>
+<div class="controls">
+<input id="ip" placeholder="192.168.1.50" aria-label="Twinkly IPv4-adres"></div>
+<p id="message" role="status"></p></section><div id="devices"></div></main>
+<script>
+const byId = id => document.getElementById(id);
+const cards = new Map();
+let busy = false;
+async function request(path, data) {
+  const response = await fetch('./' + path, data === undefined ? {cache:'no-store'} : {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+  });
+  if (!response.ok) throw Error('HTTP ' + response.status);
+  return response.json();
+}
+function button(parent, label, action) {
+  const el = document.createElement('button');
+  el.textContent = label;
+  el.onclick = async () => {
+    if (busy) return;
+    busy = true;
+    el.disabled = true;
+    byId('message').textContent = 'Bezig…';
+    try { byId('message').textContent = await action(); await refresh(); }
+    catch (error) { byId('message').textContent = error.message; }
+    finally { el.disabled = false; busy = false; }
+  };
+  parent.append(el);
+}
+function controls(parent, id) {
+  const run = async (action, value) => {
+    const result = await request('control', {id, action, value});
+    return result.failed.length ? 'Mislukt bij ' + result.failed.length + ' apparaat/apparaten.' : 'Opdracht verwerkt.';
+  };
+  for (const [label, action] of [['Aan','on'],['Uit','off'],['Muziek','music'],['Stop muziek','stop']]) {
+    button(parent, label, () => run(action));
+  }
+  const color = document.createElement('input');
+  color.type = 'color'; color.value = '#e8a043'; color.setAttribute('aria-label','Kleur');
+  parent.append(color); button(parent,'Kleur', () => run('color',color.value));
+  const level = document.createElement('input');
+  level.type = 'number'; level.min = 0; level.max = 100; level.value = 65;
+  level.setAttribute('aria-label','Helderheid in procenten');
+  parent.append(level); button(parent,'Dim %', () => run('brightness',level.valueAsNumber));
+}
+async function refresh() {
+  const status = await request('status');
+  byId('audio').textContent = status.audio ? 'LedFx-frames worden ontvangen' : 'Wacht op LedFx-muziekeffect';
+  for (const d of status.devices) {
+    if (!cards.has(d.id)) {
+      const card = document.createElement('article');
+      const title = document.createElement('h3'), info = document.createElement('p');
+      const actions = document.createElement('div');
+      actions.className = 'controls';
+      card.append(title, info, actions);
+      byId('devices').append(card);
+      controls(actions, d.id);
+      cards.set(d.id, {title, info});
+    }
+    const {title, info} = cards.get(d.id);
+    title.textContent = d.name;
+    info.textContent = [d.ip, d.leds + ' leds', d.profile, d.music ? 'Muziek aan' : '', d.error || ''].filter(Boolean).join(' · ');
+  }
+}
+controls(byId('all'), '*');
+async function register(ip) {
+  const data = await request('register', {ip});
+  return data.added + ' apparaat/apparaten gevonden. ' + data.errors.join(' · ');
+}
+const scanRow = byId('ip').parentElement;
+button(scanRow,'IP toevoegen', () => register(byId('ip').value.trim()));
+button(scanRow,'Zoeken op netwerk', () => register(''));
+const poll = async () => {
+  try { await refresh(); } catch { byId('audio').textContent = 'Verbinding met de add-on ontbreekt'; }
+  setTimeout(poll, 2500);
+};
+poll();
+</script></html>

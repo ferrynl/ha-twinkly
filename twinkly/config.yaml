@@ -1,0 +1,21 @@
+name: Twinkly Kerst
+slug: twinkly_kerst
+version: "0.1.0"
+description: Lokale Twinkly-bediening met muziekeffecten via LedFx
+url: https://github.com/ferrynl/ha-twinkly
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+init: false
+host_network: true
+ingress: true
+ingress_port: 18489
+panel_icon: mdi:string-lights
+options:
+  ddp_source: "127.0.0.1"
+  fps: 20
+schema:
+  ddp_source: str
+  fps: int(5,25)
