@@ -27,7 +27,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .device-info{margin-top:12px}.device-info dl[hidden]{display:none}.device-info dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:10px 0 0;gap:1px;background:#3a5851;border:1px solid #3a5851;border-radius:10px;overflow:hidden}
 .device-info dt,.device-info dd{margin:0;padding:7px;background:#122422;overflow-wrap:anywhere;font-size:.86rem}.device-info dt{color:#d1e6df}.device-info dd{color:#ffe4a8}
 @media(max-width:760px){.desk-grid{grid-template-columns:1fr}.desk-controls button{flex:1 1 auto}.mixdesk{border-radius:16px}}
-.product-card{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #45645a;border-radius:12px;background:#101f1c}.product-card[hidden],.product-card img[hidden]{display:none}.product-card img{width:82px;height:66px;object-fit:contain;background:#fff;border-radius:7px}.product-card small,.product-card a{display:block;margin-top:3px}.product-card a{color:#ffe2a5}
+.product-card{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #45645a;border-radius:12px;background:#101f1c}.product-card[hidden],.product-card img[hidden]{display:none}.product-card img{width:clamp(106px,32%,148px);height:105px;object-fit:contain;background:#fff;border-radius:7px}.product-card small{display:block;margin-top:3px;overflow-wrap:anywhere}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
@@ -98,10 +98,7 @@ const detailsText = {
 };
 const detailKeys = ['firmware_version','rssi','ssid','channel','product_code','hardware_version','uptime','number_of_led','frame_rate','network_mode','status'];
 const productLabels = {
- nl:['Officiële productpagina','Voorbeeldfoto van productreeks','Model'],
- en:['Official product page','Product-family reference photo','Model'],
- es:['Página oficial del producto','Foto de referencia de la gama','Modelo'],
- de:['Offizielle Produktseite','Referenzfoto der Produktreihe','Modell']
+ nl:'Model',en:'Model',es:'Modelo',de:'Modell'
 };
 function modelInfo(code, device) {
   const strings = /^TWS(\d{2,4})(SPP|STP|GOP)[A-Z0-9-]*$/i.exec(code);
@@ -109,14 +106,12 @@ function modelInfo(code, device) {
     const rgbw = strings[2].toUpperCase() === 'SPP';
     const suffix = {SPP:'RGB+W',STP:'RGB',GOP:'AWW'}[strings[2].toUpperCase()];
     return {name:'Twinkly Strings · ' + device.leds + ' LEDs · ' + suffix,
-      page:'https://twinkly.com/nl-nl/' + (rgbw ? 'products/strings-multicolor-white' : 'collections/strings'),
-      photo:rgbw ? 'https://twinkly.com/cdn/shop/files/TWS250SPP-BEU_Out-of-the-box.jpg?v=1769612111&width=240' : ''};
+      photo:rgbw ? 'strings-rgbw' : ''};
   }
   if (/^TWL\d{2,4}STW[A-Z0-9-]*$/i.test(code)) {
-    return {name:'Twinkly Line · ' + device.leds + ' LEDs',page:'https://twinkly.com/nl-nl/products/line',
-      photo:'https://twinkly.com/cdn/shop/files/TWL100STW-BEU_Out-of-the-box.jpg?v=1757667667&width=240'};
+    return {name:'Twinkly Line · ' + device.leds + ' LEDs',photo:'line'};
   }
-  return {name:productLabels[lang.value][2] + ' · ' + code};
+  return {name:productLabels[lang.value] + ' · ' + code};
 }
 function drawProduct(card, device) {
   const code = typeof device.product_code === 'string' ? device.product_code.trim() : '';
@@ -126,26 +121,21 @@ function drawProduct(card, device) {
   if (card.productSignature === signature) return;
   card.productSignature = signature;
   const model = modelInfo(code,device);
-  const labels = productLabels[lang.value];
   const title = document.createElement('strong'), subtitle = document.createElement('small');
   const body = document.createElement('div');
   title.textContent = model.name;
-  subtitle.textContent = model.page ? code : '';
-  body.append(title,subtitle);
-  if (model.page) {
-    const link = document.createElement('a');
-    link.href = model.page; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    link.textContent = labels[0];
-    body.append(link);
+  body.append(title);
+  if (!model.name.endsWith(' · ' + code)) {
+    subtitle.textContent = code;
+    body.append(subtitle);
   }
   card.product.replaceChildren();
   if (model.photo) {
     const photo = document.createElement('img');
     photo.loading = 'lazy'; photo.referrerPolicy = 'no-referrer';
-    photo.alt = labels[1];
+    photo.alt = model.name;
     photo.onerror = () => { photo.hidden = true; };
-    photo.src = model.photo;
-    subtitle.textContent = code + ' · ' + labels[1];
+    photo.src = './product-photo/' + model.photo;
     card.product.append(photo);
   }
   card.product.append(body);

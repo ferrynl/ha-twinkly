@@ -24,6 +24,11 @@ from xled import HighControlInterface
 DATA = Path("/data/devices.json")
 GROUPS = DATA.with_name("groups.json")
 IMAGES = DATA.with_name("effect-images")
+PRODUCT_PHOTOS = DATA.with_name("product-photos")
+PRODUCT_PHOTO_URLS = {
+    "strings-rgbw": "https://twinkly.com/cdn/shop/files/TWS250SPP-BEU_Out-of-the-box.jpg?v=1769612111&width=480",
+    "line": "https://twinkly.com/cdn/shop/files/TWL100STW-BEU_Out-of-the-box.jpg?v=1757667667&width=480",
+}
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
 MAX_DEVICES = 40
@@ -334,6 +339,7 @@ class Controller:
         self.edit = asyncio.Lock()
         self.music_setup = asyncio.Lock()
         self.gif_capture = asyncio.Lock()
+        self.photo_lock = asyncio.Lock()
         self.probe = asyncio.Semaphore(6)
         if DATA.exists():
             for row in json.loads(DATA.read_text()):
@@ -478,6 +484,37 @@ class Controller:
     def image_path(key, kind, index):
         fingerprint = hashlib.sha256(f"{key}/{kind}/{index}".encode()).hexdigest()
         return IMAGES / (fingerprint + ".jpg")
+
+    async def product_photo(self, request):
+        key = request.match_info["key"]
+        url = PRODUCT_PHOTO_URLS.get(key)
+        if url is None:
+            raise web.HTTPNotFound()
+        path = PRODUCT_PHOTOS / (key + ".jpg")
+        if not path.is_file():
+            async with self.photo_lock:
+                if not path.is_file():
+                    try:
+                        async with ClientSession(timeout=ClientTimeout(total=8)) as session:
+                            async with session.get(url, allow_redirects=False) as response:
+                                if response.status != 200 or response.content_type != "image/jpeg":
+                                    raise ValueError("Unexpected product photo response")
+                                raw = bytearray()
+                                async for chunk in response.content.iter_chunked(65536):
+                                    raw.extend(chunk)
+                                    if len(raw) > 1_000_000:
+                                        raise ValueError("Product photo too large")
+                                if not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
+                                    raise ValueError("Invalid JPEG product photo")
+                        PRODUCT_PHOTOS.mkdir(exist_ok=True)
+                        temp = path.with_suffix(".tmp")
+                        temp.write_bytes(raw)
+                        temp.replace(path)
+                    except (ClientError, TimeoutError, ValueError, OSError) as exc:
+                        LOG.warning("Product photo %s: %s", key, exc)
+                        raise web.HTTPBadGateway() from exc
+        return web.FileResponse(path, headers={"Cache-Control": "private, max-age=86400",
+                                               "X-Content-Type-Options": "nosniff"})
 
     async def effect_image(self, request):
         key = request.query.get("id")
@@ -635,6 +672,7 @@ class Controller:
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
         app.router.add_post("/groups", self.save_group)
+        app.router.add_get("/product-photo/{key}", self.product_photo)
         app.router.add_get("/effect-image", self.effect_image)
         app.router.add_post("/effect-image", self.effect_image)
         app.router.add_post("/setup-music", self.setup_music)

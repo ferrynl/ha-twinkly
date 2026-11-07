@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.13
+
+- Vergroot de productfoto en verwijder de productlink en de toelichting onder de modelnaam.
+- Bewaar opgehaalde productfoto’s lokaal tussen herstarts.
+
 ## 0.1.12
 
 - Herken Twinkly Strings en Line op basis van de modelcode en toon bij ondersteunde reeksen een officiële referentiefoto.
