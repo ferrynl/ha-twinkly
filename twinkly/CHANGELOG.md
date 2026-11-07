@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.33
+
+- Meld definitieve lampfouten met UTC-tijd, lampnaam, IP en opdracht.
+- Groepeer terugkerende fouten en laat automatische herstelpogingen geleidelijk minder vaak lopen.
+- Vraag openbare apparaatinfo eerst zonder toegangstoken op.
+
 ## 0.1.32
 
 - Toon de Matrix-GIF-galerij direct rechts onder het muziekkanaal.

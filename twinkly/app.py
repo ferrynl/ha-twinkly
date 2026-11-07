@@ -8,7 +8,7 @@ import colorsys
 import math
 import os
 from urllib.parse import urlsplit
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, RequestException, Timeout
 from xled.exceptions import ApplicationError
 import functools
 import io
@@ -259,6 +259,9 @@ class Device:
         self.details_until = 0.0
         self.rt_check = 0.0
         self.retry = 0.0
+        self.failures = 0
+        self.last_warning = None
+        self.last_warning_at = 0.0
         self.error = None
         self.mapping = tuple(3 * (i * PIXELS // row["leds"]) for i in range(row["leds"]))
 
@@ -271,7 +274,12 @@ class Device:
     def api(self, path, payload=None):
         session = self.client.session
         try:
-            response = session.get(path) if payload is None else session.post(path, json=payload)
+            if payload is None:
+                response = session.get(path, withhold_token=path in ("gestalt", "fw/version"))
+                if response.status_code == 401 and path in ("gestalt", "fw/version"):
+                    response = session.get(path)
+            else:
+                response = session.post(path, json=payload)
         except AssertionError as exc:
             raise ValueError(f'{path}: XLED kon de sessie of het antwoord niet valideren') from exc
         response.raise_for_status()
@@ -308,7 +316,10 @@ class Device:
                 self.set_mode(mode)
                 self.last_mode = mode
                 return
-            except (ApplicationError, HTTPError):
+            except HTTPError as exc:
+                if exc.response.status_code == 401:
+                    raise
+            except ApplicationError:
                 continue
         self.color((255, 190, 110))
         self.last_mode = "color"
@@ -450,14 +461,33 @@ class Device:
             try:
                 await asyncio.to_thread(method, *args)
             except Exception as exc:
-                self.error = str(exc) or type(exc).__name__
-                self.retry = time.monotonic() + 5
+                now = time.monotonic()
+                operation = method.__name__
+                if operation == "command" and args:
+                    operation = str(args[0])
+                status = exc.response.status_code if isinstance(exc, HTTPError) and exc.response is not None else None
+                if status == 401:
+                    message = "HTTP 401: lamp weigerde het vernieuwde toegangstoken"
+                elif isinstance(exc, Timeout):
+                    message = f"Verbinding liep vast (timeout): {exc}"
+                else:
+                    message = str(exc) or type(exc).__name__
+                self.error = message
+                self.failures += 1
+                delay = min(60, 5 * 2 ** min(self.failures - 1, 4))
+                self.retry = now + delay
                 self.rt_check = 0
-                self.client.session.close()
-                self.client = self.connect()
-                LOG.warning("%s: %s", self.row["ip"], exc)
+                if isinstance(exc, RequestException) and (status is None or status == 401):
+                    self.client.session.close()
+                    self.client = self.connect()
+                warning = (operation, type(exc), status)
+                if warning != self.last_warning or now - self.last_warning_at >= 60:
+                    LOG.warning("lamp=%r ip=%s actie=%s: %s", self.row["name"], self.row["ip"], operation, message)
+                    self.last_warning, self.last_warning_at = warning, now
                 return False
             self.error = None
+            self.retry = 0
+            self.failures = 0
             return True
 
 
@@ -1342,6 +1372,13 @@ async def ingress_only(request, handler):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.Formatter.converter = time.gmtime
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)sZ %(levelname)s %(name)s: %(message)s",
+                        datefmt="%Y-%m-%dT%H:%M:%S")
+    # XLED retries 401s itself. Device.run reports the final failure with context.
+    logging.getLogger("xled.auth").addFilter(
+        lambda record: not record.getMessage().startswith("Unexpected HTTP status code 401 to request ")
+    )
     options = json.loads(Path("/data/options.json").read_text())
     web.run_app(Controller(options).app(), host="0.0.0.0", port=18489, access_log=None)
