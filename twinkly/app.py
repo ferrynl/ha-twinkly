@@ -29,6 +29,7 @@ DATA = Path("/data/devices.json")
 GROUPS = DATA.with_name("groups.json")
 MUSIC_STATE = DATA.with_name("music-state.json")
 SHOW_STATE = DATA.with_name("show-state.json")
+SEQUENCES = DATA.with_name("sequences.json")
 TV_STATE = DATA.with_name("tv-state.json")
 SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
@@ -505,6 +506,14 @@ class Controller:
         self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
         self.music = set()
         self.patterns = {}
+        self.sequence_data = (json.loads(SEQUENCES.read_text(encoding="utf-8"))
+                              if SEQUENCES.exists() else {"shows": {}, "favorites": []})
+        self.sequence_task = None
+        self.sequence_stop = asyncio.Event()
+        self.sequence_lock = asyncio.Lock()
+        self.sequence_status = None
+        self.sequence_devices = {}
+        self.sequence_error = None
         self.gif_patterns = {}
         self.gif_library_lock = asyncio.Lock()
         self.edit = asyncio.Lock()
@@ -596,10 +605,11 @@ class Controller:
                         frame = frames[index]
                     else:
                         frame = live_pattern(pattern, int(now * self.fps), self.fps)
-                    await device.run(device.send, frame)
+                    level = self.sequence_devices.get(key, 100)
+                    await device.run(device.send, self.dim_frame(frame, level))
                 elif active:
                     fade_started = None
-                    frame = self.dim_frame(self.ddp.frame, self.show["master"])
+                    frame = self.dim_frame(self.ddp.frame, self.show["master"] * self.sequence_devices.get(key, 100) // 100)
                     if any(frame):
                         last_output = frame
                     await device.run(device.send, frame)
@@ -655,6 +665,9 @@ class Controller:
         yield
         supervisor.cancel()
         await asyncio.gather(supervisor, return_exceptions=True)
+        self.sequence_stop.set()
+        if self.sequence_task:
+            await self.sequence_task
         transport.close()
         # Let outstanding device operations finish before restoring modes.
         self.music.clear()
@@ -669,6 +682,9 @@ class Controller:
         return web.json_response({
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
             "groups": self.groups,
+            "sequence": self.sequence_status,
+            "sequence_error": self.sequence_error,
+            "sequence_data": self.sequence_data,
             "active_music_style": self.active_style,
             "show": self.show,
             "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code, pattern=self.patterns.get(k))
@@ -841,8 +857,18 @@ class Controller:
             temp.replace(path)
         return web.json_response({"ok": True})
 
+    @staticmethod
+    def valid_pattern(value):
+        return isinstance(value, str) and (
+            value in PATTERN_PALETTES
+            or (value.startswith("gif:") and GIF_ID.fullmatch(value[4:]))
+            or (value.startswith("matrix:") and MATRIX_ID.fullmatch(value[7:]))
+        )
+
     async def control(self, request):
-        data = await request.json()
+        return web.json_response(await self.apply_control(await request.json()))
+
+    async def apply_control(self, data, sequence_level=None):
         action = data.get("action")
         value = data.get("value")
         if action not in ("on", "off", "color", "brightness", "music", "stop", "effect", "pattern", "stop-pattern"):
@@ -853,10 +879,7 @@ class Controller:
             value = bytes.fromhex(value[1:])
         if action == "brightness" and (type(value) is not int or not 0 <= value <= 100):
             raise web.HTTPBadRequest()
-        if action == "pattern" and (not isinstance(value, str)
-                or (value not in PATTERN_PALETTES
-                    and not (value.startswith("gif:") and GIF_ID.fullmatch(value[4:]))
-                    and not (value.startswith("matrix:") and MATRIX_ID.fullmatch(value[7:])))):
+        if action == "pattern" and not self.valid_pattern(value):
             raise web.HTTPBadRequest()
         if action == "effect":
             if (not isinstance(value, list) or len(value) != 2
@@ -884,22 +907,127 @@ class Controller:
                         raise web.HTTPBadRequest(text="GIF unavailable") from exc
                 self.music.difference_update(keys)
                 self.patterns.update(dict.fromkeys(keys, value))
-                return web.json_response({"failed": []})
+                self.mark_sequence_devices(keys, sequence_level)
+                return {"failed": []}
             if action == "stop-pattern":
                 keys = [key for key in keys if key in self.patterns]
                 action = "stop"
             for key in keys:
                 self.patterns.pop(key, None)
+            self.mark_sequence_devices(keys, sequence_level if action == "music" else None)
             if action == "music":
                 self.music.update(keys)
-                return web.json_response({"failed": []})
+                return {"failed": []}
             self.music.difference_update(keys)
             results = await asyncio.gather(*(self.devices[k].run(self.devices[k].command, action, value)
                                              for k in keys))
-            return web.json_response({"failed": [
+            return {"failed": [
                 f"{self.devices[key].row['ip']}: {self.devices[key].error}"
                 for key, ok in zip(keys, results) if not ok
-            ]})
+            ]}
+
+    def mark_sequence_devices(self, keys, level):
+        for key in keys:
+            if level is None:
+                self.sequence_devices.pop(key, None)
+            else:
+                self.sequence_devices[key] = level
+
+    async def finish_sequence_step(self):
+        async with self.edit:
+            keys = list(self.sequence_devices)
+            self.sequence_devices.clear()
+            self.music.difference_update(keys)
+            for key in keys:
+                self.patterns.pop(key, None)
+            await asyncio.gather(*(self.devices[key].run(self.devices[key].command, "stop", None)
+                                   for key in keys if key in self.devices))
+
+    async def play_sequence(self, key, show):
+        try:
+            for index, step in enumerate(show["steps"]):
+                if self.sequence_stop.is_set():
+                    break
+                target = {"id": "*"} if step["group"] == "*" else {"group": step["group"]}
+                command = {"action": "music"} if step["pattern"] == "music" else {
+                    "action": "pattern", "value": step["pattern"]
+                }
+                await self.apply_control({**target, **command}, sequence_level=step["level"])
+                self.sequence_status = {"id": key, "name": show["name"], "step": index + 1,
+                                        "total": len(show["steps"]), "ends": time.time() + step["seconds"]}
+                try:
+                    await asyncio.wait_for(self.sequence_stop.wait(), step["seconds"])
+                except TimeoutError:
+                    pass
+                finally:
+                    await self.finish_sequence_step()
+        except (web.HTTPException, OSError, ValueError) as exc:
+            self.sequence_error = exc.text if isinstance(exc, web.HTTPException) else str(exc)
+            LOG.warning("Show %r: %s", show["name"], self.sequence_error)
+        finally:
+            self.sequence_status = None
+
+    async def sequences(self, request):
+        data = await request.json()
+        action, key = data.get("action"), data.get("id")
+        async with self.sequence_lock:
+            shows = self.sequence_data["shows"].copy()
+            favorites = self.sequence_data["favorites"].copy()
+            if action in ("play", "stop"):
+                if action == "play" and (not isinstance(key, str) or key not in shows):
+                    raise web.HTTPNotFound()
+                if self.sequence_task and not self.sequence_task.done():
+                    self.sequence_stop.set()
+                    await self.sequence_task
+                if action == "play":
+                    self.sequence_stop.clear()
+                    self.sequence_error = None
+                    self.sequence_task = asyncio.create_task(self.play_sequence(key, shows[key]))
+                return web.json_response({"ok": True})
+            if action == "favorite":
+                pattern = data.get("pattern")
+                if not self.valid_pattern(pattern):
+                    raise web.HTTPBadRequest()
+                if pattern in favorites:
+                    favorites.remove(pattern)
+                elif len(favorites) < 8:
+                    favorites.append(pattern)
+                else:
+                    raise web.HTTPConflict(text="Maximum 8 favorites")
+            elif action == "delete":
+                if not isinstance(key, str) or key not in shows:
+                    raise web.HTTPNotFound()
+                del shows[key]
+            elif action == "save":
+                name, steps = data.get("name"), data.get("steps")
+                if (not isinstance(name, str) or not 1 <= len(name.strip()) <= 60
+                        or not isinstance(steps, list) or not 1 <= len(steps) <= 30):
+                    raise web.HTTPBadRequest()
+                if key is not None and (not isinstance(key, str) or key not in shows):
+                    raise web.HTTPNotFound()
+                if key is None and len(shows) >= 30:
+                    raise web.HTTPConflict()
+                validated = []
+                for step in steps:
+                    if not isinstance(step, dict):
+                        raise web.HTTPBadRequest()
+                    group, pattern = step.get("group"), step.get("pattern")
+                    seconds, level = step.get("seconds"), step.get("level")
+                    if (not isinstance(group, str) or (group != "*" and group not in self.groups)
+                            or (pattern != "music" and not self.valid_pattern(pattern))
+                            or type(seconds) is not int or not 1 <= seconds <= 3600
+                            or type(level) is not int or not 0 <= level <= 100):
+                        raise web.HTTPBadRequest()
+                    validated.append({"group": group, "pattern": pattern, "seconds": seconds, "level": level})
+                shows[key or uuid.uuid4().hex] = {"name": name.strip(), "steps": validated}
+            else:
+                raise web.HTTPBadRequest()
+            updated = {"shows": shows, "favorites": favorites}
+            temp = SEQUENCES.with_suffix(".tmp")
+            temp.write_text(json.dumps(updated), encoding="utf-8")
+            temp.replace(SEQUENCES)
+            self.sequence_data = updated
+        return web.json_response({"ok": True})
 
     async def details(self, request):
         device = self.devices.get(request.query.get("id"))
@@ -1290,6 +1418,7 @@ class Controller:
         app.router.add_get("/details", self.details)
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
+        app.router.add_post("/sequences", self.sequences)
         app.router.add_post("/groups", self.save_group)
         app.router.add_post("/show", self.save_show)
         app.router.add_get("/product-photo/{key}", self.product_photo)

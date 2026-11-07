@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.34
+
+- Bouw en speel lichtshows met livepatronen, GIF’s en muziekstappen.
+- Stel per stap een groep, duur en helderheid in.
+- Bewaar maximaal acht favorieten op de mengtafel.
+
 ## 0.1.33
 
 - Meld definitieve lampfouten met UTC-tijd, lampnaam, IP en opdracht.

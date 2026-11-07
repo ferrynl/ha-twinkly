@@ -43,6 +43,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .pattern-categories{margin-top:10px}.mixdesk .pattern-categories button{min-height:32px;font-size:.84rem}.pattern-categories button[aria-pressed=true]{border-color:#9debcf;color:#a9ffe4}
 .matrix-library summary{cursor:pointer;color:#b7ecd9}#matrix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,96px),1fr));gap:8px}.mixdesk .matrix-tile{display:grid;align-content:start;gap:6px;min-width:0;text-align:center;font-size:.79rem;padding:6px;overflow-wrap:anywhere}.matrix-tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#000;border-radius:5px;image-rendering:pixelated}.mixdesk .matrix-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:0 0 0 1px #9debcf}
 .matrix-library h3{font-size:.92rem;margin:10px 0 4px;color:#d7f1e9}#matrix-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,100px),1fr))}
+#favorite-tiles .favorite-tile{display:grid;gap:4px;width:105px;text-align:center;font-size:.78rem}#favorite-tiles img{width:100%;aspect-ratio:1;object-fit:contain;background:#080b10;border-radius:4px}#builder-shows{display:grid;gap:6px}#builder-steps{padding-left:1.7rem}#builder-steps li{margin:6px 0}#builder-steps button{min-height:28px;padding:3px 7px;margin-left:5px}#builder-status{font-size:.85rem;color:#c4d9eb}#builder-effect,#favorite-effect{max-width:100%;min-width:0}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -58,7 +59,18 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 </div><div class="desk-channel live-monitor"><div class="music-heading"><h2 id="monitor-title"></h2><span id="monitor-count"></span></div>
 <canvas id="monitor-strip" width="480" height="36"></canvas>
 <div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
-<div class="monitor-devices" id="monitor-devices"></div></div></div>
+<div class="monitor-devices" id="monitor-devices"></div></div>
+<div class="desk-channel"><h2 id="favorites-title"></h2><div id="favorite-tiles" class="controls"></div>
+<div class="controls gap"><select id="favorite-effect"></select><button id="favorite-toggle"></button></div></div>
+<div class="desk-channel"><div class="music-heading"><h2 id="builder-title"></h2><button id="builder-stop"></button></div>
+<p id="builder-status" role="status"></p><div id="builder-shows"></div>
+<details class="gap"><summary id="builder-editor"></summary>
+<div class="controls gap"><input id="builder-name" maxlength="60"><select id="builder-effect"></select><select id="builder-group"></select>
+<label><span id="builder-seconds-label"></span> <input id="builder-seconds" type="number" min="1" max="3600" value="30"></label>
+<label><span id="builder-level-label"></span> <input id="builder-level" type="number" min="0" max="100" value="65"></label>
+<button id="builder-add"></button></div>
+<ol id="builder-steps"></ol><div class="controls"><button id="builder-save"></button><button id="builder-reset"></button></div>
+</details></div></div>
 <div class="desk-stack"><div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
@@ -253,6 +265,12 @@ const extraMatrixLabels = {
   de:['Weltraum','Tropisch','Retro','Pastell','Mitternacht']
 };
 let matrixCatalog = [], matrixTheme = 'winter', matrixSignature = '', matrixLoading = false;
+const builderText = {
+ nl:['Favorieten','Favoriet toevoegen / verwijderen','Showbouwer','Stop show','Nieuwe show of bewerken','Shownaam','Seconden','Helderheid %','Stap toevoegen','Show opslaan','Editor wissen','Voeg een naam en minstens één stap toe.','Nog geen shows opgeslagen','Stap','Omhoog','Omlaag','Kies een duur en helderheid binnen het bereik.'],
+ en:['Favorites','Add / remove favorite','Show builder','Stop show','New or edit show','Show name','Seconds','Brightness %','Add step','Save show','Clear editor','Enter a name and at least one step.','No saved shows','Step','Move up','Move down','Choose a valid duration and brightness.'],
+ es:['Favoritos','Añadir / quitar favorito','Creador de espectáculos','Detener espectáculo','Crear o editar','Nombre','Segundos','Brillo %','Añadir paso','Guardar','Limpiar','Añade un nombre y un paso.','Sin espectáculos guardados','Paso','Subir','Bajar','Elige una duración y un brillo válidos.'],
+ de:['Favoriten','Favorit hinzufügen / entfernen','Show-Editor','Show stoppen','Show erstellen oder bearbeiten','Name','Sekunden','Helligkeit %','Schritt hinzufügen','Show speichern','Editor leeren','Name und mindestens einen Schritt eingeben.','Keine gespeicherten Shows','Schritt','Nach oben','Nach unten','Gültige Dauer und Helligkeit wählen.']
+};
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -513,6 +531,7 @@ function drawDetails(card) {
   card.detailList.hidden = false;
 }
 function render() {
+  renderBuilder();
   renderPatterns();
   renderMonitor();
   if (!status?.audio) drawMonitor([]);
@@ -955,6 +974,7 @@ function renderPatterns() {
     tile.setAttribute('aria-pressed',String(selected.length > 0 && selected.every(d => d.pattern === tile.dataset.pattern)));
   }
   byId('pattern-stop').disabled = !selected.some(device => device.pattern);
+  renderBuilder();
 }
 patternTarget.onchange = renderPatterns;
 byId('pattern-stop').onclick = () => perform(byId('pattern-stop'),() => patternCommand('stop-pattern'));
@@ -1097,8 +1117,132 @@ async function loadMatrixGallery() {
     byId('message').textContent = matrixLabels[lang.value][6];
   } finally { matrixLoading = false; }
 }
+const builder = {id:null, steps:[], signature:'', options:''};
+const bt = index => builderText[lang.value][index];
+function sequenceName(id) {
+  if (id === 'music') return t('music');
+  if (id.startsWith('gif:')) return libraryGifs.find(item => 'gif:' + item.id === id)?.name || id.slice(4);
+  return patternName(id);
+}
+function selectOptions(select, values) {
+  const current = select.value;
+  select.replaceChildren(...values.map(([id,name]) => new Option(name,id)));
+  if (values.some(([id]) => id === current)) select.value = current;
+}
+function renderSteps() {
+  const list = byId('builder-steps');
+  list.replaceChildren();
+  builder.steps.forEach((step,index) => {
+    const row = document.createElement('li');
+    const group = step.group === '*' ? t('all') : status?.groups?.[step.group]?.name || step.group;
+    row.append(sequenceName(step.pattern) + ' · ' + group + ' · ' + step.seconds + ' s · ' + step.level + '%');
+    for (const [offset, symbol, label] of [[-1,'↑',bt(14)],[1,'↓',bt(15)],[0,'×',extra(5)]]) {
+      const key = document.createElement('button');
+      key.textContent = symbol; key.setAttribute('aria-label',label);
+      key.disabled = offset !== 0 && !builder.steps[index+offset];
+      key.onclick = () => {
+        if (offset === 0) builder.steps.splice(index,1);
+        else [builder.steps[index],builder.steps[index+offset]] = [builder.steps[index+offset],builder.steps[index]];
+        renderSteps();
+      };
+      row.append(key);
+    }
+    list.append(row);
+  });
+}
+function resetBuilder(id = null, show = null) {
+  builder.id = id; builder.steps = show ? show.steps.map(step => ({...step})) : [];
+  byId('builder-name').value = show?.name || '';
+  renderSteps();
+}
+function renderBuilder() {
+  const data = status?.sequence_data || {shows:{},favorites:[]};
+  const groups = status?.groups || {};
+  const labels = builderText[lang.value];
+  const active = status?.sequence;
+  byId('builder-status').textContent = active ? active.name + ' · ' + labels[13] + ' ' +
+    active.step + '/' + active.total + ' · ' + Math.max(0,Math.ceil(active.ends - Date.now()/1000)) + ' s'
+    : status?.sequence_error || (Object.keys(data.shows).length ? '' : labels[12]);
+  byId('builder-stop').disabled = !active;
+  const options = [...Object.keys(patternStyles),...Object.keys(extraPatterns),
+    ...matrixCatalog.map(item => 'matrix:' + item.id),...libraryGifs.map(item => 'gif:' + item.id)];
+  const signature = JSON.stringify([lang.value,options,groups]);
+  if (signature !== builder.options) {
+    builder.options = signature;
+    const effects = options.map(id => [id,sequenceName(id)]);
+    selectOptions(byId('favorite-effect'),effects);
+    selectOptions(byId('builder-effect'),[...effects,['music',t('music')]]);
+    selectOptions(byId('builder-group'),[['*',t('all')],...Object.entries(groups).map(([id,item]) => [id,item.name])]);
+    renderSteps();
+  }
+  const tilesSignature = JSON.stringify([signature,data]);
+  if (tilesSignature === builder.signature) return;
+  builder.signature = tilesSignature;
+  const tiles = byId('favorite-tiles'), shows = byId('builder-shows');
+  tiles.replaceChildren(); shows.replaceChildren();
+  for (const id of data.favorites) {
+    const tile = document.createElement('button');
+    tile.className = 'favorite-tile';
+    if (id.startsWith('gif:') || id.startsWith('matrix:')) {
+      const image = document.createElement('img');
+      image.alt = ''; image.loading = 'lazy';
+      image.src = (id.startsWith('gif:') ? './gifs/' : './matrix-gifs/') + encodeURIComponent(id.split(':')[1]);
+      tile.append(image);
+    }
+    tile.append(sequenceName(id));
+    tile.onclick = () => perform(tile,() => patternCommand('pattern',id));
+    tiles.append(tile);
+  }
+  for (const [id,show] of Object.entries(data.shows)) {
+    const row = document.createElement('div'), title = document.createElement('strong');
+    row.className = 'settings-item'; title.textContent = show.name; row.append(title);
+    for (const [action,label] of [['play',gifLabels[lang.value][5]],['edit',extra(4)],['delete',extra(5)]]) {
+      const key = document.createElement('button');
+      key.textContent = label;
+      key.onclick = () => {
+        if (action === 'edit') { resetBuilder(id,show); byId('builder-editor').parentElement.open = true; }
+        else perform(key,async () => { await request('sequences',{action,id}); return t('done'); });
+      };
+      row.append(key);
+    }
+    shows.append(row);
+  }
+}
+byId('builder-add').onclick = () => {
+  const seconds = byId('builder-seconds'), level = byId('builder-level');
+  if (!seconds.reportValidity() || !level.reportValidity() || !Number.isInteger(seconds.valueAsNumber) ||
+      !Number.isInteger(level.valueAsNumber)) { byId('message').textContent = bt(16); return; }
+  if (builder.steps.length >= 30) return;
+  builder.steps.push({pattern:byId('builder-effect').value, group:byId('builder-group').value,
+    seconds:seconds.valueAsNumber, level:level.valueAsNumber});
+  renderSteps();
+};
+byId('builder-reset').onclick = () => resetBuilder();
+byId('builder-stop').onclick = () => perform(byId('builder-stop'),async () => {
+  await request('sequences',{action:'stop'}); return t('done');
+});
+byId('builder-save').onclick = () => perform(byId('builder-save'),async () => {
+  const name = byId('builder-name').value.trim();
+  if (!name || !builder.steps.length) return bt(11);
+  await request('sequences',{action:'save',id:builder.id,name,steps:builder.steps});
+  resetBuilder();
+  return t('done');
+});
+byId('favorite-toggle').onclick = () => perform(byId('favorite-toggle'),async () => {
+  await request('sequences',{action:'favorite',pattern:byId('favorite-effect').value});
+  return t('done');
+});
 function translate() {
   document.documentElement.lang = lang.value;
+  ['favorites-title','favorite-toggle','builder-title','builder-stop','builder-editor',null,
+    'builder-seconds-label','builder-level-label','builder-add','builder-save','builder-reset'].forEach((id,index) => {
+      if (id) byId(id).textContent = bt(index);
+  });
+  byId('builder-name').placeholder = bt(5);
+  byId('builder-name').setAttribute('aria-label',bt(5));
+  byId('builder-effect').setAttribute('aria-label',t('choose'));
+  byId('favorite-effect').setAttribute('aria-label',bt(0));
+  byId('builder-group').setAttribute('aria-label',extra(0));
   const gif = gifLabels[lang.value], gifPattern = byId('gif-pattern'), priorGif = gifPattern.value;
   ['gif-library-title','gif-upload-button','gif-import-button','gif-create-button'].forEach((id,index) => {
     byId(id).textContent = gif[[0,2,3,4][index]];
