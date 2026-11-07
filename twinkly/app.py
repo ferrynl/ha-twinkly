@@ -4,6 +4,8 @@ import hashlib
 import uuid
 import colorsys
 import math
+import os
+from urllib.parse import urlsplit
 from requests.exceptions import HTTPError
 from xled.exceptions import ApplicationError
 import functools
@@ -351,6 +353,9 @@ class Controller:
         self.gif_capture = asyncio.Lock()
         self.photo_lock = asyncio.Lock()
         self.track_lock = asyncio.Lock()
+        self.media_player = options.get('media_player', '').strip()
+        self.ha_media_until = 0.0
+        self.ha_media_states = []
         self.track_until = 0.0
         self.track_state = {'track': None, 'available': False}
         self.track_art = None
@@ -698,6 +703,41 @@ class Controller:
                    for entry in device.effects] if ok else []
         return web.json_response({"effects": catalog, "error": None if ok else device.error})
 
+    @staticmethod
+    def ha_headers():
+        return {"Authorization": "Bearer " + os.environ["SUPERVISOR_TOKEN"]}
+
+    async def home_assistant_media(self, now, track):
+        if not self.media_player and not track:
+            return None
+        if now >= self.ha_media_until:
+            self.ha_media_until = now + 12
+            self.ha_media_states = []
+            if self.media_player and not re.fullmatch(r"media_player\.[a-z0-9_]+", self.media_player):
+                return None
+            endpoint = "http://supervisor/core/api/states"
+            if self.media_player:
+                endpoint += "/" + self.media_player
+            try:
+                async with ClientSession(timeout=ClientTimeout(total=2)) as session:
+                    async with session.get(endpoint, headers=self.ha_headers(),
+                                           allow_redirects=False) as response:
+                        response.raise_for_status()
+                        data = await response.json()
+                states = [data] if self.media_player else data
+                self.ha_media_states = [item for item in states
+                                        if item.get("entity_id", "").startswith("media_player.")]
+            except (ClientError, TimeoutError, ValueError, KeyError):
+                return None
+        for item in self.ha_media_states:
+            attrs = item.get("attributes") or {}
+            title = str(attrs.get("media_title") or "").strip()
+            if item.get("state") not in ("playing", "paused", "buffering") or not title:
+                continue
+            if self.media_player or title.casefold() == track["title"].strip().casefold():
+                return attrs
+        return None
+
     async def now_playing(self, request):
         async with self.track_lock:
             now = time.monotonic()
@@ -721,11 +761,32 @@ class Controller:
                         digest = artwork.get("hash") or ""
                         if (re.fullmatch(r"now_playing/now_playing\.(jpg|jpeg|png|webp|gif)", path)
                                 and re.fullmatch(r"[a-fA-F0-9]{8,128}", digest)):
-                            self.track_art = (digest, path)
+                            self.track_art = (digest, path, "ledfx")
                             track["artwork"] = digest
                         self.track_state["track"] = track
                 except (ClientError, TimeoutError, ValueError):
                     self.track_until = now + 10
+                track = self.track_state["track"]
+                attrs = await self.home_assistant_media(now, track)
+                if attrs:
+                    if track is None or self.media_player:
+                        track = {"title": str(attrs["media_title"])[:512],
+                                 "artist": str(attrs.get("media_artist") or "")[:512],
+                                 "album": str(attrs.get("media_album_name") or "")[:512]}
+                    picture = urlsplit(str(attrs.get("entity_picture") or ""))
+                    if (not picture.scheme and not picture.netloc
+                            and re.fullmatch(r"/api/media_player_proxy/media_player\.[a-z0-9_]+", picture.path)):
+                        path = picture.path + ("?" + picture.query if picture.query else "")
+                        digest = hashlib.sha256((track["title"] + path).encode()).hexdigest()
+                        self.track_art = (digest, path, "ha")
+                        track["artwork"] = digest
+                    media = str(attrs.get("media_content_id") or "")
+                    video = urlsplit(media)
+                    if (attrs.get("media_content_type") in ("video", "movie", "tvshow", "episode")
+                            and video.scheme == "https" and video.hostname and not video.username
+                            and video.path.lower().endswith((".mp4", ".webm"))):
+                        track["video"] = media
+                    self.track_state = {"track": track, "available": True}
             return web.json_response(self.track_state, headers={"Cache-Control": "no-store"})
 
     async def now_playing_art(self, request):
@@ -734,9 +795,15 @@ class Controller:
                 raise web.HTTPNotFound()
             if self.track_art_cache is None or self.track_art_cache[0] != self.track_art:
                 try:
+                    _, path, source = self.track_art
+                    if source == "ha":
+                        url = "http://supervisor/core" + path
+                        options = {"headers": self.ha_headers()}
+                    else:
+                        url = "http://127.0.0.1:8888/api/assets/download"
+                        options = {"params": {"path": path}}
                     async with ClientSession(timeout=ClientTimeout(total=3)) as session:
-                        async with session.get("http://127.0.0.1:8888/api/assets/download",
-                                               params={"path": self.track_art[1]}, allow_redirects=False) as response:
+                        async with session.get(url, allow_redirects=False, **options) as response:
                             if response.status != 200 or response.content_type not in (
                                 "image/jpeg", "image/png", "image/webp", "image/gif"
                             ):

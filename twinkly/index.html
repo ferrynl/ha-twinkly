@@ -30,12 +30,13 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .product-card{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #45645a;border-radius:12px;background:#101f1c}.product-card[hidden],.product-card img[hidden]{display:none}.product-card img{width:clamp(106px,32%,148px);height:105px;object-fit:contain;background:#fff;border-radius:7px}.product-card small{display:block;margin-top:3px;overflow-wrap:anywhere}
 .scene-pad{display:inline-flex;gap:4px;padding:5px;border:1px solid #617587;border-radius:11px;background:#121922}.mixdesk .scene-pad button:first-child{background:linear-gradient(#673f82,#382549);border-color:#ab82c0}
 .track-screen{display:flex;align-items:center;gap:12px;min-height:88px;padding:12px;margin-bottom:12px;border:1px solid #3b5e58;border-radius:12px;background:radial-gradient(ellipse at top right,#1c4038,#080f13 72%);box-shadow:inset 0 2px 7px #0009}.track-screen img{width:66px;height:66px;object-fit:cover;border-radius:6px}.track-screen p{margin:3px 0;color:#a5c4be;font-size:.83rem;overflow-wrap:anywhere}.track-screen strong{display:block;color:#b7ffe5;overflow-wrap:anywhere}.track-screen #track-label{letter-spacing:.12em;text-transform:uppercase}
+.track-tv{max-width:590px;margin-bottom:14px;padding:9px;border:1px solid #59677a;border-radius:16px;background:linear-gradient(155deg,#46515e,#181e27 45%);box-shadow:0 5px 0 #080b10,0 10px 18px #0008}.track-display{position:relative;display:grid;place-items:center;aspect-ratio:16/9;max-height:275px;background:radial-gradient(ellipse,#183830,#05090c 72%);overflow:hidden;border:1px solid #080b10;border-radius:10px}.track-display img,.track-display video{position:absolute;width:100%;height:100%;object-fit:contain}.track-display [hidden]{display:none}.track-tv .track-screen{border:0;box-shadow:none;margin:0;background:none;padding:8px 4px 2px;min-height:0}#track-idle{font-size:clamp(2rem,6vw,4rem);color:#82dabb}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
 <select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
 <section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div><div class="desk-grid"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div><div class="desk-channel desk-music"><h2 id="desk-music-title"></h2>
-<div class="track-screen"><img id="track-art" alt="" hidden><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div>
+<div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" hidden><video id="track-video" controls playsinline preload="none" hidden></video></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="controls gap" id="music-setup"></div>
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <p id="active-music-style" class="status"></p>
@@ -652,22 +653,32 @@ byId('scene-form').onsubmit = event => {
     return t('done');
   });
 };
-let trackState, trackArtwork;
+let trackState, trackArtwork, trackVideo;
 function renderTrack() {
   const labels = trackLabels[lang.value];
   const track = trackState?.track;
   byId('track-label').textContent = labels[0];
   byId('track-title').textContent = track?.title || labels[trackState?.available === false ? 2 : 1];
   byId('track-byline').textContent = [track?.artist,track?.album].filter(Boolean).join(' · ');
+  const video = byId('track-video'), source = track?.video;
+  if (source !== trackVideo) {
+    trackVideo = source;
+    video.hidden = !source;
+    if (source) video.src = source;
+    else { video.removeAttribute('src'); video.load(); }
+  }
   const image = byId('track-art'), artwork = track?.artwork;
+  image.hidden = !!source || !image.complete || !image.naturalWidth;
+  byId('track-idle').hidden = !!source || !image.hidden;
   if (artwork === trackArtwork) return;
   trackArtwork = artwork;
   image.hidden = true;
+  byId('track-idle').hidden = !!source;
   if (artwork) image.src = './now-playing-art?v=' + encodeURIComponent(artwork);
   else image.removeAttribute('src');
 }
-byId('track-art').onload = () => { byId('track-art').hidden = false; };
-byId('track-art').onerror = () => { byId('track-art').hidden = true; };
+byId('track-art').onload = () => { byId('track-art').hidden = !!trackVideo; byId('track-idle').hidden = true; };
+byId('track-art').onerror = () => { byId('track-art').hidden = true; byId('track-idle').hidden = !!trackVideo; };
 async function pollTrack() {
   if (!document.hidden) {
     try { trackState = await request('now-playing'); }

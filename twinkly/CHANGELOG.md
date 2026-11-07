@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.17
+
+- Maak van Nu speelt een tv-scherm met grotere hoesweergave.
+- Gebruik de afbeelding van een overeenkomende Home Assistant-mediaspeler of een ingestelde speler.
+- Toon videobediening als de speler een directe HTTPS MP4- of WebM-bron rapporteert.
+
 ## 0.1.16
 
 - Toon de huidige Music Assistant-track in de mengtafel via LedFX Sendspin-metadata.

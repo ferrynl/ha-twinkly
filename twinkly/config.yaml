@@ -1,6 +1,6 @@
 name: Twinkly Kerst
 slug: twinkly_kerst
-version: "0.1.16"
+version: "0.1.17"
 description: Lokale Twinkly-bediening met muziekeffecten via LedFx
 url: https://github.com/ferrynl/ha-twinkly
 arch:
@@ -10,6 +10,7 @@ startup: application
 boot: auto
 init: false
 host_network: true
+homeassistant_api: true
 ingress: true
 ingress_port: 18489
 panel_icon: mdi:string-lights
@@ -17,7 +18,9 @@ options:
   ddp_source: "127.0.0.1"
   discovery_broadcast: "255.255.255.255"
   fps: 20
+  media_player: ""
 schema:
   ddp_source: str
   discovery_broadcast: str
   fps: int(5,25)
+  media_player: str
