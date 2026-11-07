@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.18 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.19 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -61,6 +61,6 @@ Kies in de groepsinstellingen wat er gebeurt bij wegvallende of enkele seconden 
 
 Het **Nu speelt**-scherm toont titel, artiest en album uit de Sendspin-metadata die LedFX ontvangt. De hoes verschijnt wanneer LedFX een lokale hoes heeft opgeslagen. De weergave werkt met LedFX op dezelfde host en vereist dat Music Assistant trackgegevens naar de gekoppelde speler stuurt.
 
-Het tv-scherm kan ook de afbeelding uit Home Assistant tonen. De app zoekt een actieve speler met dezelfde titel als LedFX. Stel bij **Configuratie** desgewenst `media_player` in op de exacte entiteit, bijvoorbeeld `media_player.woonkamer`. Alleen als die speler een rechtstreekse HTTPS MP4- of WebM-bron doorgeeft, verschijnt er ook een videospeler. Een afbeelding of YouTube-ID wordt als metadata behandeld.
+Het tv-scherm kan ook de afbeelding uit Home Assistant tonen. De app zoekt een actieve speler met dezelfde titel als LedFX. Stel bij **Configuratie** desgewenst `media_player` in op de exacte entiteit, bijvoorbeeld `media_player.woonkamer`. Het scherm toont lokale hoezen en ondersteunde YouTube-miniaturen.
 
 Gebruik **Tv-bron** bij het scherm om rechtstreeks een Home Assistant-mediaspeler te kiezen. **Automatisch** blijft de optie om de track op basis van LedFX te koppelen. De keuze wordt centraal bewaard. De instelling `media_player` dient als beginwaarde zolang je nog geen keuze in het mengpaneel hebt opgeslagen.

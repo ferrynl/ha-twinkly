@@ -773,6 +773,19 @@ class Controller:
                 return attrs
         return None
 
+    @staticmethod
+    def cover_url(value):
+        if not isinstance(value, str) or len(value) > 4096:
+            return None
+        try:
+            url = urlsplit(value)
+        except ValueError:
+            return None
+        if (url.scheme == "https" and url.netloc == "i.ytimg.com"
+                and re.fullmatch(r"/vi(?:_webp)?/[A-Za-z0-9_-]{11}/[A-Za-z0-9_-]+\.(jpg|webp)", url.path)):
+            return "https://i.ytimg.com" + url.path
+        return None
+
     async def now_playing(self, request):
         async with self.track_lock:
             now = time.monotonic()
@@ -794,6 +807,9 @@ class Controller:
                         artwork = data.get("artwork") or {}
                         path = artwork.get("cache_key") or ""
                         digest = artwork.get("hash") or ""
+                        cover = self.cover_url(artwork.get("url")) or self.cover_url(metadata.get("artwork_url"))
+                        if cover:
+                            track["cover_url"] = cover
                         if (re.fullmatch(r"now_playing/now_playing\.(jpg|jpeg|png|webp|gif)", path)
                                 and re.fullmatch(r"[a-fA-F0-9]{8,128}", digest)):
                             self.track_art = (digest, path, "ledfx")
@@ -805,22 +821,27 @@ class Controller:
                 attrs = await self.home_assistant_media(now, track)
                 if attrs:
                     if track is None or self.media_player:
+                        previous = track or {}
                         track = {"title": str(attrs["media_title"])[:512],
                                  "artist": str(attrs.get("media_artist") or "")[:512],
                                  "album": str(attrs.get("media_album_name") or "")[:512]}
-                    picture = urlsplit(str(attrs.get("entity_picture") or ""))
-                    if (not picture.scheme and not picture.netloc
-                            and re.fullmatch(r"/api/media_player_proxy/media_player\.[a-z0-9_]+", picture.path)):
+                        if previous.get("title", "").strip().casefold() == track["title"].strip().casefold():
+                            track.update({key: previous[key] for key in ("artwork", "cover_url") if key in previous})
+                    picture_url = str(attrs.get("entity_picture") or "")
+                    try:
+                        picture = urlsplit(picture_url)
+                    except ValueError:
+                        picture = urlsplit("")
+                    if re.fullmatch(r"/api/media_player_proxy/media_player\.[a-z0-9_]+", picture.path):
                         path = picture.path + ("?" + picture.query if picture.query else "")
                         digest = hashlib.sha256((track["title"] + path).encode()).hexdigest()
                         self.track_art = (digest, path, "ha")
                         track["artwork"] = digest
-                    media = str(attrs.get("media_content_id") or "")
-                    video = urlsplit(media)
-                    if (attrs.get("media_content_type") in ("video", "movie", "tvshow", "episode")
-                            and video.scheme == "https" and video.hostname and not video.username
-                            and video.path.lower().endswith((".mp4", ".webm"))):
-                        track["video"] = media
+                    else:
+                        cover = self.cover_url(picture_url)
+                        if cover:
+                            track.pop("artwork", None)
+                            track["cover_url"] = cover
                     self.track_state = {"track": track, "available": True}
             return web.json_response(dict(self.track_state, player=self.media_player),
                                      headers={"Cache-Control": "no-store"})

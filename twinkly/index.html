@@ -38,7 +38,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
 <section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div><div class="desk-grid"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div><div class="desk-channel desk-music"><h2 id="desk-music-title"></h2>
 <div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
-<div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" hidden><video id="track-video" controls playsinline preload="none" hidden></video></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
+<div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="controls gap" id="music-setup"></div>
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <p id="active-music-style" class="status"></p>
@@ -664,7 +664,7 @@ const tvSourceText = {
 const tvSelect = byId('tv-source');
 const tvRefresh = byId('tv-refresh');
 let tvPlayers = [], tvSelected = '';
-let trackState, trackArtwork, trackVideo;
+let trackState, trackArtwork, coverFallback;
 function renderTvSource() {
   const [label, automatic, refresh] = tvSourceText[lang.value];
   byId('tv-source-label').textContent = label;
@@ -706,25 +706,25 @@ function renderTrack() {
   byId('track-label').textContent = labels[0];
   byId('track-title').textContent = track?.title || labels[trackState?.available === false ? 2 : 1];
   byId('track-byline').textContent = [track?.artist,track?.album].filter(Boolean).join(' · ');
-  const video = byId('track-video'), source = track?.video;
-  if (source !== trackVideo) {
-    trackVideo = source;
-    video.hidden = !source;
-    if (source) video.src = source;
-    else { video.removeAttribute('src'); video.load(); }
-  }
-  const image = byId('track-art'), artwork = track?.artwork;
-  image.hidden = !!source || !image.complete || !image.naturalWidth;
-  byId('track-idle').hidden = !!source || !image.hidden;
+  const image = byId('track-art');
+  const artwork = track?.artwork ? './now-playing-art?v=' + encodeURIComponent(track.artwork) : track?.cover_url;
+  coverFallback = track?.artwork ? track.cover_url : undefined;
+  image.hidden = !image.complete || !image.naturalWidth;
+  byId('track-idle').hidden = !image.hidden;
   if (artwork === trackArtwork) return;
   trackArtwork = artwork;
   image.hidden = true;
-  byId('track-idle').hidden = !!source;
-  if (artwork) image.src = './now-playing-art?v=' + encodeURIComponent(artwork);
+  byId('track-idle').hidden = false;
+  if (artwork) image.src = artwork;
   else image.removeAttribute('src');
 }
-byId('track-art').onload = () => { byId('track-art').hidden = !!trackVideo; byId('track-idle').hidden = true; };
-byId('track-art').onerror = () => { byId('track-art').hidden = true; byId('track-idle').hidden = !!trackVideo; };
+byId('track-art').onload = () => { byId('track-art').hidden = false; byId('track-idle').hidden = true; };
+byId('track-art').onerror = () => {
+  const image = byId('track-art');
+  if (coverFallback && image.src !== new URL(coverFallback).href) { image.src = coverFallback; return; }
+  image.hidden = true;
+  byId('track-idle').hidden = !!trackVideo;
+};
 async function pollTrack() {
   if (!document.hidden) {
     try { trackState = await request('now-playing'); }

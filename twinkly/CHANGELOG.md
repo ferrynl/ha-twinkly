@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.19
+
+- Toon ook YouTube-miniaturen van de officiële afbeeldingsserver naast de lokale hoesafbeeldingen.
+- Gebruik een beschikbare directe hoes als terugvaloptie als de lokale afbeelding faalt.
+- Verwijder het automatisch laden van externe videobronnen.
+
 ## 0.1.18
 
 - Kies de Home Assistant-mediaspeler rechtstreeks bij het tv-scherm.
