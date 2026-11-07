@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.6
+
+- Speel het echte effect af op de lamp vanuit de effectkiezer.
+- Bewaar herkenbare eigen namen per lamp en effect in je browser.
+- Verwijder de illustratieve patronen die geen weergave van het echte effect waren.
+
 ## 0.1.5
 
 - Kies een muziekstijl in het dashboard: Energiepuls, Kleurenspectrum, Bas en slag, Kleurgolf of Stroboscoop.

@@ -3,7 +3,7 @@
 <title>Twinkly Kerst</title>
 <style>
 *{box-sizing:border-box}body{margin:0;color:#fff7e9;background:radial-gradient(ellipse at 85% 0,#304e43 0,transparent 42%),#0b1616;font:16px system-ui}main{max-width:1140px;margin:auto;padding:clamp(16px,4vw,44px)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}h1{font:700 clamp(2.6rem,7vw,5rem) Georgia;margin:0;color:#ffe2a5}h2,h3,p{margin:0 0 12px}p{color:#c5d8d2}section,article{padding:20px;border:1px solid #3b5951;border-radius:22px;background:linear-gradient(145deg,#1c3430,#122422);box-shadow:0 12px 26px #0005}section{margin-top:18px}.eyebrow{letter-spacing:.16em;font-size:.78rem;color:#facb7e;text-transform:uppercase}.status{display:inline-block;border-radius:100px;background:#213e34;padding:8px 14px;margin:12px 0 0}#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:18px}.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select,input{font:inherit;border:1px solid #66877b;background:#213c34;color:#fff7e9;border-radius:10px;padding:8px 11px;max-width:100%}button{cursor:pointer}button:hover{background:#38584a}.primary{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.primary:hover{background:#ffdfa6}button:disabled{opacity:.55}input[type=color]{width:48px;height:40px;padding:4px}input[type=number]{width:76px}.gap{margin-top:14px}#message{margin:12px 0 0;overflow-wrap:anywhere}.effects{margin-top:12px;width:100%}.error{color:#ffb5a0;overflow-wrap:anywhere}
-.power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:10px}.effect-card{min-width:0;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card span{display:block;height:44px;margin-bottom:7px;border-radius:6px;background:var(--preview);box-shadow:inset 0 0 12px #0004}.preview-note{font-size:.82rem;margin-top:10px}
+.power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
@@ -22,7 +22,12 @@ const strings = {
  es:['Control de iluminación','Todas las luces','Encender','Apagar','Color','Brillo %','Música','Detener música','Conectar Music Assistant','Añadir IP','Buscar en la red','Procesando…','Orden procesada.','Recibiendo datos de LedFx','Esperando un efecto musical de LedFx','Conexión con la aplicación no disponible','Cargar efectos','Elige un efecto','Efecto','Película','No se encontraron efectos locales','Dispositivos encontrados','Música activada','Dirección IPv4 de Twinkly','LedFX configurado. Añade LedFx Twinkly al grupo de reproducción de Music Assistant.','Error de configuración'],
  de:['Lichtsteuerung','Alle Lichter','Ein','Aus','Farbe','Helligkeit %','Musik','Musik stoppen','Music Assistant verbinden','IP hinzufügen','Netzwerk durchsuchen','Wird ausgeführt…','Befehl verarbeitet.','LedFx-Frames werden empfangen','Warte auf einen LedFx-Musikeffekt','Verbindung zur App fehlt','Effekte laden','Effekt auswählen','Effekt','Film','Keine lokalen Effekte gefunden','Geräte gefunden','Musik aktiviert','Twinkly-IPv4-Adresse','LedFX eingerichtet. Füge LedFx Twinkly zur Wiedergabegruppe in Music Assistant hinzu.','Einrichtung fehlgeschlagen']
 };
-const previewNotes = {nl:'Voorbeeldbeelden ter illustratie',en:'Illustrative previews',es:'Vistas previas ilustrativas',de:'Illustrative Vorschaubilder'};
+const effectLabels = {
+ nl:['Probeer het echte effect op de lamp. Geef het daarna een herkenbare naam.','Afspelen op lamp','Eigen naam','Naam opslaan'],
+ en:['Play the actual effect on the light, then give it a name you recognise.','Play on light','Custom name','Save name'],
+ es:['Reproduce el efecto real en la luz y dale un nombre que reconozcas.','Reproducir en la luz','Nombre personalizado','Guardar nombre'],
+ de:['Spiele den echten Effekt am Licht ab und gib ihm einen Namen, den du wiedererkennst.','Am Licht abspielen','Eigener Name','Namen speichern']
+};
 const musicStyles = {
  nl:['Muziekstijl','Stijl toepassen','Muziekstijl ingesteld.','Energiepuls','Kleurenspectrum','Bas en slag','Kleurgolf','Stroboscoop (snelle flitsen)'],
  en:['Music style','Apply style','Music style applied.','Energy pulse','Colour spectrum','Bass and beat','Colour wave','Strobe (rapid flashes)'],
@@ -82,16 +87,33 @@ function controls(parent, id) {
 }
 function renderEffects(card) {
   card.grid.replaceChildren();
-  card.note.textContent = card.effects.length ? previewNotes[lang.value] : '';
+  const [note, play, customName, save] = effectLabels[lang.value];
+  card.note.textContent = card.effects.length ? note : '';
   for (const entry of card.effects) {
-    const name = entry.name || t(entry.kind) + ' ' + entry.id;
-    const seed = Array.from(name).reduce((sum, char) => (sum * 31 + char.codePointAt(0)) % 360, 0);
-    const tile = document.createElement('button');
+    const original = entry.name || t(entry.kind) + ' ' + entry.id;
+    const key = 'twinkly-effect:' + JSON.stringify([card.id,entry.kind,entry.id,entry.name || '']);
+    const tile = document.createElement('div');
     tile.className = 'effect-card';
-    const swatch = document.createElement('span');
-    swatch.style.setProperty('--preview', 'repeating-radial-gradient(circle at 35% 20%, hsl(' + seed + ' 95% 66%) 0 3px, hsl(' + ((seed+105)%360) + ' 75% 32%) 5px 13px)');
-    tile.append(swatch, document.createTextNode(name));
-    tile.onclick = () => perform(tile, () => run(card.id,'effect',[entry.kind,entry.id]));
+    const title = document.createElement('strong');
+    title.textContent = localStorage.getItem(key) || original;
+    const playButton = document.createElement('button');
+    playButton.textContent = play;
+    playButton.onclick = () => perform(playButton, () => run(card.id,'effect',[entry.kind,entry.id]));
+    const name = document.createElement('input');
+    name.type = 'text'; name.maxLength = 60;
+    name.placeholder = customName;
+    name.setAttribute('aria-label',customName + ' · ' + original);
+    name.value = localStorage.getItem(key) || '';
+    const saveButton = document.createElement('button');
+    saveButton.textContent = save;
+    saveButton.onclick = () => {
+      const value = name.value.trim();
+      if (value) localStorage.setItem(key,value);
+      else localStorage.removeItem(key);
+      title.textContent = value || original;
+      byId('message').textContent = t('done');
+    };
+    tile.append(title, playButton, name, saveButton);
     card.grid.append(tile);
   }
 }
