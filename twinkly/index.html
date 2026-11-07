@@ -32,29 +32,44 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .track-screen{display:flex;align-items:center;gap:12px;min-height:88px;padding:12px;margin-bottom:12px;border:1px solid #3b5e58;border-radius:12px;background:radial-gradient(ellipse at top right,#1c4038,#080f13 72%);box-shadow:inset 0 2px 7px #0009}.track-screen img{width:66px;height:66px;object-fit:cover;border-radius:6px}.track-screen p{margin:3px 0;color:#a5c4be;font-size:.83rem;overflow-wrap:anywhere}.track-screen strong{display:block;color:#b7ffe5;overflow-wrap:anywhere}.track-screen #track-label{letter-spacing:.12em;text-transform:uppercase}
 .track-tv{max-width:590px;margin-bottom:14px;padding:9px;border:1px solid #59677a;border-radius:16px;background:linear-gradient(155deg,#46515e,#181e27 45%);box-shadow:0 5px 0 #080b10,0 10px 18px #0008}.track-display{position:relative;display:grid;place-items:center;aspect-ratio:16/9;max-height:275px;background:radial-gradient(ellipse,#183830,#05090c 72%);overflow:hidden;border:1px solid #080b10;border-radius:10px}.track-display img,.track-display video{position:absolute;width:100%;height:100%;object-fit:contain}.track-display [hidden]{display:none}.track-tv .track-screen{border:0;box-shadow:none;margin:0;background:none;padding:8px 4px 2px;min-height:0}#track-idle{font-size:clamp(2rem,6vw,4rem);color:#82dabb}
 .tv-source{margin:0 0 10px}.tv-source select{max-width:100%;min-width:0}
+.workspace-header{align-items:center}.workspace-header h1{font-size:clamp(2.2rem,5vw,4rem)}.workspace-nav{display:flex;flex-wrap:wrap;gap:8px}.workspace-nav a{padding:9px 14px;border:1px solid #5d7c70;border-radius:10px;color:#e9f5ef;text-decoration:none}.workspace-nav a[aria-current=page]{background:#9debcf;color:#102921;border-color:#9debcf;font-weight:700}#message:empty{display:none}#message:not(:empty){padding:9px 12px;background:#152a24;border-radius:10px}main [hidden]{display:none!important}.desk-grid{grid-template-columns:minmax(300px,.9fr) minmax(0,1.25fr);align-items:start}.desk-stack{display:grid;gap:12px}.music-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px}.music-heading h2,.music-heading .status{margin:0}.music-heading .status{font-size:.8rem}.music-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.85fr);align-items:start;gap:12px}.track-tv{width:100%;max-width:none;margin:0}.track-display{max-height:none}.music-actions{min-width:0}.music-actions .gap:first-child{margin-top:0}.music-actions select{min-width:0;width:min(100%,260px)}.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));align-items:start;gap:14px;margin-top:18px}.settings-grid section{margin:0;min-width:0}.settings-list{display:grid;gap:8px;margin-top:12px}.settings-item{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px;border-radius:9px;background:#132521}.settings-item strong{margin-right:auto}.settings-item.effect-settings{display:block}.settings-item.effect-settings strong{display:block;margin-bottom:8px}.devices-section{padding:0;background:none;border:0;box-shadow:none}.devices-section #devices{margin-top:12px}#group-cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}.mixdesk .desk-fader{max-width:100%}
+@media(max-width:1120px){.music-grid{grid-template-columns:1fr}.track-tv{max-width:520px}}@media(max-width:760px){.desk-grid{grid-template-columns:1fr}.workspace-header{align-items:flex-start}}
 </style>
 <main>
-<header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
-<select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
-<section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div><div class="desk-grid"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div><div class="desk-channel desk-music"><h2 id="desk-music-title"></h2>
-<div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
-<div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
-<div class="controls gap" id="music-setup"></div>
-<div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
+<header class="workspace-header"><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1></div>
+<nav class="workspace-nav"><a id="nav-control" href="#bediening"></a><a id="nav-settings" href="#instellingen"></a></nav></header>
+<p id="message" role="status"></p>
+<div id="control-page">
+<section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div>
+<div class="desk-grid">
+<div class="desk-stack"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div>
+<div class="desk-channel"><h2 id="show-title"></h2>
+<div class="controls desk-fader"><label id="master-label" for="master-level"></label><input id="master-level" type="range" min="0" max="100" value="100"><output id="master-value">100%</output><button id="master-save"></button></div>
+<div class="controls gap" id="scene-pads"></div>
+</div></div>
+<div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
+<div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
+<div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <p id="active-music-style" class="status"></p>
 <div class="controls gap" id="music-preview-tools"></div>
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
-</div></div><div class="controls gap desk-scan" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
-<div class="desk-channel gap"><h2 id="show-title"></h2>
-<div class="controls desk-fader"><label id="master-label" for="master-level"></label><input id="master-level" type="range" min="0" max="100" value="100"><output id="master-value">100%</output><button id="master-save"></button></div>
-<div class="controls gap" id="scene-pads"></div>
-<form class="controls gap" id="scene-form"><input id="scene-name" maxlength="60" required><select id="scene-group"></select><select id="scene-mode"></select><button id="scene-save" type="submit"></button></form></div>
-<p id="message" role="status"></p></section>
-<section><h2 id="group-title"></h2><form id="group-form">
+</div></div></div></div></section>
+<section id="group-section" hidden><h2 id="group-title"></h2><div id="group-cards"></div></section>
+<section class="devices-section"><h2 id="device-title"></h2><div id="devices"></div></section></div>
+<div id="settings-page" hidden><div class="settings-grid">
+<section><h2 id="settings-general"></h2><select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></section>
+<section><h2 id="settings-music"></h2><div class="controls gap" id="music-setup"></div><div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
+</section>
+<section><h2 id="settings-discover"></h2><div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
+</section>
+<section><h2 id="settings-groups"></h2><form id="group-form">
 <div class="controls"><input id="group-name" maxlength="60" required><label id="silence-label" for="group-silence"></label><select id="group-silence"></select><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
-<div class="controls gap" id="group-members"></div></form><div id="group-cards"></div></section>
-<div id="devices"></div>
+<div class="controls gap" id="group-members"></div></form><div class="settings-list" id="group-management"></div></section>
+<section><h2 id="settings-scenes"></h2>
+<form class="controls gap" id="scene-form"><input id="scene-name" maxlength="60" required><select id="scene-group"></select><select id="scene-mode"></select><select id="scene-style"></select><input id="scene-level" type="number" min="0" max="100" value="100" required><button id="scene-save" type="submit"></button></form>
+<div class="settings-list" id="scene-management"></div></section>
+<section><h2 id="settings-effects"></h2><div class="settings-list" id="effect-management"></div></section></div></div>
 </main>
 <script>
 const strings = {
@@ -164,6 +179,12 @@ const trackLabels = {
  es:['Sonando ahora · Music Assistant','Esperando información de la pista','Información no disponible'],
  de:['Jetzt läuft · Music Assistant','Warte auf Titelinformationen','Titelinformationen nicht verfügbar']
 };
+const pageLabels = {
+ nl:['Bediening','Instellingen','Apparaten','Algemeen','Muziek en tv','Apparaten toevoegen','Groepen beheren','Scènes beheren','Effecten beheren'],
+ en:['Controls','Settings','Devices','General','Music and TV','Add devices','Manage groups','Manage scenes','Manage effects'],
+ es:['Controles','Ajustes','Dispositivos','General','Música y TV','Añadir dispositivos','Gestionar grupos','Gestionar escenas','Gestionar efectos'],
+ de:['Steuerung','Einstellungen','Geräte','Allgemein','Musik und TV','Geräte hinzufügen','Gruppen verwalten','Szenen verwalten','Effekte verwalten']
+};
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -241,8 +262,9 @@ async function encodeImage(file) {
 }
 function renderEffects(card) {
   card.grid.replaceChildren();
-  const [note, play, customName, save] = effectLabels[lang.value];
-  card.note.textContent = card.effects.length ? note : '';
+  card.manageGrid.replaceChildren();
+  const [, play, customName, save] = effectLabels[lang.value];
+
   for (const entry of card.effects) {
     const original = entry.name || t(entry.kind) + ' ' + entry.id;
     const key = 'twinkly-effect:' + JSON.stringify([card.id,entry.kind,entry.id,entry.name || '']);
@@ -265,13 +287,14 @@ function renderEffects(card) {
       if (value) localStorage.setItem(key,value);
       else localStorage.removeItem(key);
       title.textContent = value || original;
+      manageTitle.textContent = title.textContent;
       byId('message').textContent = t('done');
     };
     const imagePath = 'effect-image?' + new URLSearchParams({id:card.id,kind:entry.kind,index:entry.id});
     const image = document.createElement('img');
     image.className = 'effect-image'; image.alt = title.textContent; image.hidden = true;
     const remove = document.createElement('button');
-    remove.textContent = extra(8); remove.hidden = true;
+    remove.textContent = extra(8); remove.hidden = !entry.has_image;
     image.onload = () => { image.hidden = false; remove.hidden = false; };
     image.onerror = () => { image.hidden = true; remove.hidden = true; };
     const upload = document.createElement('input');
@@ -298,8 +321,13 @@ function renderEffects(card) {
       return t('done');
     });
     if (entry.has_image) image.src = './' + imagePath;
-    tile.append(title, image, playButton, name, saveButton, uploadLabel, remove);
+    tile.append(title,image,playButton);
     card.grid.append(tile);
+    const manageTile = document.createElement('div'), manageTitle = document.createElement('strong');
+    manageTile.className = 'effect-card';
+    manageTitle.textContent = title.textContent;
+    manageTile.append(manageTitle,name,saveButton,uploadLabel,remove);
+    card.manageGrid.append(manageTile);
   }
 }
 function drawLayout(card, frame = liveFrame) {
@@ -364,8 +392,9 @@ function renderGroups() {
   }
   if (signature === groupSignature) return;
   groupSignature = signature;
-  const parent = byId('group-cards');
-  parent.replaceChildren();
+  const parent = byId('group-cards'), manage = byId('group-management');
+  parent.replaceChildren(); manage.replaceChildren();
+  byId('group-section').hidden = !Object.keys(groups).length;
   for (const [id,group] of Object.entries(groups)) {
     const card = document.createElement('article'), title = document.createElement('h3');
     const info = document.createElement('p'), actions = document.createElement('div');
@@ -381,7 +410,9 @@ function renderGroups() {
       if (editingGroup === id) editGroup(null);
       return t('done');
     });
-    actions.append(edit,remove);
+    const entry = document.createElement('div'), name = document.createElement('strong');
+    entry.className = 'settings-item'; name.textContent = group.name;
+    entry.append(name,edit,remove); manage.append(entry);
     card.append(title,info,actions);
     parent.append(card);
   }
@@ -425,17 +456,27 @@ function render() {
       error.className = 'error';
       const actions = document.createElement('div'), effects = document.createElement('div');
       actions.className = 'controls'; effects.className = 'gap';
-      const grid = document.createElement('div'), note = document.createElement('p');
-      grid.className = 'effect-grid'; note.className = 'preview-note';
-      const card = {id:d.id, title, info, error, grid, note, effects:[]};
-      button(effects, 'load', async () => {
+      const grid = document.createElement('div');
+      grid.className = 'effect-grid';
+      const manage = document.createElement('div'), manageTitle = document.createElement('strong');
+      const manageGrid = document.createElement('div');
+      manage.className = 'settings-item effect-settings';
+      manageGrid.className = 'effect-grid';
+      manageTitle.textContent = d.name;
+      const card = {id:d.id, title, info, error, grid, manageGrid, manageTitle, effects:[]};
+      const loadEffects = async () => {
         const result = await request('effects?id=' + encodeURIComponent(d.id));
         if (result.error) return result.error;
         card.effects = result.effects;
         renderEffects(card);
         return card.effects.length ? t('done') : t('empty');
-      });
-      effects.append(note, grid);
+      };
+      button(effects, 'load', loadEffects);
+      manage.append(manageTitle);
+      button(manage, 'load', loadEffects);
+      manage.append(manageGrid);
+      byId('effect-management').append(manage);
+      effects.append(grid);
       const map = document.createElement('div');
       map.className = 'led-map';
       const mapInfo = document.createElement('p'), canvas = document.createElement('canvas');
@@ -484,6 +525,7 @@ function render() {
     power.on.classList.toggle("power-active", Boolean(d.mode && d.mode !== "off"));
     power.off.classList.toggle("power-active", d.mode === "off");
     title.textContent = d.name;
+    card.manageTitle.textContent = d.name;
     info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : ''].filter(Boolean).join(' · ');
     error.textContent = d.error || '';
     error.hidden = !d.error;
@@ -533,7 +575,7 @@ function updatePreviewLabels() {
 let liveFrame = [];
 let previewRunning = false;
 function previewNeeded() {
-  return !livePanel.hidden || [...cards.values()].some(card => card.layout?.points.length);
+  return !byId('control-page').hidden && (!livePanel.hidden || [...cards.values()].some(card => card.layout?.points.length));
 }
 function schedulePreview() {
   if (!previewTimer && !previewRunning && previewNeeded()) {
@@ -623,8 +665,8 @@ function renderShow() {
   const group = byId('scene-group'), current = group.value;
   group.replaceChildren(new Option(t('all'),'*'),...Object.entries(groups).map(([id,value]) => new Option(value.name,id)));
   group.value = Object.hasOwn(groups,current) ? current : '*';
-  const pads = byId('scene-pads');
-  pads.replaceChildren();
+  const pads = byId('scene-pads'), manage = byId('scene-management');
+  pads.replaceChildren(); manage.replaceChildren();
   const presets = [
     {name:showLabel(9),group:'*',style:'wavelength',level:35,mode:'music'},
     {name:showLabel(10),group:'*',style:'blade_power_plus',level:80,mode:'music'},
@@ -641,7 +683,9 @@ function renderShow() {
       remove.textContent = '×';
       remove.setAttribute('aria-label',extra(5) + ' ' + scene.name);
       remove.onclick = () => perform(remove,async () => { await request('show',{delete:id}); return t('done'); });
-      pad.append(remove);
+      const entry = document.createElement('div'), name = document.createElement('strong');
+      entry.className = 'settings-item'; name.textContent = scene.name;
+      entry.append(name,remove); manage.append(entry);
     }
     pads.append(pad);
   }
@@ -650,7 +694,7 @@ byId('scene-form').onsubmit = event => {
   event.preventDefault();
   perform(byId('scene-save'),async () => {
     await request('show',{name:byId('scene-name').value,group:byId('scene-group').value,
-      mode:byId('scene-mode').value,style:styleSelect.value,level:master.valueAsNumber});
+      mode:byId('scene-mode').value,style:byId('scene-style').value,level:byId('scene-level').valueAsNumber});
     byId('scene-name').value = '';
     return t('done');
   });
@@ -737,8 +781,21 @@ async function pollTrack() {
   }
   setTimeout(pollTrack,4000);
 }
+function showPage() {
+  const settings = location.hash === '#instellingen';
+  byId('control-page').hidden = settings;
+  byId('settings-page').hidden = !settings;
+  byId('nav-control').setAttribute('aria-current',settings ? 'false' : 'page');
+  byId('nav-settings').setAttribute('aria-current',settings ? 'page' : 'false');
+  if (!settings) schedulePreview();
+}
+window.addEventListener('hashchange',showPage);
 function translate() {
   document.documentElement.lang = lang.value;
+  ['nav-control','nav-settings','device-title','settings-general','settings-music','settings-discover','settings-groups','settings-scenes','settings-effects'].forEach((id,index) => {
+    byId(id).textContent = pageLabels[lang.value][index];
+  });
+  showPage();
   renderTrack();
   renderTvSource();
   byId('show-title').textContent = showLabel(0);
@@ -770,6 +827,11 @@ function translate() {
   styleSelect.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
   updatePreviewLabels();
   styleSelect.value = selected;
+  const sceneStyle = byId('scene-style'), prior = sceneStyle.value || selected;
+  sceneStyle.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
+  sceneStyle.value = prior;
+  sceneStyle.setAttribute('aria-label',labels[0]);
+  byId('scene-level').setAttribute('aria-label',showLabel(1));
   document.querySelectorAll('[data-text]').forEach(el => translated(el, el.dataset.text));
   document.querySelectorAll('[data-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.label)));
   for (const card of cards.values()) { renderEffects(card); drawLayout(card); drawDetails(card); }

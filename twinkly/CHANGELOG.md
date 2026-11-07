@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.21
+
+- Splits het mengpaneel in Bediening en Instellingen.
+- Groepeer de lampbediening, scènepads en muziekbediening in een compactere responsieve indeling.
+- Verplaats koppelingen, apparaatdetectie en groeps-, scène- en effectbeheer naar Instellingen.
+
 ## 0.1.20
 
 - Gebruik dezelfde lokale hoesafbeelding als de Home Assistant-mediaspelerkaart.

@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.20 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.21 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -64,3 +64,5 @@ Het **Nu speelt**-scherm toont titel, artiest en album uit de Sendspin-metadata 
 Het tv-scherm kan ook de afbeelding uit Home Assistant tonen. De app zoekt een actieve speler met dezelfde titel als LedFX. Stel bij **Configuratie** desgewenst `media_player` in op de exacte entiteit, bijvoorbeeld `media_player.woonkamer`. Het scherm toont lokale hoezen en ondersteunde YouTube-miniaturen.
 
 Gebruik **Tv-bron** bij het scherm om rechtstreeks een Home Assistant-mediaspeler te kiezen. **Automatisch** blijft de optie om de track op basis van LedFX te koppelen. De keuze wordt centraal bewaard. De instelling `media_player` dient als beginwaarde zolang je nog geen keuze in het mengpaneel hebt opgeslagen.
+
+Het mengpaneel heeft twee pagina’s. **Bediening** bevat licht, muziek, tv, scènepads, groepsbediening en apparaten. **Instellingen** bevat taal, Music Assistant, tv-bron, apparaatdetectie en beheer van groepen, scènes en effectafbeeldingen.
