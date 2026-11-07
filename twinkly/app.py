@@ -946,6 +946,7 @@ class Controller:
         app = web.Application(middlewares=[ingress_only], client_max_size=240_000)
         app.cleanup_ctx.append(self.stream)
         app.router.add_get("/", lambda _: web.FileResponse("index.html"))
+        app.router.add_get("/twinkly.svg", lambda _: web.FileResponse("twinkly.svg"))
         app.router.add_get("/status", self.status)
         app.router.add_get("/effects", self.effects)
         app.router.add_get("/layout", self.layout)
@@ -1001,7 +1002,7 @@ async def configure_ledfx(session, style=None):
     if index != audio.get("active_device_index"):
         await api("PUT", "/audio/devices", {"audio_device": index})
 
-    config = {"name": "Twinkly Kerst", "ip_address": "127.0.0.1", "port": 18490,
+    config = {"name": "Twinkly Control Center", "ip_address": "127.0.0.1", "port": 18490,
               "pixel_count": PIXELS, "destination_id": 1}
     devices = (await api("GET", "/devices"))["devices"]
     device = next((item for item in devices.values() if item["type"] == "ddp"

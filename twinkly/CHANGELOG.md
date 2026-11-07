@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.22
+
+- Hernoem de app naar Twinkly Control Center.
+- Voeg een lokaal, transparant Twinkly-beeldmerk toe aan het dashboard en het browsertabblad.
+
 ## 0.1.21
 
 - Splits het mengpaneel in Bediening en Instellingen.

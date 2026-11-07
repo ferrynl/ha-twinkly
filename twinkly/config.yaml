@@ -1,6 +1,6 @@
-name: Twinkly Kerst
+name: Twinkly Control Center
 slug: twinkly_kerst
-version: "0.1.21"
+version: "0.1.22"
 description: Lokale Twinkly-bediening met muziekeffecten via LedFx
 url: https://github.com/ferrynl/ha-twinkly
 arch:

@@ -1,22 +1,22 @@
-# Twinkly Kerst voor Home Assistant
+# Twinkly Control Center voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.21 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.22 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
 1. Open in Home Assistant **Instellingen → Apps → Appwinkel → ⋮ → Repositories**.
-2. Voeg `https://github.com/ferrynl/ha-twinkly` toe. Zoek **Twinkly Kerst**, installeer de app en start hem.
+2. Voeg `https://github.com/ferrynl/ha-twinkly` toe. Zoek **Twinkly Control Center**, installeer de app en start hem.
 3. Open de webinterface en kies **Zoeken op netwerk**. Broadcast werkt binnen hetzelfde subnet. Gebruik **IP toevoegen** bij gemiste apparaten en reserveer de adressen in DHCP.
 4. Test aan/uit, kleur en dimmen per apparaat. **Aan** herstelt de laatst gebruikte modus als die bekend is. Anders probeert de app een warme vaste kleur en daarna alternatieve apparaatmodi. Gebruik **Kleur** voor een vaste RGB-kleur. Kies **Effecten laden** op een apparaatkaart om de opgeslagen Twinkly-films en ingebouwde effecten van dat apparaat te zien. Gebruik **Afspelen op lamp** om het echte effect te zien. Je kunt per lamp herkenbare namen bewaren in je browser. Cloud- en galerie-effecten zijn beschikbaar zodra de officiële app ze als lokaal effect naar de controller heeft geschreven.
 
 ## Music Assistant en LedFx
 
-Draait LedFX met Sendspin op dezelfde Home Assistant-host? Klik in Twinkly Kerst op **Music Assistant koppelen**. De app zoekt de Sendspin-server, kiest die als actieve audiobron in LedFX en maakt zo nodig één DDP-uitgang met een starteffect aan. Voeg daarna **LedFx Twinkly** toe aan de afspeelgroep in Music Assistant. Onder **Muziekstijl** kies je een LedFX-effect voor de gedeelde uitgang. Kies **Stijl toepassen** om het effect te wisselen. De stappen hieronder zijn ook handmatig uitvoerbaar.
+Draait LedFX met Sendspin op dezelfde Home Assistant-host? Klik in Twinkly Control Center op **Music Assistant koppelen**. De app zoekt de Sendspin-server, kiest die als actieve audiobron in LedFX en maakt zo nodig één DDP-uitgang met een starteffect aan. Voeg daarna **LedFx Twinkly** toe aan de afspeelgroep in Music Assistant. Onder **Muziekstijl** kies je een LedFX-effect voor de gedeelde uitgang. Kies **Stijl toepassen** om het effect te wisselen. De stappen hieronder zijn ook handmatig uitvoerbaar.
 
 1. Installeer LedFx met Sendspin-ondersteuning die past bij je Music Assistant-versie. Zie de [Sendspin-handleiding van LedFx](https://docs.ledfx.app/en/latest/settings/sendspin.html).
 2. Voeg in LedFx onder **Settings → Features** een Sendspin-server toe. Selecteer die onder **Settings → Audio**. Zet de LedFx-speler aan in Music Assistant en voeg hem toe aan een afspeelgroep met een compatibele speaker.
-3. Maak in LedFx één **DDP**-apparaat met **120 pixels**, **RGB**, poort **18490** en als doel **127.0.0.1** als LedFx en Twinkly Kerst dezelfde host-netwerkruimte gebruiken. Stel een audio-effect in op dat DDP-apparaat.
-4. Draait LedFx op een andere host, stel dan als DDP-doel het LAN-IP van Home Assistant in. Zet in de configuratie van Twinkly Kerst `ddp_source` op het IPv4-bronadres van LedFx zoals Home Assistant het ontvangt, en herstart de app.
+3. Maak in LedFx één **DDP**-apparaat met **120 pixels**, **RGB**, poort **18490** en als doel **127.0.0.1** als LedFx en Twinkly Control Center dezelfde host-netwerkruimte gebruiken. Stel een audio-effect in op dat DDP-apparaat.
+4. Draait LedFx op een andere host, stel dan als DDP-doel het LAN-IP van Home Assistant in. Zet in de configuratie van Twinkly Control Center `ddp_source` op het IPv4-bronadres van LedFx zoals Home Assistant het ontvangt, en herstart de app.
 5. Start muziek in Music Assistant en kies **Muziek** bij één lamp of bij **Alle lampen**. De status bovenaan toont of er DDP-frames binnenkomen. **Stop muziek** probeert de voorgaande modus te herstellen. Bij wegvallende frames gebeurt dit ook. Bij stilte kan LedFx zwarte frames blijven sturen.
 
 DDP is UDP zonder authenticatie. Laat de poort binnen het lokale netwerk en gebruik een vertrouwde LedFx-bron. De webinterface loopt via Home Assistant Ingress. Gebruik bij voorkeur één app tegelijk om de modus van een lamp te wijzigen.
@@ -66,3 +66,5 @@ Het tv-scherm kan ook de afbeelding uit Home Assistant tonen. De app zoekt een a
 Gebruik **Tv-bron** bij het scherm om rechtstreeks een Home Assistant-mediaspeler te kiezen. **Automatisch** blijft de optie om de track op basis van LedFX te koppelen. De keuze wordt centraal bewaard. De instelling `media_player` dient als beginwaarde zolang je nog geen keuze in het mengpaneel hebt opgeslagen.
 
 Het mengpaneel heeft twee pagina’s. **Bediening** bevat licht, muziek, tv, scènepads, groepsbediening en apparaten. **Instellingen** bevat taal, Music Assistant, tv-bron, apparaatdetectie en beheer van groepen, scènes en effectafbeeldingen.
+
+Het Twinkly-beeldmerk is lokaal opgenomen als transparant SVG, gebaseerd op [Simple Icons](https://github.com/simple-icons/simple-icons/blob/develop/icons/twinkly.svg). Het merk is van Twinkly.
