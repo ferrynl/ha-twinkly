@@ -1,5 +1,9 @@
 # Wijzigingslogboek
 
+## 0.1.28
+
+- Importeer gewone GIPHY-deellinks en directe GIPHY-afbeeldingslinks in de lokale GIF-bibliotheek.
+
 ## 0.1.27
 
 - Verplaats de live-effectengalerij naar de mengtafel.

@@ -56,7 +56,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <canvas id="monitor-strip" width="480" height="36"></canvas>
 <div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
 <div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div id="pattern-grid"></div><details class="gap gif-library"><summary id="gif-library-title"></summary>
-<form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
+<form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
 <div id="gif-library-list" class="gap"></div></details></div></div>
 <div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
@@ -951,10 +951,24 @@ function encodeGifBytes(bytes) {
   for (let offset=0; offset<bytes.length; offset+=8192) binary += String.fromCharCode(...bytes.subarray(offset,offset+8192));
   return btoa(binary);
 }
+function giphyId(url) {
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
+  if (['giphy.com','www.giphy.com'].includes(url.hostname)) {
+    const match = /^\/(?:gifs|stickers|embed)\/([A-Za-z0-9_-]+)\/?$/.exec(url.pathname);
+    const id = match?.[1].split('-').at(-1);
+    return /^[A-Za-z0-9]{3,40}$/.test(id || '') ? id : null;
+  }
+  if (/^media\d*\.giphy\.com$/.test(url.hostname)) {
+    return /^\/media\/([A-Za-z0-9]{3,40})\//.exec(url.pathname)?.[1] || null;
+  }
+  return null;
+}
 async function importGif() {
   const labels = gifLabels[lang.value];
   let url;
   try { url = new URL(byId('gif-url').value.trim()); } catch { throw Error(labels[10]); }
+  const giphy = giphyId(url);
+  if (giphy) return {giphy, fallbackName:'GIPHY ' + giphy};
   if (url.protocol !== 'https:' || url.username || url.password || url.port ||
       !/^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i.test(url.hostname) ||
       /\.(local|lan|internal|localhost|home|test|invalid)$/i.test(url.hostname)) throw Error(labels[10]);
@@ -974,7 +988,7 @@ async function importGif() {
       bytes.set(value,length); length += value.length;
     }
   } finally { await reader.cancel(); }
-  return encodeGifBytes(bytes.subarray(0,length));
+  return {image:encodeGifBytes(bytes.subarray(0,length)), fallbackName:'GIF'};
 }
 byId('gif-form').onsubmit = event => event.preventDefault();
 for (const [id, payload] of [
@@ -983,14 +997,15 @@ for (const [id, payload] of [
     if (!file || file.size > gifLimit) throw Error(gifLabels[lang.value][8]);
     return {image:encodeGifBytes(new Uint8Array(await file.arrayBuffer()))};
   }],
-  ['gif-import-button', async () => ({image:await importGif()})],
+  ['gif-import-button', importGif],
   ['gif-create-button', async () => ({pattern:byId('gif-pattern').value})]
 ]) {
   const el = byId(id);
   el.onclick = () => {
-    if (!byId('gif-name').reportValidity()) return;
+    if (id !== 'gif-import-button' && !byId('gif-name').reportValidity()) return;
     perform(el,async () => {
-      await request('gifs',{name:byId('gif-name').value.trim(),...await payload()});
+      const {fallbackName,...data} = await payload();
+      await request('gifs',{name:byId('gif-name').value.trim() || fallbackName,...data});
       await loadGifLibrary();
       return t('done');
     });

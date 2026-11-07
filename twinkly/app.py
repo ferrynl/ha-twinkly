@@ -1020,6 +1020,29 @@ class Controller:
                    for path in sorted(GIF_LIBRARY.glob("*.gif")) if GIF_ID.fullmatch(path.stem)]
         return web.json_response({"gifs": entries}, headers={"Cache-Control": "no-store"})
 
+    async def download_giphy(self, gif_id):
+        if not isinstance(gif_id, str) or not re.fullmatch(r"[A-Za-z0-9]{3,40}", gif_id):
+            raise ValueError("Invalid GIPHY ID")
+        async with ClientSession(timeout=ClientTimeout(total=8)) as session:
+            for rendition in ("200w.gif", "giphy-preview.gif", "giphy.gif"):
+                url = f"https://media1.giphy.com/media/{gif_id}/{rendition}"
+                async with session.get(url, allow_redirects=False) as response:
+                    if response.status != 200 or response.content_type != "image/gif":
+                        continue
+                    if response.content_length and response.content_length > GIF_LIMIT:
+                        continue
+                    raw = bytearray()
+                    async for chunk in response.content.iter_chunked(32768):
+                        raw.extend(chunk)
+                        if len(raw) > GIF_LIMIT:
+                            break
+                    try:
+                        decoded = await asyncio.to_thread(self.decode_gif, raw)
+                    except (OSError, ValueError, Image.DecompressionBombError):
+                        continue
+                    return raw, decoded
+        raise ValueError("GIPHY GIF unavailable or exceeds the library limits")
+
     async def save_gif(self, request):
         data = await request.json()
         if "delete" in data:
@@ -1038,13 +1061,16 @@ class Controller:
         slug = re.sub(r"[^a-zA-Z0-9-]+", "_", name).strip("_")[:48] or "GIF"
         pattern = data.get("pattern")
         try:
-            if isinstance(pattern, str) and pattern in PATTERN_PALETTES:
-                frames = [live_pattern(pattern, index, 10) for index in range(30)]
-                raw = await asyncio.to_thread(self.encode_gif, frames)
+            if "giphy" in data:
+                raw, decoded = await self.download_giphy(data["giphy"])
             else:
-                raw = base64.b64decode(data.get("image", ""), validate=True)
-            decoded = await asyncio.to_thread(self.decode_gif, raw)
-        except (ValueError, OSError, TypeError, Image.DecompressionBombError) as exc:
+                if isinstance(pattern, str) and pattern in PATTERN_PALETTES:
+                    frames = [live_pattern(pattern, index, 10) for index in range(30)]
+                    raw = await asyncio.to_thread(self.encode_gif, frames)
+                else:
+                    raw = base64.b64decode(data.get("image", ""), validate=True)
+                decoded = await asyncio.to_thread(self.decode_gif, raw)
+        except (ClientError, TimeoutError, ValueError, OSError, TypeError, Image.DecompressionBombError) as exc:
             raise web.HTTPBadRequest(text="Invalid GIF, or limits exceeded") from exc
         gif_id = hashlib.sha256(raw).hexdigest()[:12] + "-" + slug
         async with self.gif_library_lock:
