@@ -350,6 +350,11 @@ class Controller:
                              if MUSIC_STATE.is_file() else None)
         self.gif_capture = asyncio.Lock()
         self.photo_lock = asyncio.Lock()
+        self.track_lock = asyncio.Lock()
+        self.track_until = 0.0
+        self.track_state = {'track': None, 'available': False}
+        self.track_art = None
+        self.track_art_cache = None
         self.probe = asyncio.Semaphore(6)
         if DATA.exists():
             for row in json.loads(DATA.read_text()):
@@ -693,6 +698,62 @@ class Controller:
                    for entry in device.effects] if ok else []
         return web.json_response({"effects": catalog, "error": None if ok else device.error})
 
+    async def now_playing(self, request):
+        async with self.track_lock:
+            now = time.monotonic()
+            if now >= self.track_until:
+                self.track_until = now + 3
+                self.track_state = {"track": None, "available": False}
+                self.track_art = None
+                try:
+                    async with ClientSession(timeout=ClientTimeout(total=2)) as session:
+                        async with session.get("http://127.0.0.1:8888/api/now-playing",
+                                               allow_redirects=False) as response:
+                            response.raise_for_status()
+                            data = await response.json()
+                    self.track_state["available"] = True
+                    metadata = data.get("metadata") or {}
+                    if metadata.get("source_id") == "sendspin" and metadata.get("title"):
+                        track = {key: str(metadata.get(key) or "")[:512]
+                                 for key in ("title", "artist", "album")}
+                        artwork = data.get("artwork") or {}
+                        path = artwork.get("cache_key") or ""
+                        digest = artwork.get("hash") or ""
+                        if (re.fullmatch(r"now_playing/now_playing\.(jpg|jpeg|png|webp|gif)", path)
+                                and re.fullmatch(r"[a-fA-F0-9]{8,128}", digest)):
+                            self.track_art = (digest, path)
+                            track["artwork"] = digest
+                        self.track_state["track"] = track
+                except (ClientError, TimeoutError, ValueError):
+                    self.track_until = now + 10
+            return web.json_response(self.track_state, headers={"Cache-Control": "no-store"})
+
+    async def now_playing_art(self, request):
+        async with self.track_lock:
+            if self.track_art is None or request.query.get("v") != self.track_art[0]:
+                raise web.HTTPNotFound()
+            if self.track_art_cache is None or self.track_art_cache[0] != self.track_art:
+                try:
+                    async with ClientSession(timeout=ClientTimeout(total=3)) as session:
+                        async with session.get("http://127.0.0.1:8888/api/assets/download",
+                                               params={"path": self.track_art[1]}, allow_redirects=False) as response:
+                            if response.status != 200 or response.content_type not in (
+                                "image/jpeg", "image/png", "image/webp", "image/gif"
+                            ):
+                                raise web.HTTPNotFound()
+                            content = bytearray()
+                            async for chunk in response.content.iter_chunked(65536):
+                                content.extend(chunk)
+                                if len(content) > 2_000_000:
+                                    raise web.HTTPNotFound()
+                            self.track_art_cache = (self.track_art, bytes(content), response.content_type)
+                except (ClientError, TimeoutError) as exc:
+                    raise web.HTTPBadGateway() from exc
+            _, content, mime = self.track_art_cache
+            return web.Response(body=content, content_type=mime,
+                                headers={"Cache-Control": "private, max-age=86400",
+                                         "X-Content-Type-Options": "nosniff"})
+
     def music_frame(self):
         if time.monotonic() - self.ddp.received < 1.5:
             return self.ddp.frame
@@ -769,6 +830,8 @@ class Controller:
         app.router.add_post("/effect-image", self.effect_image)
         app.router.add_post("/setup-music", self.setup_music)
         app.router.add_get("/music-preview", self.music_preview)
+        app.router.add_get("/now-playing", self.now_playing)
+        app.router.add_get("/now-playing-art", self.now_playing_art)
         app.router.add_post("/music-gif", self.music_gif)
         return app
 

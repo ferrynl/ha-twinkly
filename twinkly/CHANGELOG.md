@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.16
+
+- Toon de huidige Music Assistant-track in de mengtafel via LedFX Sendspin-metadata.
+- Toon de albumhoes wanneer LedFX een lokale versie beschikbaar stelt.
+
 ## 0.1.15
 
 - Voeg scènepads en eigen scènes per groep toe.
