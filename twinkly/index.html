@@ -15,6 +15,8 @@ input[type=number]{width:72px} #message{min-height:1.5em;overflow-wrap:anywhere}
 <main><h1>Twinkly Kerst</h1><p id="audio">Status laden.</p>
 <section><h2>Alle lampen</h2><p>Bedien alle gevonden Twinkly's tegelijk.</p>
 <div class="controls" id="all"></div><hr>
+<div class="controls" id="music-setup"></div>
+<p>Deze koppeling kiest Music Assistant als audiobron voor LedFX.</p>
 <div class="controls">
 <input id="ip" placeholder="192.168.1.50" aria-label="Twinkly IPv4-adres"></div>
 <p id="message" role="status"></p></section><div id="devices"></div></main>
@@ -79,6 +81,8 @@ async function refresh() {
   }
 }
 controls(byId('all'), '*');
+button(byId('music-setup'), 'Music Assistant koppelen', async () =>
+  (await request('setup-music', {})).message);
 async function register(ip) {
   const data = await request('register', {ip});
   return data.added + ' apparaat/apparaten gevonden. ' + data.errors.join(' � ');

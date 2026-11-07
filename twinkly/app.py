@@ -10,7 +10,7 @@ import struct
 import time
 from pathlib import Path
 
-from aiohttp import web
+from aiohttp import ClientError, ClientSession, ClientTimeout, web
 from xled import HighControlInterface
 
 DATA = Path("/data/devices.json")
@@ -155,6 +155,7 @@ class Controller:
         self.devices = {}
         self.music = set()
         self.edit = asyncio.Lock()
+        self.music_setup = asyncio.Lock()
         self.probe = asyncio.Semaphore(6)
         if DATA.exists():
             for row in json.loads(DATA.read_text()):
@@ -290,6 +291,20 @@ class Controller:
                 for key, ok in zip(keys, results) if not ok
             ]})
 
+    async def setup_music(self, request):
+        if self.source != "127.0.0.1":
+            return web.json_response({"message": "Automatische koppeling vereist LedFX op dezelfde Home Assistant-host en ddp_source 127.0.0.1."})
+        async with self.music_setup:
+            try:
+                async with ClientSession(base_url="http://127.0.0.1:8888", timeout=ClientTimeout(total=10)) as session:
+                    await configure_ledfx(session)
+            except (ClientError, TimeoutError, ValueError, KeyError) as exc:
+                LOG.warning("LedFX setup: %s", exc)
+                return web.json_response({"message": f"LedFX koppelen mislukt: {exc or type(exc).__name__}"})
+        return web.json_response({
+            "message": "LedFX ingesteld. Voeg LedFx Twinkly toe aan de afspeelgroep in Music Assistant en start muziek."
+        })
+
     def app(self):
         self.edit_scan = asyncio.Lock()
         app = web.Application(middlewares=[ingress_only], client_max_size=8192)
@@ -298,7 +313,56 @@ class Controller:
         app.router.add_get("/status", self.status)
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
+        app.router.add_post("/setup-music", self.setup_music)
         return app
+
+
+async def configure_ledfx(session):
+    async def api(method, path, body=None):
+        async with session.request(method, "/api" + path, json=body, allow_redirects=False) as response:
+            data = await response.json()
+            if response.status >= 300 or data.get("status") in ("failed", "error"):
+                reason = data.get("payload", {}).get("reason", f"HTTP {response.status}")
+                raise ValueError(f"{path}: {reason}")
+            return data
+
+    info = await api("GET", "/info")
+    if not info.get("features", {}).get("sendspin"):
+        raise ValueError("Deze LedFX-engine biedt geen Sendspin.")
+
+    server_id = "twinkly-music"
+    servers = (await api("GET", "/sendspin/servers"))["servers"]
+    if server_id not in servers:
+        scan = await api("GET", "/sendspin/discover?timeout=3")
+        found = scan.get("data", {}).get("servers", scan.get("servers", []))
+        urls = {server["server_url"] for server in found}
+        if len(urls) > 1:
+            raise ValueError("Meerdere Sendspin-servers gevonden. Kies er één in LedFX.")
+        server_url = next(iter(urls), "ws://127.0.0.1:8927/sendspin")
+        await api("POST", "/sendspin/servers", {
+            "id": server_id, "server_url": server_url, "client_name": "LedFx Twinkly"
+        })
+
+    audio = await api("GET", "/audio/devices")
+    index = next((int(key) for key, name in audio["devices"].items()
+                  if name == f"SENDSPIN: {server_id}"), None)
+    if index is None:
+        raise ValueError("De Sendspin-bron verschijnt niet in de LedFX-audiolijst.")
+    if index != audio.get("active_device_index"):
+        await api("PUT", "/audio/devices", {"audio_device": index})
+
+    config = {"name": "Twinkly Kerst", "ip_address": "127.0.0.1", "port": 18490,
+              "pixel_count": PIXELS, "destination_id": 1}
+    devices = (await api("GET", "/devices"))["devices"]
+    device = next((item for item in devices.values() if item["type"] == "ddp"
+                   and all(item["config"].get(key) == value
+                           for key, value in config.items() if key != "name")), None)
+    if device is None:
+        device = (await api("POST", "/devices", {"type": "ddp", "config": config}))["device"]
+
+    path = f"/virtuals/{device['id']}/effects"
+    if not (await api("GET", path)).get("effect"):
+        await api("POST", path, {"type": "energy", "config": {}})
 
 
 @web.middleware
