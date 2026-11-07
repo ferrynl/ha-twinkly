@@ -4,6 +4,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;color:#fff7e9;background:radial-gradient(ellipse at 85% 0,#304e43 0,transparent 42%),#0b1616;font:16px system-ui}main{max-width:1140px;margin:auto;padding:clamp(16px,4vw,44px)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}h1{font:700 clamp(2.6rem,7vw,5rem) Georgia;margin:0;color:#ffe2a5}h2,h3,p{margin:0 0 12px}p{color:#c5d8d2}section,article{padding:20px;border:1px solid #3b5951;border-radius:22px;background:linear-gradient(145deg,#1c3430,#122422);box-shadow:0 12px 26px #0005}section{margin-top:18px}.eyebrow{letter-spacing:.16em;font-size:.78rem;color:#facb7e;text-transform:uppercase}.status{display:inline-block;border-radius:100px;background:#213e34;padding:8px 14px;margin:12px 0 0}#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:18px}.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select,input{font:inherit;border:1px solid #66877b;background:#213c34;color:#fff7e9;border-radius:10px;padding:8px 11px;max-width:100%}button{cursor:pointer}button:hover{background:#38584a}.primary{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.primary:hover{background:#ffdfa6}button:disabled{opacity:.55}input[type=color]{width:48px;height:40px;padding:4px}input[type=number]{width:76px}.gap{margin-top:14px}#message{margin:12px 0 0;overflow-wrap:anywhere}.effects{margin-top:12px;width:100%}.error{color:#ffb5a0;overflow-wrap:anywhere}
 .power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
+.led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
@@ -35,6 +36,12 @@ const musicStyles = {
  de:['Musikstil','Stil anwenden','Musikstil angewendet.','Energiepuls','Farbspektrum','Bass und Takt','Farbwelle','Stroboskop (schnelle Blitze)']
 };
 const styleIds = ['energy','spectrum','power','wavelength','strobe'];
+const layoutLabels = {
+ nl:['Ledkaart laden','Geen ledposities ontvangen','ledposities','Berekende indeling','Draai ledkaart'],
+ en:['Load LED map','No LED positions received','LED positions','Generated layout','Rotate LED map'],
+ es:['Cargar mapa LED','No se recibieron posiciones LED','posiciones LED','Diseño generado','Girar mapa LED'],
+ de:['LED-Karte laden','Keine LED-Positionen empfangen','LED-Positionen','Berechnetes Layout','LED-Karte drehen']
+};
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -117,6 +124,35 @@ function renderEffects(card) {
     card.grid.append(tile);
   }
 }
+function drawLayout(card) {
+  const [load, empty, positions, synthetic, rotate] = layoutLabels[lang.value];
+  card.mapButton.textContent = load;
+  if (!card.layout) return;
+  const {points, source, synthesized} = card.layout;
+  card.mapInfo.textContent = points.length
+    ? [points.length + ' ' + positions, source, synthesized ? synthetic : ''].filter(Boolean).join(' · ')
+    : empty;
+  card.canvas.hidden = !points.length;
+  card.rotation.hidden = source !== '3d' || !points.length;
+  card.rotation.setAttribute('aria-label',rotate);
+  if (!points.length) return;
+  const ctx = card.canvas.getContext('2d');
+  const {width, height} = card.canvas;
+  ctx.clearRect(0,0,width,height);
+  const angle = source === '3d' ? Number(card.rotation.value) * Math.PI / 180 : 0;
+  const projected = points.map(([id,x,y,z]) => [id,x*Math.cos(angle)+z*Math.sin(angle),y]);
+  const xs = projected.map(p => p[1]), ys = projected.map(p => p[2]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const scale = Math.min((width-30)/(maxX-minX || 1),(height-30)/(maxY-minY || 1));
+  const radius = Math.max(1.7,Math.min(5,100/Math.sqrt(points.length)));
+  for (const [id,x,y] of projected) {
+    ctx.fillStyle = 'hsl(' + (40 + 145*id/Math.max(1,points.length-1)) + ' 75% 65%)';
+    ctx.beginPath();
+    ctx.arc(width/2 + (x-(minX+maxX)/2)*scale,height/2 - (y-(minY+maxY)/2)*scale,radius,0,Math.PI*2);
+    ctx.fill();
+  }
+}
 function render() {
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
   for (const d of status?.devices || []) {
@@ -137,7 +173,27 @@ function render() {
         return card.effects.length ? t('done') : t('empty');
       });
       effects.append(note, grid);
-      article.append(title, info, error, actions, effects);
+      const map = document.createElement('div');
+      map.className = 'led-map';
+      const mapInfo = document.createElement('p'), canvas = document.createElement('canvas');
+      canvas.width = 560; canvas.height = 320; canvas.hidden = true;
+      const rotation = document.createElement('input');
+      rotation.type = 'range'; rotation.min = -180; rotation.max = 180; rotation.value = 0;
+      rotation.hidden = true;
+      Object.assign(card,{mapInfo,canvas,rotation});
+      const mapButton = document.createElement('button');
+      card.mapButton = mapButton;
+      mapButton.onclick = () => perform(mapButton, async () => {
+        const result = await request('layout?id=' + encodeURIComponent(d.id));
+        if (result.error) return result.error;
+        card.layout = result.layout;
+        drawLayout(card);
+        return t('done');
+      });
+      rotation.oninput = () => drawLayout(card);
+      map.append(mapButton,mapInfo,canvas,rotation);
+      drawLayout(card);
+      article.append(title, info, error, actions, effects, map);
       byId('devices').append(article);
       card.power = controls(actions, d.id);
       cards.set(d.id, card);
@@ -181,7 +237,7 @@ function translate() {
   styleSelect.value = selected;
   document.querySelectorAll('[data-text]').forEach(el => translated(el, el.dataset.text));
   document.querySelectorAll('[data-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.label)));
-  for (const card of cards.values()) renderEffects(card);
+  for (const card of cards.values()) { renderEffects(card); drawLayout(card); }
   byId('message').textContent = '';
   render();
 }

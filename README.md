@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.6 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.7 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -29,7 +29,7 @@ DDP is UDP zonder authenticatie. Laat de poort binnen het lokale netwerk en gebr
 - Tot acht gelijktijdige apparaatoperaties. Bij een netwerkfout wacht de lamp vijf seconden voordat ze weer frames probeert te verwerken. De overige lampen houden hun eigen uitzendlus.
 - Gedeelde animatie over maximaal 40 geregistreerde controllers, met 20 als beoogde opstelling. Praktische framerate hangt af van wifi, firmware en de lengte van de strings.
 
-De app verdeelt hetzelfde effect over de ledvolgorde per controller. Ruimtelijke 2D/3D-mapping, Twinkly-groepsbeheer en de Twinkly Music-dongle vallen buiten deze proefversie.
+De app verdeelt hetzelfde effect over de ledvolgorde per controller. Via **Ledkaart laden** bekijk je de door de controller opgeslagen 2D- of 3D-ledposities. Een 3D-kaart kan worden gedraaid. De kaart is alleen-lezen. Twinkly-groepsbeheer en de Twinkly Music-dongle vallen buiten deze proefversie.
 
 ## Als zoeken of bedienen niet werkt
 

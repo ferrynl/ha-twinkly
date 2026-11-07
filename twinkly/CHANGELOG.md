@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.7
+
+- Lees per controller de opgeslagen ledposities uit en toon die in een ledkaart.
+- Draai 3D-kaarten en herken door de controller berekende layouts.
+- Hergebruik ledposities twee minuten uit de cache.
+
 ## 0.1.6
 
 - Speel het echte effect af op de lamp vanuit de effectkiezer.

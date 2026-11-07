@@ -1,5 +1,6 @@
 import asyncio
 import colorsys
+import math
 from requests.exceptions import HTTPError
 from xled.exceptions import ApplicationError
 import functools
@@ -92,6 +93,8 @@ class Device:
         self.mode_check = 0.0
         self.effects = []
         self.effects_until = 0.0
+        self.layout = None
+        self.layout_until = 0.0
         self.rt_check = 0.0
         self.retry = 0.0
         self.error = None
@@ -147,6 +150,21 @@ class Device:
                 continue
         self.color((255, 190, 110))
         self.last_mode = "color"
+
+    def load_layout(self):
+        if time.monotonic() < self.layout_until:
+            return
+        data = self.api("led/layout/full")
+        points = []
+        for index, point in enumerate((data.get("coordinates") or [])[:4096]):
+            if not isinstance(point, dict):
+                continue
+            coords = [point.get(axis, 0 if axis == "z" else None) for axis in ("x", "y", "z")]
+            if all(type(value) in (int, float) and math.isfinite(value) for value in coords):
+                points.append([index, *coords])
+        self.layout = {"points": points, "source": data.get("source"),
+                       "synthesized": data.get("synthesized") is True}
+        self.layout_until = time.monotonic() + 120
 
     def load_effects(self):
         if time.monotonic() < self.effects_until:
@@ -393,6 +411,14 @@ class Controller:
                 for key, ok in zip(keys, results) if not ok
             ]})
 
+    async def layout(self, request):
+        device = self.devices.get(request.query.get("id"))
+        if device is None:
+            raise web.HTTPNotFound()
+        ok = await device.run(device.load_layout)
+        return web.json_response({"layout": device.layout if ok else None,
+                                  "error": None if ok else device.error})
+
     async def effects(self, request):
         device = self.devices.get(request.query.get("id"))
         if device is None:
@@ -426,6 +452,7 @@ class Controller:
         app.router.add_get("/", lambda _: web.FileResponse("index.html"))
         app.router.add_get("/status", self.status)
         app.router.add_get("/effects", self.effects)
+        app.router.add_get("/layout", self.layout)
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
         app.router.add_post("/setup-music", self.setup_music)
