@@ -87,6 +87,8 @@ class Device:
         self.client = self.connect()
         self.restore = None
         self.last_mode = None
+        self.mode = None
+        self.mode_check = 0.0
         self.effects = []
         self.effects_until = 0.0
         self.rt_check = 0.0
@@ -102,18 +104,31 @@ class Device:
 
     def api(self, path, payload=None):
         session = self.client.session
-        response = session.get(path) if payload is None else session.post(path, json=payload)
+        try:
+            response = session.get(path) if payload is None else session.post(path, json=payload)
+        except AssertionError as exc:
+            raise ValueError(f'{path}: XLED kon de sessie of het antwoord niet valideren') from exc
         response.raise_for_status()
         data = response.json()
         if data.get("code") != 1000:
             raise ApplicationError(f"{path}: Twinkly code {data.get('code')}", response=response)
         return data
 
+    def read_mode(self):
+        self.mode = self.api("led/mode").get("mode")
+        self.mode_check = time.monotonic() + 30
+        return self.mode
+
+    def set_mode(self, mode):
+        self.api("led/mode", {"mode": mode})
+        self.mode = mode
+        self.mode_check = time.monotonic() + 30
+
     def color(self, rgb):
         hue, saturation, value = colorsys.rgb_to_hsv(*(channel / 255 for channel in rgb))
         self.api("led/color", {"hue": round(hue * 360) % 360,
                                "saturation": round(saturation * 255), "value": round(value * 255)})
-        self.client.set_mode("color").raise_for_status()
+        self.set_mode("color")
 
     def turn_on(self):
         for mode in dict.fromkeys((self.last_mode, "color", "demo", "effect", "playlist", "movie")):
@@ -124,9 +139,9 @@ class Device:
                     self.color((255, 190, 110))
                     self.last_mode = mode
                     return
-                if self.client.set_mode(mode).ok:
-                    self.last_mode = mode
-                    return
+                self.set_mode(mode)
+                self.last_mode = mode
+                return
             except (ApplicationError, HTTPError):
                 continue
         self.color((255, 190, 110))
@@ -157,7 +172,7 @@ class Device:
     def command(self, action, value):
         if action == "stop":
             if self.restore is not None:
-                self.client.set_mode(self.restore).raise_for_status()
+                self.set_mode(self.restore)
                 self.restore = None
             return
         if action == "music":
@@ -172,7 +187,7 @@ class Device:
                     self.last_mode = mode
             except (HTTPError, ApplicationError):
                 pass
-            self.client.turn_off().raise_for_status()
+            self.set_mode("off")
         elif action == "color":
             self.color(value)
             self.last_mode = "color"
@@ -187,7 +202,7 @@ class Device:
                     self.api("led/movies/current", {"id": index})
             else:
                 self.api("led/effects/current", {"effect_id": index})
-            self.client.set_mode(kind).raise_for_status()
+            self.set_mode(kind)
             self.last_mode = kind
         elif action == "brightness":
             self.client.set_brightness(value).raise_for_status()
@@ -195,13 +210,11 @@ class Device:
     def send(self, frame):
         now = time.monotonic()
         if now >= self.rt_check:
-            response = self.client.get_mode()
-            response.raise_for_status()
-            mode = response["mode"]
+            mode = self.read_mode()
             if self.restore is None:
                 self.restore = mode if mode != "rt" else "off"
             if mode != "rt":
-                self.client.set_mode("rt").raise_for_status()
+                self.set_mode("rt")
             self.rt_check = now + 2
         # RGBW controllers use white first on the realtime wire.
         white = b"\0" if self.row["profile"] == "RGBW" else b""
@@ -291,6 +304,10 @@ class Controller:
                 elif device.restore is not None:
                     await device.run(device.command, "stop", None)
                     device.rt_check = 0
+                elif now >= device.mode_check:
+                    device.mode_check = now + 30
+                    if not await device.run(device.read_mode):
+                        device.mode = None
             await asyncio.sleep(1 / self.fps if active else 0.2)
 
     async def stream(self, app):
@@ -326,7 +343,7 @@ class Controller:
     async def status(self, request):
         return web.json_response({
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
-            "devices": [dict(d.row, music=k in self.music, error=d.error)
+            "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error)
                         for k, d in self.devices.items()],
         })
 
