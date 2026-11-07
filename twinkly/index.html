@@ -2,28 +2,32 @@
 <html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Twinkly Kerst</title>
 <style>
-*{box-sizing:border-box} body{font:16px system-ui;background:#0a1714;color:#f3eee3;margin:0}
-main{max-width:1100px;margin:auto;padding:clamp(14px,4vw,40px)}
-h1{font-size:clamp(2rem,6vw,4rem);margin:0;color:#f7d591}
-p{color:#c8dbd3} section,article{background:#152a24;border:1px solid #335347;border-radius:18px;padding:18px}
-#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,305px),1fr));gap:14px;margin-top:14px}
-button,input{font:inherit;background:#233d34;border:1px solid #6b897d;border-radius:8px;color:white;padding:8px}
-button{cursor:pointer} button:disabled{opacity:.5} button:hover{background:#38574a}
-.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center} input[type=color]{height:40px;width:48px}
-input[type=number]{width:72px} #message{min-height:1.5em;overflow-wrap:anywhere} h2,h3{margin:0}
+*{box-sizing:border-box}body{margin:0;color:#fff7e9;background:radial-gradient(ellipse at 85% 0,#304e43 0,transparent 42%),#0b1616;font:16px system-ui}main{max-width:1140px;margin:auto;padding:clamp(16px,4vw,44px)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}h1{font:700 clamp(2.6rem,7vw,5rem) Georgia;margin:0;color:#ffe2a5}h2,h3,p{margin:0 0 12px}p{color:#c5d8d2}section,article{padding:20px;border:1px solid #3b5951;border-radius:22px;background:linear-gradient(145deg,#1c3430,#122422);box-shadow:0 12px 26px #0005}section{margin-top:18px}.eyebrow{letter-spacing:.16em;font-size:.78rem;color:#facb7e;text-transform:uppercase}.status{display:inline-block;border-radius:100px;background:#213e34;padding:8px 14px;margin:12px 0 0}#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:18px}.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select,input{font:inherit;border:1px solid #66877b;background:#213c34;color:#fff7e9;border-radius:10px;padding:8px 11px;max-width:100%}button{cursor:pointer}button:hover{background:#38584a}.primary{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.primary:hover{background:#ffdfa6}button:disabled{opacity:.55}input[type=color]{width:48px;height:40px;padding:4px}input[type=number]{width:76px}.gap{margin-top:14px}#message{margin:12px 0 0;overflow-wrap:anywhere}.effects{margin-top:12px;width:100%}.error{color:#ffb5a0;overflow-wrap:anywhere}
 </style>
-<main><h1>Twinkly Kerst</h1><p id="audio">Status laden.</p>
-<section><h2>Alle lampen</h2><p>Bedien alle gevonden Twinkly's tegelijk.</p>
-<div class="controls" id="all"></div><hr>
-<div class="controls" id="music-setup"></div>
-<p>Deze koppeling kiest Music Assistant als audiobron voor LedFX.</p>
-<div class="controls">
-<input id="ip" placeholder="192.168.1.50" aria-label="Twinkly IPv4-adres"></div>
-<p id="message" role="status"></p></section><div id="devices"></div></main>
+<main>
+<header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
+<select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
+<section><h2 data-text="all"></h2><div class="controls" id="all"></div>
+<div class="controls gap" id="music-setup"></div>
+<div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
+<p id="message" role="status"></p></section>
+<div id="devices"></div>
+</main>
 <script>
+const strings = {
+ nl:['Lichtbediening','Alle lampen','Aan','Uit','Kleur','Helderheid %','Muziek','Stop muziek','Music Assistant koppelen','IP toevoegen','Zoeken op netwerk','Bezig…','Opdracht verwerkt.','LedFx-frames worden ontvangen','Wacht op LedFx-muziekeffect','Verbinding met de add-on ontbreekt','Effecten laden','Kies een effect','Effect','Film','Geen lokale effecten gevonden','Apparaten gevonden','Muziek aan','Twinkly IPv4-adres','LedFX ingesteld. Voeg LedFx Twinkly toe aan je Music Assistant-afspeelgroep.','Koppeling mislukt'],
+ en:['Lighting controls','All lights','On','Off','Colour','Brightness %','Music','Stop music','Connect Music Assistant','Add IP','Scan network','Working…','Command processed.','Receiving LedFx frames','Waiting for a LedFx music effect','Add-on connection unavailable','Load effects','Choose an effect','Effect','Movie','No local effects found','Devices found','Music enabled','Twinkly IPv4 address','LedFX configured. Add LedFx Twinkly to your Music Assistant playback group.','Setup failed'],
+ es:['Control de iluminación','Todas las luces','Encender','Apagar','Color','Brillo %','Música','Detener música','Conectar Music Assistant','Añadir IP','Buscar en la red','Procesando…','Orden procesada.','Recibiendo datos de LedFx','Esperando un efecto musical de LedFx','Conexión con la aplicación no disponible','Cargar efectos','Elige un efecto','Efecto','Película','No se encontraron efectos locales','Dispositivos encontrados','Música activada','Dirección IPv4 de Twinkly','LedFX configurado. Añade LedFx Twinkly al grupo de reproducción de Music Assistant.','Error de configuración'],
+ de:['Lichtsteuerung','Alle Lichter','Ein','Aus','Farbe','Helligkeit %','Musik','Musik stoppen','Music Assistant verbinden','IP hinzufügen','Netzwerk durchsuchen','Wird ausgeführt…','Befehl verarbeitet.','LedFx-Frames werden empfangen','Warte auf einen LedFx-Musikeffekt','Verbindung zur App fehlt','Effekte laden','Effekt auswählen','Effekt','Film','Keine lokalen Effekte gefunden','Geräte gefunden','Musik aktiviert','Twinkly-IPv4-Adresse','LedFX eingerichtet. Füge LedFx Twinkly zur Wiedergabegruppe in Music Assistant hinzu.','Einrichtung fehlgeschlagen']
+};
+const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
-let busy = false;
+const lang = byId('language');
+lang.value = localStorage.getItem('twinkly-language') || 'nl';
+if (!lang.value) lang.value = 'nl';
+const t = key => strings[lang.value][keys.indexOf(key)];
+let busy = false, status;
 async function request(path, data) {
   const response = await fetch('./' + path, data === undefined ? {cache:'no-store'} : {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
@@ -31,67 +35,112 @@ async function request(path, data) {
   if (!response.ok) throw Error('HTTP ' + response.status);
   return response.json();
 }
-function button(parent, label, action) {
+function translated(el, key) { el.dataset.text = key; el.textContent = t(key); }
+async function perform(el, action) {
+  if (busy) return;
+  busy = true;
+  el.disabled = true;
+  byId('message').textContent = t('busy');
+  try { byId('message').textContent = await action(); await refresh(); }
+  catch (error) { byId('message').textContent = error.message; }
+  finally { el.disabled = false; busy = false; }
+}
+function button(parent, key, action, primary = false) {
   const el = document.createElement('button');
-  el.textContent = label;
-  el.onclick = async () => {
-    if (busy) return;
-    busy = true;
-    el.disabled = true;
-    byId('message').textContent = 'Bezig.';
-    try { byId('message').textContent = await action(); await refresh(); }
-    catch (error) { byId('message').textContent = error.message; }
-    finally { el.disabled = false; busy = false; }
-  };
+  translated(el, key);
+  if (primary) el.className = 'primary';
+  el.onclick = () => perform(el, action);
   parent.append(el);
 }
+async function run(id, action, value) {
+  const result = await request('control', {id, action, value});
+  return result.failed.length ? result.failed.join(' · ') : t('done');
+}
 function controls(parent, id) {
-  const run = async (action, value) => {
-    const result = await request('control', {id, action, value});
-    return result.failed.length ? result.failed.join(' � ') : 'Opdracht verwerkt.';
-  };
-  for (const [label, action] of [['Aan','on'],['Uit','off'],['Muziek','music'],['Stop muziek','stop']]) {
-    button(parent, label, () => run(action));
-  }
+  for (const key of ['on','off','music','stop']) button(parent, key, () => run(id,key), key === 'on');
   const color = document.createElement('input');
-  color.type = 'color'; color.value = '#e8a043'; color.setAttribute('aria-label','Kleur');
-  parent.append(color); button(parent,'Kleur', () => run('color',color.value));
+  color.type = 'color'; color.value = '#e8a043'; color.dataset.label = 'color';
+  color.setAttribute('aria-label',t('color'));
+  parent.append(color); button(parent,'color', () => run(id,'color',color.value));
   const level = document.createElement('input');
-  level.type = 'number'; level.min = 0; level.max = 100; level.value = 65;
-  level.setAttribute('aria-label','Helderheid in procenten');
-  parent.append(level); button(parent,'Dim %', () => run('brightness',level.valueAsNumber));
+  level.type = 'number'; level.min = 0; level.max = 100; level.value = 65; level.dataset.label = 'brightness';
+  level.setAttribute('aria-label',t('brightness'));
+  parent.append(level); button(parent,'brightness', () => run(id,'brightness',level.valueAsNumber));
 }
-async function refresh() {
-  const status = await request('status');
-  byId('audio').textContent = status.audio ? 'LedFx-frames worden ontvangen' : 'Wacht op LedFx-muziekeffect';
-  for (const d of status.devices) {
+function renderEffects(card) {
+  card.select.replaceChildren(new Option(t('choose'), ''));
+  for (const entry of card.effects) {
+    card.select.add(new Option(entry.name || t(entry.kind) + ' ' + entry.id,
+                              JSON.stringify([entry.kind,entry.id])));
+  }
+  card.select.hidden = card.effects.length === 0;
+}
+function render() {
+  byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
+  for (const d of status?.devices || []) {
     if (!cards.has(d.id)) {
-      const card = document.createElement('article');
-      const title = document.createElement('h3'), info = document.createElement('p');
-      const actions = document.createElement('div');
-      actions.className = 'controls';
-      card.append(title, info, actions);
-      byId('devices').append(card);
+      const article = document.createElement('article');
+      const title = document.createElement('h3'), info = document.createElement('p'), error = document.createElement('p');
+      error.className = 'error';
+      const actions = document.createElement('div'), effects = document.createElement('div');
+      actions.className = 'controls'; effects.className = 'gap';
+      const select = document.createElement('select');
+      select.className = 'effects';
+      select.hidden = true;
+      select.dataset.label = 'choose';
+      select.setAttribute('aria-label',t('choose'));
+      const card = {title, info, error, select, effects:[]};
+      button(effects, 'load', async () => {
+        const result = await request('effects?id=' + encodeURIComponent(d.id));
+        if (result.error) return result.error;
+        card.effects = result.effects;
+        renderEffects(card);
+        return card.effects.length ? t('done') : t('empty');
+      });
+      select.onchange = () => {
+        if (!select.value) return;
+        const effect = JSON.parse(select.value);
+        select.value = '';
+        perform(select, () => run(d.id,'effect',effect));
+      };
+      effects.append(select);
+      article.append(title, info, error, actions, effects);
+      byId('devices').append(article);
       controls(actions, d.id);
-      cards.set(d.id, {title, info});
+      cards.set(d.id, card);
     }
-    const {title, info} = cards.get(d.id);
+    const {title, info, error} = cards.get(d.id);
     title.textContent = d.name;
-    info.textContent = [d.ip, d.leds + ' leds', d.profile, d.music ? 'Muziek aan' : '', d.error || ''].filter(Boolean).join(' � ');
+    info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : ''].filter(Boolean).join(' · ');
+    error.textContent = d.error || '';
+    error.hidden = !d.error;
   }
 }
+async function refresh() { status = await request('status'); render(); }
 controls(byId('all'), '*');
-button(byId('music-setup'), 'Music Assistant koppelen', async () =>
-  (await request('setup-music', {})).message);
+button(byId('music-setup'), 'setup', async () => {
+  const result = await request('setup-music', {});
+  return result.ok ? t('setupDone') : t('setupFailed') + ' · ' + result.message;
+}, true);
 async function register(ip) {
   const data = await request('register', {ip});
-  return data.added + ' apparaat/apparaten gevonden. ' + data.errors.join(' � ');
+  return t('found') + ' · ' + data.added + ' ' + data.errors.join(' · ');
 }
-const scanRow = byId('ip').parentElement;
-button(scanRow,'IP toevoegen', () => register(byId('ip').value.trim()));
-button(scanRow,'Zoeken op netwerk', () => register(''));
+byId('ip').dataset.label = 'ip';
+button(byId('scan'),'add', () => register(byId('ip').value.trim()));
+button(byId('scan'),'scan', () => register(''));
+function translate() {
+  document.documentElement.lang = lang.value;
+  document.querySelectorAll('[data-text]').forEach(el => translated(el, el.dataset.text));
+  document.querySelectorAll('[data-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.label)));
+  for (const card of cards.values()) renderEffects(card);
+  byId('message').textContent = '';
+  render();
+}
+lang.onchange = () => { localStorage.setItem('twinkly-language',lang.value); translate(); };
+translate();
 const poll = async () => {
-  try { await refresh(); } catch { byId('audio').textContent = 'Verbinding met de add-on ontbreekt'; }
+  try { await refresh(); } catch { status = undefined; render(); }
   setTimeout(poll, 2500);
 };
 poll();

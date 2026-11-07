@@ -1,4 +1,7 @@
 import asyncio
+import colorsys
+from requests.exceptions import HTTPError
+from xled.exceptions import ApplicationError
 import functools
 import io
 import ipaddress
@@ -83,6 +86,9 @@ class Device:
         self.lock = asyncio.Lock()
         self.client = self.connect()
         self.restore = None
+        self.last_mode = None
+        self.effects = []
+        self.effects_until = 0.0
         self.rt_check = 0.0
         self.retry = 0.0
         self.error = None
@@ -94,6 +100,60 @@ class Device:
         client.session.request = functools.partial(client.session.request, timeout=(1, 2))
         return client
 
+    def api(self, path, payload=None):
+        session = self.client.session
+        response = session.get(path) if payload is None else session.post(path, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("code") != 1000:
+            raise ApplicationError(f"{path}: Twinkly code {data.get('code')}", response=response)
+        return data
+
+    def color(self, rgb):
+        hue, saturation, value = colorsys.rgb_to_hsv(*(channel / 255 for channel in rgb))
+        self.api("led/color", {"hue": round(hue * 360) % 360,
+                               "saturation": round(saturation * 255), "value": round(value * 255)})
+        self.client.set_mode("color").raise_for_status()
+
+    def turn_on(self):
+        for mode in dict.fromkeys((self.last_mode, "color", "demo", "effect", "playlist", "movie")):
+            if mode is None:
+                continue
+            try:
+                if mode == "color" and self.last_mode is None:
+                    self.color((255, 190, 110))
+                    self.last_mode = mode
+                    return
+                if self.client.set_mode(mode).ok:
+                    self.last_mode = mode
+                    return
+            except (ApplicationError, HTTPError):
+                continue
+        self.color((255, 190, 110))
+        self.last_mode = "color"
+
+    def load_effects(self):
+        if time.monotonic() < self.effects_until:
+            return
+        catalog = []
+        for path, kind in (("movies", "movie"), ("led/effects", "effect")):
+            try:
+                data = self.api(path)
+            except HTTPError as exc:
+                if exc.response.status_code not in (400, 404, 405, 501):
+                    raise
+                continue
+            except ApplicationError:
+                continue
+            if kind == "movie":
+                catalog.extend({"kind": kind, "id": item["id"], "name": item.get("name", "")}
+                               for item in data.get("movies", []) if type(item.get("id")) is int)
+            else:
+                catalog.extend({"kind": kind, "id": index, "name": ""}
+                               for index in range(min(256, int(data.get("effects_number", 0)))))
+        self.effects = catalog
+        self.effects_until = time.monotonic() + 120
+
     def command(self, action, value):
         if action == "stop":
             if self.restore is not None:
@@ -104,12 +164,31 @@ class Device:
             return
         self.command("stop", None)
         if action == "on":
-            self.client.turn_on()
+            self.turn_on()
         elif action == "off":
+            try:
+                mode = self.api("led/mode").get("mode")
+                if mode in ("playlist", "movie", "effect", "demo", "color"):
+                    self.last_mode = mode
+            except (HTTPError, ApplicationError):
+                pass
             self.client.turn_off().raise_for_status()
         elif action == "color":
-            self.client.set_led_color_rgb(*value).raise_for_status()
-            self.client.set_mode("color").raise_for_status()
+            self.color(value)
+            self.last_mode = "color"
+        elif action == "effect":
+            kind, index = value
+            if kind == "movie":
+                try:
+                    self.api("movies/current", {"id": index})
+                except HTTPError as exc:
+                    if exc.response.status_code not in (404, 405):
+                        raise
+                    self.api("led/movies/current", {"id": index})
+            else:
+                self.api("led/effects/current", {"effect_id": index})
+            self.client.set_mode(kind).raise_for_status()
+            self.last_mode = kind
         elif action == "brightness":
             self.client.set_brightness(value).raise_for_status()
 
@@ -268,7 +347,7 @@ class Controller:
         data = await request.json()
         action = data.get("action")
         value = data.get("value")
-        if action not in ("on", "off", "color", "brightness", "music", "stop"):
+        if action not in ("on", "off", "color", "brightness", "music", "stop", "effect"):
             raise web.HTTPBadRequest()
         if action == "color":
             if not isinstance(value, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
@@ -276,6 +355,11 @@ class Controller:
             value = bytes.fromhex(value[1:])
         if action == "brightness" and (type(value) is not int or not 0 <= value <= 100):
             raise web.HTTPBadRequest()
+        if action == "effect":
+            if (not isinstance(value, list) or len(value) != 2
+                    or value[0] not in ("movie", "effect") or type(value[1]) is not int
+                    or not 0 <= value[1] <= 255 or data.get("id") == "*"):
+                raise web.HTTPBadRequest()
         async with self.edit:
             keys = list(self.devices) if data.get("id") == "*" else [data.get("id")]
             if any(key not in self.devices for key in keys):
@@ -291,6 +375,13 @@ class Controller:
                 for key, ok in zip(keys, results) if not ok
             ]})
 
+    async def effects(self, request):
+        device = self.devices.get(request.query.get("id"))
+        if device is None:
+            raise web.HTTPNotFound()
+        ok = await device.run(device.load_effects)
+        return web.json_response({"effects": device.effects, "error": None if ok else device.error})
+
     async def setup_music(self, request):
         if self.source != "127.0.0.1":
             return web.json_response({"message": "Automatische koppeling vereist LedFX op dezelfde Home Assistant-host en ddp_source 127.0.0.1."})
@@ -302,6 +393,7 @@ class Controller:
                 LOG.warning("LedFX setup: %s", exc)
                 return web.json_response({"message": f"LedFX koppelen mislukt: {exc or type(exc).__name__}"})
         return web.json_response({
+            "ok": True,
             "message": "LedFX ingesteld. Voeg LedFx Twinkly toe aan de afspeelgroep in Music Assistant en start muziek."
         })
 
@@ -311,6 +403,7 @@ class Controller:
         app.cleanup_ctx.append(self.stream)
         app.router.add_get("/", lambda _: web.FileResponse("index.html"))
         app.router.add_get("/status", self.status)
+        app.router.add_get("/effects", self.effects)
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
         app.router.add_post("/setup-music", self.setup_music)
