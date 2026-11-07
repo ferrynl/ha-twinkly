@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.20
+
+- Gebruik dezelfde lokale hoesafbeelding als de Home Assistant-mediaspelerkaart.
+- Geef bij automatische bronselectie voorrang aan een overeenkomende speler die een hoes meldt.
+
 ## 0.1.19
 
 - Toon ook YouTube-miniaturen van de officiële afbeeldingsserver naast de lokale hoesafbeeldingen.

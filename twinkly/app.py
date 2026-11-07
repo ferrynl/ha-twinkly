@@ -764,14 +764,16 @@ class Controller:
                                         if item.get("entity_id", "").startswith("media_player.")]
             except (ClientError, TimeoutError, ValueError, KeyError):
                 return None
+        matches = []
         for item in self.ha_media_states:
             attrs = item.get("attributes") or {}
             title = str(attrs.get("media_title") or "").strip()
             if item.get("state") not in ("playing", "paused", "buffering") or not title:
                 continue
             if self.media_player or title.casefold() == track["title"].strip().casefold():
-                return attrs
-        return None
+                matches.append(attrs)
+        return next((attrs for attrs in matches if attrs.get("entity_picture_local")
+                     or attrs.get("entity_picture")), matches[0] if matches else None)
 
     @staticmethod
     def cover_url(value):
@@ -827,21 +829,24 @@ class Controller:
                                  "album": str(attrs.get("media_album_name") or "")[:512]}
                         if previous.get("title", "").strip().casefold() == track["title"].strip().casefold():
                             track.update({key: previous[key] for key in ("artwork", "cover_url") if key in previous})
-                    picture_url = str(attrs.get("entity_picture") or "")
-                    try:
-                        picture = urlsplit(picture_url)
-                    except ValueError:
-                        picture = urlsplit("")
-                    if re.fullmatch(r"/api/media_player_proxy/media_player\.[a-z0-9_]+", picture.path):
-                        path = picture.path + ("?" + picture.query if picture.query else "")
-                        digest = hashlib.sha256((track["title"] + path).encode()).hexdigest()
-                        self.track_art = (digest, path, "ha")
-                        track["artwork"] = digest
-                    else:
-                        cover = self.cover_url(picture_url)
+                    for value in (attrs.get("entity_picture_local"), attrs.get("entity_picture")):
+                        if not isinstance(value, str):
+                            continue
+                        try:
+                            picture = urlsplit(value)
+                        except ValueError:
+                            continue
+                        if re.fullmatch(r"/api/media_player_proxy/media_player\.[a-z0-9_]+", picture.path):
+                            path = picture.path + ("?" + picture.query if picture.query else "")
+                            digest = hashlib.sha256((track["title"] + path).encode()).hexdigest()
+                            self.track_art = (digest, path, "ha")
+                            track["artwork"] = digest
+                            break
+                        cover = self.cover_url(value)
                         if cover:
                             track.pop("artwork", None)
                             track["cover_url"] = cover
+                            break
                     self.track_state = {"track": track, "available": True}
             return web.json_response(dict(self.track_state, player=self.media_player),
                                      headers={"Cache-Control": "no-store"})
