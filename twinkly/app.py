@@ -112,6 +112,8 @@ class Device:
         self.effects_until = 0.0
         self.layout = None
         self.layout_until = 0.0
+        self.product_code = row.get('product_code')
+        self.model_checked = bool(self.product_code)
         self.details = None
         self.details_until = 0.0
         self.rt_check = 0.0
@@ -170,10 +172,17 @@ class Device:
         self.color((255, 190, 110))
         self.last_mode = "color"
 
+    def read_product_code(self):
+        info = self.api("gestalt")
+        self.product_code = info.get("product_code")
+        self.model_checked = True
+
     def load_details(self):
         if time.monotonic() < self.details_until:
             return
         info = self.api("gestalt")
+        self.product_code = info.get("product_code") or self.product_code
+        self.model_checked = True
         details = {key: info[key] for key in (
             "product_name", "product_code", "product_version", "hardware_version",
             "firmware_version", "fw_family", "led_type", "led_version", "wire_type",
@@ -344,7 +353,7 @@ class Controller:
                 raise ValueError("Onbekend ledprofiel of aantal leds")
             return {"id": str(info.get("mac") or info.get("hw_id") or host),
                     "name": str(info.get("device_name") or host), "ip": host,
-                    "leds": leds, "profile": profile,
+                    "leds": leds, "profile": profile, "product_code": info.get("product_code"),
                     "protocol": 1 if str(info.get("product_version")) == "1" and leds <= 255 else 3}
 
     async def add(self, host):
@@ -385,6 +394,8 @@ class Controller:
                     device.mode_check = now + 30
                     if not await device.run(device.read_mode):
                         device.mode = None
+                    elif not device.model_checked:
+                        await device.run(device.read_product_code)
             await asyncio.sleep(1 / self.fps if active else 0.2)
 
     async def stream(self, app):
@@ -422,7 +433,7 @@ class Controller:
         return web.json_response({
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
             "groups": self.groups,
-            "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error)
+            "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code)
                         for k, d in self.devices.items()],
         })
 

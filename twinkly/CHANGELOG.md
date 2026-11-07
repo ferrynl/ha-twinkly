@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.12
+
+- Herken Twinkly Strings en Line op basis van de modelcode en toon bij ondersteunde reeksen een officiële referentiefoto.
+- Lees bij bestaande apparaten de modelcode op de achtergrond uit.
+
 ## 0.1.11
 
 - Verzend realtimeframes via één UDP-socket met een automatisch toegewezen bronpoort. Dit voorkomt een poortconflict wanneer meerdere Twinkly-lampen tegelijk op muziek reageren.
