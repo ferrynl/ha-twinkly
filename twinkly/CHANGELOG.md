@@ -1,5 +1,9 @@
 # Wijzigingslogboek
 
+## 0.1.26
+
+- Voeg acht live patronen toe voor een lamp, groep of alle lampen zonder ze op de controllers op te slaan.
+
 ## 0.1.25
 
 - Maak het tv-scherm compacter en voeg een live lichtmonitor met uitgangsniveau toe.

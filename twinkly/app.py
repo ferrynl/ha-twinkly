@@ -104,6 +104,46 @@ class DDP(asyncio.DatagramProtocol):
             self.size = 0
 
 
+PATTERN_PALETTES = {
+    "rainbow": (), "aurora": ((4, 25, 68), (29, 230, 137), (129, 47, 229)),
+    "fire": ((43, 3, 0), (255, 53, 0), (255, 194, 47)),
+    "ice": ((10, 24, 60), (30, 129, 255), (165, 242, 255)),
+    "ocean": ((3, 13, 52), (0, 95, 175), (26, 222, 194)),
+    "candy": ((222, 16, 35), (255, 238, 210)),
+    "sunset": ((95, 16, 102), (234, 43, 110), (255, 168, 48)),
+    "sparkle": (),
+}
+
+
+@functools.lru_cache(maxsize=64)
+def live_pattern(name, tick, fps):
+    time_seconds = tick / fps
+    frame = bytearray()
+    for index in range(PIXELS):
+        position = index / PIXELS
+        if name == "rainbow":
+            rgb = tuple(round(channel * 255) for channel in colorsys.hsv_to_rgb(
+                (position - time_seconds * 0.16) % 1, 0.92, 0.95))
+        elif name == "sparkle":
+            phase = (time_seconds * (0.7 + index % 7 * 0.09) + index * 0.618) % 1
+            glow = 0.12 + 0.88 * (0.5 + 0.5 * math.cos(phase * math.tau)) ** 9
+            rgb = tuple(round(channel * glow) for channel in (255, 192, 104))
+        else:
+            palette = PATTERN_PALETTES[name]
+            wave = position * (6 if name == "candy" else 2) - time_seconds * 0.27
+            if name != "candy":
+                wave += 0.22 * math.sin(position * 13 + time_seconds * 1.1)
+            scaled = (wave % 1) * len(palette)
+            first = int(scaled)
+            fraction = scaled - first
+            if name == "candy":
+                fraction = min(1, max(0, (fraction - 0.8) * 5))
+            rgb = tuple(round(a + (b-a) * fraction) for a, b in
+                        zip(palette[first], palette[(first+1) % len(palette)]))
+        frame.extend(rgb)
+    return bytes(frame)
+
+
 def realtime_packets(payload, token, version, led_count):
     if version == 1:
         yield b"\x01" + token + bytes([led_count]) + payload
@@ -350,6 +390,7 @@ class Controller:
                      else {"master": 100, "scenes": {}})
         self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
         self.music = set()
+        self.patterns = {}
         self.edit = asyncio.Lock()
         self.music_setup = asyncio.Lock()
         self.active_style = (json.loads(MUSIC_STATE.read_text(encoding='utf-8')).get('style')
@@ -399,6 +440,7 @@ class Controller:
                 raise ValueError("Maximum aantal apparaten bereikt")
             if old:
                 self.music.discard(key)
+                self.patterns.pop(key, None)
                 await old.run(old.command, "stop", None)
                 old.client.session.close()
             self.devices[key] = Device(row, self.limit, self.realtime_socket)
@@ -425,12 +467,16 @@ class Controller:
         fade_started = None
         while self.devices.get(key) is device:
             now = time.monotonic()
+            pattern = self.patterns.get(key)
             armed = key in self.music
             active = (armed and self.ddp.frame is not None and now - self.ddp.received < 1.5
                       and now - self.ddp.lit_at < 3)
             fading = False
             if now >= device.retry:
-                if active:
+                if pattern:
+                    frame = live_pattern(pattern, int(now * self.fps), self.fps)
+                    await device.run(device.send, frame)
+                elif active:
                     fade_started = None
                     frame = self.dim_frame(self.ddp.frame, self.show["master"])
                     if any(frame):
@@ -464,7 +510,7 @@ class Controller:
                         device.mode = None
                     elif not device.model_checked:
                         await device.run(device.read_product_code)
-            await asyncio.sleep(1 / self.fps if active or fading else 0.2)
+            await asyncio.sleep(1 / self.fps if pattern or active or fading else 0.2)
 
     async def stream(self, app):
         loop = asyncio.get_running_loop()
@@ -491,6 +537,7 @@ class Controller:
         transport.close()
         # Let outstanding device operations finish before restoring modes.
         self.music.clear()
+        self.patterns.clear()
         await asyncio.gather(*(d.run(d.command, "stop", None) for d in self.devices.values()))
         for _, task in workers.values():
             task.cancel()
@@ -503,7 +550,7 @@ class Controller:
             "groups": self.groups,
             "active_music_style": self.active_style,
             "show": self.show,
-            "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code)
+            "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code, pattern=self.patterns.get(k))
                         for k, d in self.devices.items()],
         })
 
@@ -677,13 +724,15 @@ class Controller:
         data = await request.json()
         action = data.get("action")
         value = data.get("value")
-        if action not in ("on", "off", "color", "brightness", "music", "stop", "effect"):
+        if action not in ("on", "off", "color", "brightness", "music", "stop", "effect", "pattern", "stop-pattern"):
             raise web.HTTPBadRequest()
         if action == "color":
             if not isinstance(value, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
                 raise web.HTTPBadRequest()
             value = bytes.fromhex(value[1:])
         if action == "brightness" and (type(value) is not int or not 0 <= value <= 100):
+            raise web.HTTPBadRequest()
+        if action == "pattern" and (not isinstance(value, str) or value not in PATTERN_PALETTES):
             raise web.HTTPBadRequest()
         if action == "effect":
             if (not isinstance(value, list) or len(value) != 2
@@ -700,6 +749,15 @@ class Controller:
                 keys = list(self.devices) if data.get("id") == "*" else [data.get("id")]
             if any(key not in self.devices for key in keys):
                 raise web.HTTPNotFound()
+            if action == "pattern":
+                self.music.difference_update(keys)
+                self.patterns.update(dict.fromkeys(keys, value))
+                return web.json_response({"failed": []})
+            if action == "stop-pattern":
+                keys = [key for key in keys if key in self.patterns]
+                action = "stop"
+            for key in keys:
+                self.patterns.pop(key, None)
             if action == "music":
                 self.music.update(keys)
                 return web.json_response({"failed": []})
