@@ -42,6 +42,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .gif-library summary{cursor:pointer;color:#b7ecd9}.gif-library input,.gif-library select{min-width:0;max-width:100%}#gif-library-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}.gif-item{display:grid;gap:6px;padding:8px;border:1px solid #47566a;border-radius:8px;min-width:0;overflow-wrap:anywhere}.gif-item img{width:100%;height:65px;object-fit:contain;background:#080c12;border-radius:5px}.gif-item a{color:#ffe2a5}.gif-item button[aria-pressed=true]{border-color:#9debcf}
 .pattern-categories{margin-top:10px}.mixdesk .pattern-categories button{min-height:32px;font-size:.84rem}.pattern-categories button[aria-pressed=true]{border-color:#9debcf;color:#a9ffe4}
 .matrix-library summary{cursor:pointer;color:#b7ecd9}#matrix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,96px),1fr));gap:8px}.mixdesk .matrix-tile{display:grid;align-content:start;gap:6px;min-width:0;text-align:center;font-size:.79rem;padding:6px;overflow-wrap:anywhere}.matrix-tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#000;border-radius:5px;image-rendering:pixelated}.mixdesk .matrix-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:0 0 0 1px #9debcf}
+.matrix-library h3{font-size:.92rem;margin:10px 0 4px;color:#d7f1e9}#matrix-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,100px),1fr))}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -57,18 +58,19 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 </div><div class="desk-channel live-monitor"><div class="music-heading"><h2 id="monitor-title"></h2><span id="monitor-count"></span></div>
 <canvas id="monitor-strip" width="480" height="36"></canvas>
 <div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
-<div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="controls pattern-categories" id="pattern-categories"></div><div id="pattern-grid"></div><details class="gap matrix-library" id="matrix-gallery"><summary id="matrix-title"></summary><div class="controls pattern-categories" id="matrix-themes"></div><div id="matrix-grid" class="gap"></div></details>
-<details class="gap gif-library"><summary id="gif-library-title"></summary>
-<form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
-<div id="gif-library-list" class="gap"></div></details></div></div>
-<div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
+<div class="monitor-devices" id="monitor-devices"></div></div></div>
+<div class="desk-stack"><div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <p id="active-music-style" class="status"></p>
 <div class="controls gap" id="music-preview-tools"></div>
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
-</div></div></div></div></section>
+</div></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="matrix-library" id="matrix-gallery"><h3 id="matrix-title"></h3><div class="controls pattern-categories" id="matrix-themes"></div><div id="matrix-grid" class="gap"></div></div>
+<div class="controls pattern-categories" id="pattern-categories"></div><div id="pattern-grid"></div>
+<details class="gap gif-library"><summary id="gif-library-title"></summary>
+<form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
+<div id="gif-library-list" class="gap"></div></details></div></div></div></section>
 <section id="group-section" hidden><h2 id="group-title"></h2><div id="group-cards"></div></section>
 <section class="devices-section"><h2 id="device-title"></h2><div id="devices"></div></section></div>
 <div id="settings-page" hidden><div class="settings-grid">
@@ -243,7 +245,13 @@ const matrixLabels = {
  es:['GIF de matriz','Invierno','Navidad','Neón','Océano','Oro','No se pudieron cargar los GIF.'],
  de:['Matrix-GIFs','Winter','Weihnachten','Neon','Ozean','Gold','Matrix-GIFs konnten nicht geladen werden.']
 };
-const matrixThemes = ['winter','festive','neon','ocean','gold'];
+const matrixThemes = ['winter','festive','neon','ocean','gold','cosmic','tropical','retro','pastel','midnight'];
+const extraMatrixLabels = {
+  nl:['Ruimte','Tropisch','Retro','Pastel','Middernacht'],
+  en:['Space','Tropical','Retro','Pastel','Midnight'],
+  es:['Espacio','Tropical','Retro','Pastel','Medianoche'],
+  de:['Weltraum','Tropisch','Retro','Pastell','Mitternacht']
+};
 let matrixCatalog = [], matrixTheme = 'winter', matrixSignature = '', matrixLoading = false;
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
@@ -1053,7 +1061,7 @@ for (const [id, payload] of [
 }
 function renderMatrixGallery() {
   const labels = matrixLabels[lang.value];
-  byId('matrix-title').textContent = labels[0] + ' · 50';
+  byId('matrix-title').textContent = labels[0] + ' · ' + (matrixCatalog.length || 100);
   const signature = [lang.value,matrixTheme,matrixCatalog.length].join(':');
   if (signature === matrixSignature) return;
   matrixSignature = signature;
@@ -1062,7 +1070,7 @@ function renderMatrixGallery() {
   grid.replaceChildren();
   matrixThemes.forEach((theme,index) => {
     const button = document.createElement('button');
-    button.textContent = labels[index+1];
+    button.textContent = index < 5 ? labels[index+1] : extraMatrixLabels[lang.value][index-5];
     button.setAttribute('aria-pressed',String(theme === matrixTheme));
     button.onclick = () => { matrixTheme = theme; renderMatrixGallery(); };
     tabs.append(button);
@@ -1079,8 +1087,8 @@ function renderMatrixGallery() {
   }
   renderPatterns();
 }
-byId('matrix-gallery').ontoggle = async () => {
-  if (!byId('matrix-gallery').open || matrixCatalog.length || matrixLoading) return;
+async function loadMatrixGallery() {
+  if (matrixCatalog.length || matrixLoading) return;
   matrixLoading = true;
   try {
     matrixCatalog = await request('matrix-gifs');
@@ -1088,7 +1096,7 @@ byId('matrix-gallery').ontoggle = async () => {
   } catch {
     byId('message').textContent = matrixLabels[lang.value][6];
   } finally { matrixLoading = false; }
-};
+}
 function translate() {
   document.documentElement.lang = lang.value;
   const gif = gifLabels[lang.value], gifPattern = byId('gif-pattern'), priorGif = gifPattern.value;
@@ -1186,4 +1194,5 @@ poll();
 pollTrack();
 loadTvSources();
 loadGifLibrary().catch(() => {});
+loadMatrixGallery();
 </script></html>

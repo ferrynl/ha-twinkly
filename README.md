@@ -1,6 +1,6 @@
 # Twinkly Control Center voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.31 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.32 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -77,4 +77,4 @@ De mengtafel bevat een GIF-bibliotheek. Upload een GIF, maak een GIF uit een liv
 
 Bij **Importeer URL** kun je ook een gewone GIPHY-deellink plakken. De add-on haalt een geschikte GIF-versie op bij GIPHY en slaat die lokaal op.
 
-Onder **Matrix-GIF’s** staan 50 originele geanimeerde vierkanten in vijf thema’s. De GIF-bestanden worden tijdens het bouwen lokaal in de afzonderlijke map `matrix_gifs` gemaakt. Voor een ledstreng zet de app de 12 bij 10 pixels rij voor rij om naar de ledvolgorde.
+Onder **Matrix-GIF’s** staan 100 originele geanimeerde vierkanten in tien thema’s, rechts in de mengtafel. De GIF-bestanden worden tijdens het bouwen lokaal in de afzonderlijke map `matrix_gifs` gemaakt. Voor een ledstreng zet de app de 12 bij 10 pixels rij voor rij om naar de ledvolgorde.

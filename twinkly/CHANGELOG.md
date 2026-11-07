@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.32
+
+- Toon de Matrix-GIF-galerij direct rechts onder het muziekkanaal.
+- Voeg 50 nieuwe animaties toe in Ruimte, Tropisch, Retro, Pastel en Middernacht.
+
 ## 0.1.31
 
 - Voeg 50 originele geanimeerde matrix-GIF’s toe met vierkante previews.
