@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.25
+
+- Maak het tv-scherm compacter en voeg een live lichtmonitor met uitgangsniveau toe.
+- Toon welke lampen op muziek staan en spring met één klik naar hun bediening.
+- Voeg vijf snelkleuren toe voor alle lampen.
+
 ## 0.1.24
 
 - Plaats Control Center in goud direct onder het Twinkly-logo en verwijder de losse kopteksten.

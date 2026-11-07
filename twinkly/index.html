@@ -37,6 +37,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 @media(max-width:1120px){.music-grid{grid-template-columns:1fr}.track-tv{max-width:520px}}@media(max-width:760px){.desk-grid{grid-template-columns:1fr}.workspace-header{align-items:flex-start}}
 .workspace-brand{display:flex;align-items:center;gap:clamp(8px,2vw,20px)}.twinkly-logo{flex:0 0 auto;width:clamp(120px,16vw,225px);height:clamp(44px,6vw,78px);background:linear-gradient(150deg,#fff1ba 7%,#e5ba62 55%,#bf852d);mask:url('./twinkly-wordmark.svg') center/contain no-repeat;-webkit-mask:url('./twinkly-wordmark.svg') center/contain no-repeat}.workspace-brand .eyebrow{margin-bottom:5px}@media(max-width:560px){.workspace-brand{align-items:flex-start;flex-direction:column;gap:3px}.twinkly-logo{width:135px;height:45px}}.workspace-brand h1{font-size:clamp(1.85rem,4.6vw,3.75rem);line-height:1.05}
 .workspace-header .workspace-brand{display:inline-flex;flex-direction:column;align-items:center;gap:0;margin:0;--wordmark-gold:linear-gradient(150deg,#fff1ba 7%,#e5ba62 55%,#bf852d)}.workspace-brand .twinkly-logo{background:var(--wordmark-gold)}.control-wordmark{font:700 clamp(.9rem,2.1vw,1.55rem)/1.15 Georgia,serif;letter-spacing:.13em;color:#e5ba62;background:var(--wordmark-gold);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.desk-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.music-grid{grid-template-columns:minmax(0,1fr) minmax(0,.8fr)}.track-tv{max-width:330px}.track-display{max-height:190px}.desk-fader input{width:0}.quick-colors{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:13px}.quick-colors>span,#monitor-count,.monitor-meter{font-size:.84rem;color:#bed0df}.mixdesk .quick-color{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:5px 8px}.quick-color i,.monitor-device i{width:10px;height:10px;flex:none;border-radius:50%;background:var(--swatch,#66727f);box-shadow:0 0 8px var(--swatch,#66727f)}#monitor-strip{display:block;width:100%;height:36px;border:1px solid #415268;border-radius:8px;background:#090e15}.monitor-meter{display:flex;align-items:center;gap:8px;margin:8px 0}.monitor-meter meter{width:min(35%,180px);accent-color:#80e8bf}.monitor-devices{display:flex;flex-wrap:wrap;gap:6px}.mixdesk .monitor-device{display:flex;align-items:center;gap:7px;min-height:32px;max-width:100%;text-align:left;font-size:.81rem;padding:5px 8px;overflow-wrap:anywhere}.monitor-device.is-music i{--swatch:#af82ff}.monitor-device.is-on i{--swatch:#62e5b0}.device-focus{outline:2px solid #9debcf;outline-offset:3px}@media(max-width:1120px){.music-grid{grid-template-columns:1fr}.track-tv{max-width:330px}}@media(max-width:760px){.desk-grid{grid-template-columns:1fr}}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -45,11 +46,14 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <div id="control-page">
 <section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div>
 <div class="desk-grid">
-<div class="desk-stack"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div>
+<div class="desk-stack"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div><div class="quick-colors"><span id="quick-color-label"></span><div class="controls" id="quick-colors"></div></div></div>
 <div class="desk-channel"><h2 id="show-title"></h2>
 <div class="controls desk-fader"><label id="master-label" for="master-level"></label><input id="master-level" type="range" min="0" max="100" value="100"><output id="master-value">100%</output><button id="master-save"></button></div>
 <div class="controls gap" id="scene-pads"></div>
-</div></div>
+</div><div class="desk-channel live-monitor"><div class="music-heading"><h2 id="monitor-title"></h2><span id="monitor-count"></span></div>
+<canvas id="monitor-strip" width="480" height="36"></canvas>
+<div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
+<div class="monitor-devices" id="monitor-devices"></div></div></div>
 <div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
@@ -188,6 +192,13 @@ const pageLabels = {
  es:['Controles','Ajustes','Dispositivos','General','Música y TV','Añadir dispositivos','Gestionar grupos','Gestionar escenas','Gestionar efectos'],
  de:['Steuerung','Einstellungen','Geräte','Allgemein','Musik und TV','Geräte hinzufügen','Gruppen verwalten','Szenen verwalten','Effekte verwalten']
 };
+const monitorLabels = {
+ nl:['Live lichtmonitor','Snelkleuren','Lichtniveau','op muziek','Warm wit','Kerstrood','IJsblauw','Groen','Paars'],
+ en:['Live light monitor','Quick colours','Light level','on music','Warm white','Christmas red','Ice blue','Green','Purple'],
+ es:['Monitor de luz en directo','Colores rápidos','Nivel de luz','con música','Blanco cálido','Rojo navideño','Azul hielo','Verde','Morado'],
+ de:['Live-Lichtmonitor','Schnellfarben','Lichtpegel','mit Musik','Warmweiß','Weihnachtsrot','Eisblau','Grün','Violett']
+};
+const quickColors = ['#ffbe6e','#ff243d','#4dd7ff','#2ee581','#a66bff'];
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -448,6 +459,9 @@ function drawDetails(card) {
   card.detailList.hidden = false;
 }
 function render() {
+  renderMonitor();
+  if (!status?.audio) drawMonitor([]);
+  schedulePreview();
   renderActiveStyle();
   renderGroups();
   renderShow();
@@ -466,7 +480,8 @@ function render() {
       manage.className = 'settings-item effect-settings';
       manageGrid.className = 'effect-grid';
       manageTitle.textContent = d.name;
-      const card = {id:d.id, title, info, error, grid, manageGrid, manageTitle, effects:[]};
+      const card = {id:d.id, article, title, info, error, grid, manageGrid, manageTitle, effects:[]};
+      article.tabIndex = -1;
       const loadEffects = async () => {
         const result = await request('effects?id=' + encodeURIComponent(d.id));
         if (result.error) return result.error;
@@ -577,8 +592,47 @@ function updatePreviewLabels() {
 }
 let liveFrame = [];
 let previewRunning = false;
+let monitorSignature = '';
+function renderMonitor() {
+  const labels = monitorLabels[lang.value], devices = status?.devices || [];
+  byId('monitor-count').textContent = devices.filter(d => d.music).length + ' / ' + devices.length + ' ' + labels[3];
+  const signature = JSON.stringify([lang.value,devices.map(d => [d.id,d.name,d.mode,d.music])]);
+  if (signature === monitorSignature) return;
+  monitorSignature = signature;
+  const row = byId('monitor-devices');
+  row.replaceChildren();
+  for (const device of devices) {
+    const tile = document.createElement('button'), lamp = document.createElement('i');
+    tile.className = 'monitor-device' + (device.music ? ' is-music' : device.mode && device.mode !== 'off' ? ' is-on' : '');
+    lamp.setAttribute('aria-hidden','true');
+    tile.append(lamp,device.name);
+    tile.onclick = () => {
+      const card = cards.get(device.id)?.article;
+      if (!card) return;
+      card.scrollIntoView({block:'center'});
+      card.focus({preventScroll:true});
+      card.classList.add('device-focus');
+      setTimeout(() => card.classList.remove('device-focus'),1500);
+    };
+    row.append(tile);
+  }
+}
+function drawMonitor(frame) {
+  const canvas = byId('monitor-strip'), ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#090e15';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  let sum = 0;
+  for (let i=0; i+2<frame.length; i+=3) {
+    ctx.fillStyle = 'rgb(' + frame[i] + ',' + frame[i+1] + ',' + frame[i+2] + ')';
+    ctx.fillRect(i/3*4,0,4,canvas.height);
+    sum += Math.max(frame[i],frame[i+1],frame[i+2]);
+  }
+  const level = frame.length ? Math.round(100 * sum / (255 * frame.length / 3)) : 0;
+  byId('monitor-level').value = level;
+  byId('monitor-value').textContent = frame.length ? level + '%' : '—';
+}
 function previewNeeded() {
-  return !byId('control-page').hidden && (!livePanel.hidden || [...cards.values()].some(card => card.layout?.points.length));
+  return !byId('control-page').hidden && (status?.audio || !livePanel.hidden || [...cards.values()].some(card => card.layout?.points.length));
 }
 function schedulePreview() {
   if (!previewTimer && !previewRunning && previewNeeded()) {
@@ -596,6 +650,7 @@ async function paintPreview() {
       const response = await fetch('./music-preview',{cache:'no-store'});
       if (response.ok) liveFrame = new Uint8Array(await response.arrayBuffer());
     } catch {}
+    drawMonitor(liveFrame);
     for (const card of cards.values()) if (card.layout) drawLayout(card);
     if (livePanel.hidden) return;
     const canvas = byId('music-preview'), ctx = canvas.getContext('2d');
@@ -795,6 +850,23 @@ function showPage() {
 window.addEventListener('hashchange',showPage);
 function translate() {
   document.documentElement.lang = lang.value;
+  const monitor = monitorLabels[lang.value];
+  byId('monitor-title').textContent = monitor[0];
+  byId('quick-color-label').textContent = monitor[1];
+  byId('monitor-level-label').textContent = monitor[2];
+  byId('monitor-level').setAttribute('aria-label',monitor[2]);
+  byId('monitor-strip').setAttribute('aria-label',monitor[0]);
+  const colorRow = byId('quick-colors');
+  colorRow.replaceChildren();
+  quickColors.forEach((color,index) => {
+    const key = document.createElement('button'), dot = document.createElement('i');
+    key.className = 'quick-color';
+    dot.style.setProperty('--swatch',color);
+    dot.setAttribute('aria-hidden','true');
+    key.append(dot,monitor[index+4]);
+    key.onclick = () => perform(key,() => run('*','color',color));
+    colorRow.append(key);
+  });
   ['nav-control','nav-settings','device-title','settings-general','settings-music','settings-discover','settings-groups','settings-scenes','settings-effects'].forEach((id,index) => {
     byId(id).textContent = pageLabels[lang.value][index];
   });
