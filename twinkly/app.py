@@ -87,10 +87,21 @@ class DDP(asyncio.DatagramProtocol):
             self.size = 0
 
 
+def realtime_packets(payload, token, version, led_count):
+    if version == 1:
+        yield b"\x01" + token + bytes([led_count]) + payload
+    elif version == 2:
+        yield b"\x02" + token + b"\x00" + payload
+    else:
+        for offset in range(0, len(payload), 900):
+            yield b"\x03" + token + b"\x00\x00" + bytes([offset // 900]) + payload[offset:offset + 900]
+
+
 class Device:
-    def __init__(self, row, limit):
+    def __init__(self, row, limit, realtime_socket):
         self.row = row
         self.limit = limit
+        self.realtime_socket = realtime_socket
         self.lock = asyncio.Lock()
         self.client = self.connect()
         self.restore = None
@@ -279,7 +290,10 @@ class Device:
         # RGBW controllers use white first on the realtime wire.
         white = b"\0" if self.row["profile"] == "RGBW" else b""
         payload = b"".join(white + frame[i:i + 3] for i in self.mapping)
-        self.client.set_rt_frame_socket(io.BytesIO(payload), self.row["protocol"], self.row["leds"])
+        token = base64.b64decode(self.client.session.access_token)
+        packets = realtime_packets(payload, token, self.row["protocol"], self.row["leds"])
+        for packet in packets:
+            self.realtime_socket.sendto(packet, (self.row["ip"], 7777))
 
     async def run(self, method, *args):
         async with self.lock, self.limit:
@@ -304,6 +318,7 @@ class Controller:
         self.fps = options["fps"]
         self.broadcast = local_ip(options.get("discovery_broadcast", "255.255.255.255"))
         self.limit = asyncio.Semaphore(8)
+        self.realtime_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.devices = {}
         self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
         self.music = set()
@@ -313,7 +328,7 @@ class Controller:
         self.probe = asyncio.Semaphore(6)
         if DATA.exists():
             for row in json.loads(DATA.read_text()):
-                self.devices[row["id"]] = Device(row, self.limit)
+                self.devices[row["id"]] = Device(row, self.limit, self.realtime_socket)
 
     @staticmethod
     def inspect(host):
@@ -346,7 +361,7 @@ class Controller:
                 self.music.discard(key)
                 await old.run(old.command, "stop", None)
                 old.client.session.close()
-            self.devices[key] = Device(row, self.limit)
+            self.devices[key] = Device(row, self.limit, self.realtime_socket)
             self.save()
         return row
 
@@ -401,6 +416,7 @@ class Controller:
         for _, task in workers.values():
             task.cancel()
         await asyncio.gather(*(task for _, task in workers.values()), return_exceptions=True)
+        self.realtime_socket.close()
 
     async def status(self, request):
         return web.json_response({

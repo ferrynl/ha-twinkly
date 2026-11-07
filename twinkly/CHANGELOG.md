@@ -1,5 +1,9 @@
 # Wijzigingslogboek
 
+## 0.1.11
+
+- Verzend realtimeframes via één UDP-socket met een automatisch toegewezen bronpoort. Dit voorkomt een poortconflict wanneer meerdere Twinkly-lampen tegelijk op muziek reageren.
+
 ## 0.1.10
 
 - Schermbrede, responsieve DJ-mengtafel met licht- en muziekbediening.
