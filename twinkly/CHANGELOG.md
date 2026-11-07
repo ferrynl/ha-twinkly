@@ -1,5 +1,9 @@
 # Wijzigingslogboek
 
+## 0.1.24
+
+- Plaats Control Center in goud direct onder het Twinkly-logo en verwijder de losse kopteksten.
+
 ## 0.1.23
 
 - Toon het volledige officiële Twinkly-logo in goud op een transparante achtergrond.
