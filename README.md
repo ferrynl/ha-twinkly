@@ -1,6 +1,6 @@
 # Twinkly Control Center voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.22 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.23 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -68,3 +68,5 @@ Gebruik **Tv-bron** bij het scherm om rechtstreeks een Home Assistant-mediaspele
 Het mengpaneel heeft twee pagina’s. **Bediening** bevat licht, muziek, tv, scènepads, groepsbediening en apparaten. **Instellingen** bevat taal, Music Assistant, tv-bron, apparaatdetectie en beheer van groepen, scènes en effectafbeeldingen.
 
 Het Twinkly-beeldmerk is lokaal opgenomen als transparant SVG, gebaseerd op [Simple Icons](https://github.com/simple-icons/simple-icons/blob/develop/icons/twinkly.svg). Het merk is van Twinkly.
+
+De kop gebruikt het volledige [officiële Twinkly-logo](https://twinkly.com/cdn/shop/files/Twinkly_Logo_White.svg) met een gouden kleurverloop. De add-on haalt het SVG bij de eerste weergave op en bewaart het in de lokale appdata. Het bestaande kleine beeldmerk blijft het icoon van het browsertabblad.

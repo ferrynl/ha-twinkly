@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.23
+
+- Toon het volledige officiële Twinkly-logo in goud op een transparante achtergrond.
+- Bewaar het SVG na de eerste download lokaal.
+
 ## 0.1.22
 
 - Hernoem de app naar Twinkly Control Center.

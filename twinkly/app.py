@@ -2,6 +2,7 @@ import asyncio
 import base64
 import hashlib
 import uuid
+import xml.etree.ElementTree as ET
 import colorsys
 import math
 import os
@@ -31,6 +32,8 @@ TV_STATE = DATA.with_name("tv-state.json")
 SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
+WORDMARK = DATA.with_name("twinkly-wordmark.svg")
+WORDMARK_URL = "https://twinkly.com/cdn/shop/files/Twinkly_Logo_White.svg"
 PRODUCT_PHOTO_URLS = {
     "strings-rgbw": "https://twinkly.com/cdn/shop/files/TWS250SPP-BEU_Out-of-the-box.jpg?v=1769612111&width=480",
     "line": "https://twinkly.com/cdn/shop/files/TWL100STW-BEU_Out-of-the-box.jpg?v=1757667667&width=480",
@@ -583,6 +586,34 @@ class Controller:
         fingerprint = hashlib.sha256(f"{key}/{kind}/{index}".encode()).hexdigest()
         return IMAGES / (fingerprint + ".jpg")
 
+    async def twinkly_wordmark(self, request):
+        if not WORDMARK.is_file():
+            async with self.photo_lock:
+                if not WORDMARK.is_file():
+                    try:
+                        async with ClientSession(timeout=ClientTimeout(total=8)) as session:
+                            async with session.get(WORDMARK_URL, allow_redirects=False) as response:
+                                response.raise_for_status()
+                                raw = bytearray()
+                                async for chunk in response.content.iter_chunked(8192):
+                                    raw.extend(chunk)
+                                    if len(raw) > 256_000:
+                                        raise ValueError("Twinkly SVG too large")
+                        if b"<!DOCTYPE" in raw.upper() or ET.fromstring(raw).tag != "{http://www.w3.org/2000/svg}svg":
+                            raise ValueError("Invalid Twinkly SVG")
+                        temp = WORDMARK.with_suffix(".tmp")
+                        temp.write_bytes(raw)
+                        temp.replace(WORDMARK)
+                    except (ClientError, TimeoutError, ValueError, OSError, ET.ParseError) as exc:
+                        LOG.warning("Twinkly wordmark: %s", exc)
+                        raise web.HTTPBadGateway() from exc
+        return web.FileResponse(WORDMARK, headers={
+            "Content-Type": "image/svg+xml",
+            "Cache-Control": "private, max-age=86400",
+            "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+            "X-Content-Type-Options": "nosniff",
+        })
+
     async def product_photo(self, request):
         key = request.match_info["key"]
         url = PRODUCT_PHOTO_URLS.get(key)
@@ -947,6 +978,7 @@ class Controller:
         app.cleanup_ctx.append(self.stream)
         app.router.add_get("/", lambda _: web.FileResponse("index.html"))
         app.router.add_get("/twinkly.svg", lambda _: web.FileResponse("twinkly.svg"))
+        app.router.add_get("/twinkly-wordmark.svg", self.twinkly_wordmark)
         app.router.add_get("/status", self.status)
         app.router.add_get("/effects", self.effects)
         app.router.add_get("/layout", self.layout)
