@@ -953,15 +953,19 @@ function encodeGifBytes(bytes) {
 }
 function giphyId(url) {
   if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
-  if (['giphy.com','www.giphy.com'].includes(url.hostname)) {
-    const match = /^\/(?:gifs|stickers|embed)\/([A-Za-z0-9_-]+)\/?$/.exec(url.pathname);
-    const id = match?.[1].split('-').at(-1);
-    return /^[A-Za-z0-9]{3,40}$/.test(id || '') ? id : null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  const host = url.hostname;
+  let id;
+  if (['giphy.com','www.giphy.com'].includes(host) && ['gifs','stickers','embed','clips'].includes(parts[0])) {
+    id = parts[1]?.split('-').at(-1);
+  } else if (/^(?:media\d*|i)\.giphy\.com$/.test(host)) {
+    if (parts[0] === 'media') {
+      id = parts[1]?.startsWith('v1.') ? parts[2] : parts[1];
+    } else if (host === 'i.giphy.com' && parts.length === 1) {
+      id = parts[0].replace(/\.(gif|webp|mp4)$/i,'');
+    }
   }
-  if (/^media\d*\.giphy\.com$/.test(url.hostname)) {
-    return /^\/media\/([A-Za-z0-9]{3,40})\//.exec(url.pathname)?.[1] || null;
-  }
-  return null;
+  return /^[A-Za-z0-9]{3,40}$/.test(id || '') ? id : null;
 }
 async function importGif() {
   const labels = gifLabels[lang.value];

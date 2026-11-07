@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.29
+
+- Herken ook GIPHY-afbeeldingslinks met een versietoken of met i.giphy.com.
+- Probeer een extra kleine GIPHY-versie als de grotere versie niet past.
+
 ## 0.1.28
 
 - Importeer gewone GIPHY-deellinks en directe GIPHY-afbeeldingslinks in de lokale GIF-bibliotheek.

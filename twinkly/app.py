@@ -1024,7 +1024,7 @@ class Controller:
         if not isinstance(gif_id, str) or not re.fullmatch(r"[A-Za-z0-9]{3,40}", gif_id):
             raise ValueError("Invalid GIPHY ID")
         async with ClientSession(timeout=ClientTimeout(total=8)) as session:
-            for rendition in ("200w.gif", "giphy-preview.gif", "giphy.gif"):
+            for rendition in ("200w.gif", "100w.gif", "giphy-preview.gif", "giphy.gif"):
                 url = f"https://media1.giphy.com/media/{gif_id}/{rendition}"
                 async with session.get(url, allow_redirects=False) as response:
                     if response.status != 200 or response.content_type != "image/gif":
