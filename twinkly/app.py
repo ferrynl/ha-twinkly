@@ -27,11 +27,11 @@ def local_ip(value):
     return str(ip)
 
 
-def discover():
+def discover(broadcast):
     found = set()
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.sendto(b"\x01discover", ("255.255.255.255", 5555))
+        sock.sendto(b"\x01discover", (broadcast, 5555))
         deadline = time.monotonic() + 2
         while len(found) < MAX_DEVICES and time.monotonic() < deadline:
             sock.settimeout(max(0.001, deadline - time.monotonic()))
@@ -97,7 +97,7 @@ class Device:
     def command(self, action, value):
         if action == "stop":
             if self.restore is not None:
-                self.client.set_mode(self.restore)
+                self.client.set_mode(self.restore).raise_for_status()
                 self.restore = None
             return
         if action == "music":
@@ -106,21 +106,23 @@ class Device:
         if action == "on":
             self.client.turn_on()
         elif action == "off":
-            self.client.turn_off()
+            self.client.turn_off().raise_for_status()
         elif action == "color":
-            self.client.set_led_color_rgb(*value)
-            self.client.set_mode("color")
+            self.client.set_led_color_rgb(*value).raise_for_status()
+            self.client.set_mode("color").raise_for_status()
         elif action == "brightness":
-            self.client.set_brightness(value)
+            self.client.set_brightness(value).raise_for_status()
 
     def send(self, frame):
         now = time.monotonic()
         if now >= self.rt_check:
-            mode = self.client.get_mode()["mode"]
+            response = self.client.get_mode()
+            response.raise_for_status()
+            mode = response["mode"]
             if self.restore is None:
                 self.restore = mode if mode != "rt" else "off"
             if mode != "rt":
-                self.client.set_mode("rt")
+                self.client.set_mode("rt").raise_for_status()
             self.rt_check = now + 2
         # RGBW controllers use white first on the realtime wire.
         white = b"\0" if self.row["profile"] == "RGBW" else b""
@@ -132,7 +134,7 @@ class Device:
             try:
                 await asyncio.to_thread(method, *args)
             except Exception as exc:
-                self.error = type(exc).__name__
+                self.error = str(exc) or type(exc).__name__
                 self.retry = time.monotonic() + 5
                 self.rt_check = 0
                 self.client.session.close()
@@ -148,6 +150,7 @@ class Controller:
         self.source = local_ip(options["ddp_source"])
         self.ddp = DDP(self.source)
         self.fps = options["fps"]
+        self.broadcast = local_ip(options.get("discovery_broadcast", "255.255.255.255"))
         self.limit = asyncio.Semaphore(8)
         self.devices = {}
         self.music = set()
@@ -164,6 +167,7 @@ class Controller:
             session.trust_env = False
             session.request = functools.partial(session.request, timeout=(1, 2))
             info = client.get_device_info()
+            info.raise_for_status()
             leds = int(info["number_of_led"])
             profile = str(info["led_profile"]).replace("+", "").upper()
             if not 1 <= leds <= 4096 or profile not in ("RGB", "RGBW"):
@@ -249,7 +253,11 @@ class Controller:
     async def register(self, request):
         data = await request.json()
         async with self.edit_scan:
-            hosts = [data["ip"]] if data.get("ip") else await asyncio.to_thread(discover)
+            hosts = [data["ip"]] if data.get("ip") else await asyncio.to_thread(discover, self.broadcast)
+            if not hosts:
+                return web.json_response({"added": 0, "errors": [
+                    f"Geen UDP-antwoord via {self.broadcast}:5555. Probeer een IP-adres of stel het broadcastadres van je LAN in."
+                ]})
             results = await asyncio.gather(*(self.add(host) for host in hosts), return_exceptions=True)
         return web.json_response({"added": sum(isinstance(x, dict) for x in results),
                                   "errors": [f"{host}: {result}" for host, result in zip(hosts, results)
@@ -277,7 +285,10 @@ class Controller:
             self.music.difference_update(keys)
             results = await asyncio.gather(*(self.devices[k].run(self.devices[k].command, action, value)
                                              for k in keys))
-        return web.json_response({"failed": [key for key, ok in zip(keys, results) if not ok]})
+            return web.json_response({"failed": [
+                f"{self.devices[key].row['ip']}: {self.devices[key].error}"
+                for key, ok in zip(keys, results) if not ok
+            ]})
 
     def app(self):
         self.edit_scan = asyncio.Lock()

@@ -12,8 +12,8 @@ button{cursor:pointer} button:disabled{opacity:.5} button:hover{background:#3857
 .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center} input[type=color]{height:40px;width:48px}
 input[type=number]{width:72px} #message{min-height:1.5em;overflow-wrap:anywhere} h2,h3{margin:0}
 </style>
-<main><h1>Twinkly Kerst</h1><p id="audio">Status laden…</p>
-<section><h2>Alle lampen</h2><p>Bedien alle gevonden Twinkly’s tegelijk.</p>
+<main><h1>Twinkly Kerst</h1><p id="audio">Status laden.</p>
+<section><h2>Alle lampen</h2><p>Bedien alle gevonden Twinkly's tegelijk.</p>
 <div class="controls" id="all"></div><hr>
 <div class="controls">
 <input id="ip" placeholder="192.168.1.50" aria-label="Twinkly IPv4-adres"></div>
@@ -36,7 +36,7 @@ function button(parent, label, action) {
     if (busy) return;
     busy = true;
     el.disabled = true;
-    byId('message').textContent = 'Bezig…';
+    byId('message').textContent = 'Bezig.';
     try { byId('message').textContent = await action(); await refresh(); }
     catch (error) { byId('message').textContent = error.message; }
     finally { el.disabled = false; busy = false; }
@@ -46,7 +46,7 @@ function button(parent, label, action) {
 function controls(parent, id) {
   const run = async (action, value) => {
     const result = await request('control', {id, action, value});
-    return result.failed.length ? 'Mislukt bij ' + result.failed.length + ' apparaat/apparaten.' : 'Opdracht verwerkt.';
+    return result.failed.length ? result.failed.join(' � ') : 'Opdracht verwerkt.';
   };
   for (const [label, action] of [['Aan','on'],['Uit','off'],['Muziek','music'],['Stop muziek','stop']]) {
     button(parent, label, () => run(action));
@@ -75,13 +75,13 @@ async function refresh() {
     }
     const {title, info} = cards.get(d.id);
     title.textContent = d.name;
-    info.textContent = [d.ip, d.leds + ' leds', d.profile, d.music ? 'Muziek aan' : '', d.error || ''].filter(Boolean).join(' · ');
+    info.textContent = [d.ip, d.leds + ' leds', d.profile, d.music ? 'Muziek aan' : '', d.error || ''].filter(Boolean).join(' � ');
   }
 }
 controls(byId('all'), '*');
 async function register(ip) {
   const data = await request('register', {ip});
-  return data.added + ' apparaat/apparaten gevonden. ' + data.errors.join(' · ');
+  return data.added + ' apparaat/apparaten gevonden. ' + data.errors.join(' � ');
 }
 const scanRow = byId('ip').parentElement;
 button(scanRow,'IP toevoegen', () => register(byId('ip').value.trim()));
