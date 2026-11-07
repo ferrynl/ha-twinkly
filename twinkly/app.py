@@ -23,6 +23,7 @@ from xled import HighControlInterface
 
 DATA = Path("/data/devices.json")
 GROUPS = DATA.with_name("groups.json")
+MUSIC_STATE = DATA.with_name("music-state.json")
 IMAGES = DATA.with_name("effect-images")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
 PRODUCT_PHOTO_URLS = {
@@ -338,6 +339,8 @@ class Controller:
         self.music = set()
         self.edit = asyncio.Lock()
         self.music_setup = asyncio.Lock()
+        self.active_style = (json.loads(MUSIC_STATE.read_text(encoding='utf-8')).get('style')
+                             if MUSIC_STATE.is_file() else None)
         self.gif_capture = asyncio.Lock()
         self.photo_lock = asyncio.Lock()
         self.probe = asyncio.Semaphore(6)
@@ -439,6 +442,7 @@ class Controller:
         return web.json_response({
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
             "groups": self.groups,
+            "active_music_style": self.active_style,
             "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code)
                         for k, d in self.devices.items()],
         })
@@ -651,8 +655,12 @@ class Controller:
         async with self.music_setup:
             try:
                 async with ClientSession(base_url="http://127.0.0.1:8888", timeout=ClientTimeout(total=10)) as session:
-                    await configure_ledfx(session, style)
-            except (ClientError, TimeoutError, ValueError, KeyError) as exc:
+                    active_style = await configure_ledfx(session, style)
+                self.active_style = active_style
+                temp = MUSIC_STATE.with_suffix('.tmp')
+                temp.write_text(json.dumps({'style': active_style}), encoding='utf-8')
+                temp.replace(MUSIC_STATE)
+            except (ClientError, TimeoutError, ValueError, KeyError, OSError) as exc:
                 LOG.warning("LedFX setup: %s", exc)
                 return web.json_response({"message": f"LedFX koppelen mislukt: {exc or type(exc).__name__}"})
         return web.json_response({
@@ -727,7 +735,10 @@ async def configure_ledfx(session, style=None):
     path = f"/virtuals/{device['id']}/effects"
     active = (await api("GET", path)).get("effect") or {}
     if not active or (style and style != active.get("type")):
-        await api("POST", path, {"type": style or "energy", "config": {}})
+        active_style = style or "energy"
+        await api("POST", path, {"type": active_style, "config": {}})
+        return active_style
+    return active.get("type")
 
 
 @web.middleware

@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.14
+
+- Bewaar de actieve muziekstijl centraal en toon die op alle browsers en na herstarts.
+- Houd een nog niet toegepaste stijlkeuze apart van de actieve stijl.
+
 ## 0.1.13
 
 - Vergroot de productfoto en verwijder de productlink en de toelichting onder de modelnaam.

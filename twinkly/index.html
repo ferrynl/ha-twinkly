@@ -35,6 +35,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div><div class="desk-grid"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div><div class="desk-channel desk-music"><h2 id="desk-music-title"></h2>
 <div class="controls gap" id="music-setup"></div>
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
+<p id="active-music-style" class="status"></p>
 <div class="controls gap" id="music-preview-tools"></div>
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
@@ -385,6 +386,7 @@ function drawDetails(card) {
   card.detailList.hidden = false;
 }
 function render() {
+  renderActiveStyle();
   renderGroups();
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
   for (const d of status?.devices || []) {
@@ -465,8 +467,25 @@ button(byId('music-setup'), 'setup', async () => {
 }, true);
 const styleSelect = byId('music-style');
 const styleButton = document.createElement('button');
+const activeStyleLabels = {
+  nl:['Actieve muziekstijl','Nog onbekend'],
+  en:['Active music style','Unknown'],
+  es:['Estilo musical activo','Desconocido'],
+  de:['Aktiver Musikstil','Unbekannt']
+};
+let draftStyle = false;
+styleSelect.onchange = () => { draftStyle = true; };
+function renderActiveStyle() {
+  const active = status?.active_music_style;
+  const index = styleIds.indexOf(active);
+  const options = musicStyles[lang.value].slice(3).concat(moreStyles[lang.value]);
+  const [label, unknown] = activeStyleLabels[lang.value];
+  byId('active-music-style').textContent = label + ' · ' + (options[index] || active || unknown);
+  if (!draftStyle && index >= 0) styleSelect.value = active;
+}
 styleButton.onclick = () => perform(styleButton, async () => {
   const result = await request('setup-music', {style:styleSelect.value});
+  if (result.ok) draftStyle = false;
   return result.ok ? musicStyles[lang.value][2] : t('setupFailed') + ' · ' + result.message;
 });
 byId('music-styles').append(styleButton);

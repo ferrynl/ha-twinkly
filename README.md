@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.13 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.14 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -50,3 +50,5 @@ Kies een muziekstijl en klik **Stijl toepassen**. **Livevoorbeeld** toont de RGB
 Klik op **Apparaatinfo laden** bij een lamp. De app leest model, firmware, ledgegevens, netwerkstatus en RSSI uit voor zover de controller die rapporteert. De diagnose wordt één minuut gecachet. Ontbrekende wifi-velden krijgen geen geschatte waarde.
 
 Modelkaarten gebruiken de productcode uit de Twinkly-API. Voor bekende Strings RGB+W- en Line-codes toont de kaart een officiële foto van de productreeks, bij het eerste gebruik opgehaald vanaf Twinkly en daarna uit de lokale appdata geladen. Een reeksfoto kan een andere uitvoering tonen. Onbekende codes krijgen alleen hun modelcode.
+
+De actieve muziekstijl wordt na een geslaagde LedFX-koppeling of stijlwijziging centraal bewaard. Andere browsers tonen deze stijl automatisch. Na een update vanaf een oudere versie verschijnt de status zodra je een stijl toepast of Music Assistant opnieuw koppelt.
