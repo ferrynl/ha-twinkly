@@ -31,11 +31,13 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .scene-pad{display:inline-flex;gap:4px;padding:5px;border:1px solid #617587;border-radius:11px;background:#121922}.mixdesk .scene-pad button:first-child{background:linear-gradient(#673f82,#382549);border-color:#ab82c0}
 .track-screen{display:flex;align-items:center;gap:12px;min-height:88px;padding:12px;margin-bottom:12px;border:1px solid #3b5e58;border-radius:12px;background:radial-gradient(ellipse at top right,#1c4038,#080f13 72%);box-shadow:inset 0 2px 7px #0009}.track-screen img{width:66px;height:66px;object-fit:cover;border-radius:6px}.track-screen p{margin:3px 0;color:#a5c4be;font-size:.83rem;overflow-wrap:anywhere}.track-screen strong{display:block;color:#b7ffe5;overflow-wrap:anywhere}.track-screen #track-label{letter-spacing:.12em;text-transform:uppercase}
 .track-tv{max-width:590px;margin-bottom:14px;padding:9px;border:1px solid #59677a;border-radius:16px;background:linear-gradient(155deg,#46515e,#181e27 45%);box-shadow:0 5px 0 #080b10,0 10px 18px #0008}.track-display{position:relative;display:grid;place-items:center;aspect-ratio:16/9;max-height:275px;background:radial-gradient(ellipse,#183830,#05090c 72%);overflow:hidden;border:1px solid #080b10;border-radius:10px}.track-display img,.track-display video{position:absolute;width:100%;height:100%;object-fit:contain}.track-display [hidden]{display:none}.track-tv .track-screen{border:0;box-shadow:none;margin:0;background:none;padding:8px 4px 2px;min-height:0}#track-idle{font-size:clamp(2rem,6vw,4rem);color:#82dabb}
+.tv-source{margin:0 0 10px}.tv-source select{max-width:100%;min-width:0}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
 <select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
 <section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div><div class="desk-grid"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div><div class="desk-channel desk-music"><h2 id="desk-music-title"></h2>
+<div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
 <div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" hidden><video id="track-video" controls playsinline preload="none" hidden></video></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="controls gap" id="music-setup"></div>
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
@@ -653,7 +655,51 @@ byId('scene-form').onsubmit = event => {
     return t('done');
   });
 };
+const tvSourceText = {
+ nl:['Tv-bron','Automatisch','Spelers vernieuwen','Mediaspelers konden niet worden opgehaald.'],
+ en:['TV source','Automatic','Refresh players','Could not load media players.'],
+ es:['Fuente de TV','Automática','Actualizar reproductores','No se pudieron cargar los reproductores.'],
+ de:['TV-Quelle','Automatisch','Player aktualisieren','Mediaplayer konnten nicht geladen werden.']
+};
+const tvSelect = byId('tv-source');
+const tvRefresh = byId('tv-refresh');
+let tvPlayers = [], tvSelected = '';
 let trackState, trackArtwork, trackVideo;
+function renderTvSource() {
+  const [label, automatic, refresh] = tvSourceText[lang.value];
+  byId('tv-source-label').textContent = label;
+  tvRefresh.textContent = refresh;
+  const options = tvPlayers.map(player => new Option(player.name + ' · ' + player.id,player.id));
+  if (tvSelected && !tvPlayers.some(player => player.id === tvSelected)) {
+    options.push(new Option(tvSelected,tvSelected));
+  }
+  tvSelect.replaceChildren(new Option(automatic,''),...options);
+  tvSelect.value = tvSelected;
+}
+async function loadTvSources() {
+  try {
+    const result = await request('media-players');
+    tvPlayers = result.players;
+    tvSelected = result.selected;
+    renderTvSource();
+    return t('done');
+  } catch {
+    return tvSourceText[lang.value][3];
+  }
+}
+tvRefresh.onclick = () => perform(tvRefresh,loadTvSources);
+tvSelect.onchange = async () => {
+  const player = tvSelect.value;
+  if (busy) { tvSelect.value = tvSelected; return; }
+  await perform(tvSelect, async () => {
+    await request('media-players',{player});
+    tvSelected = player;
+    trackState = await request('now-playing');
+    renderTrack();
+    return t('done');
+  });
+  tvSelect.value = tvSelected;
+};
 function renderTrack() {
   const labels = trackLabels[lang.value];
   const track = trackState?.track;
@@ -683,6 +729,10 @@ async function pollTrack() {
   if (!document.hidden) {
     try { trackState = await request('now-playing'); }
     catch { trackState = {available:false}; }
+    if (typeof trackState?.player === 'string' && tvSelected !== trackState.player && !tvSelect.disabled) {
+      tvSelected = trackState.player;
+      renderTvSource();
+    }
     renderTrack();
   }
   setTimeout(pollTrack,4000);
@@ -690,6 +740,7 @@ async function pollTrack() {
 function translate() {
   document.documentElement.lang = lang.value;
   renderTrack();
+  renderTvSource();
   byId('show-title').textContent = showLabel(0);
   byId('master-label').textContent = showLabel(1);
   byId('master-save').textContent = showLabel(2);
@@ -733,4 +784,5 @@ const poll = async () => {
 };
 poll();
 pollTrack();
+loadTvSources();
 </script></html>

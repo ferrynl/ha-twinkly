@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.18
+
+- Kies de Home Assistant-mediaspeler rechtstreeks bij het tv-scherm.
+- Bewaar de keuze centraal zonder herstart en bied automatische bronselectie aan.
+
 ## 0.1.17
 
 - Maak van Nu speelt een tv-scherm met grotere hoesweergave.

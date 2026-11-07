@@ -27,6 +27,7 @@ DATA = Path("/data/devices.json")
 GROUPS = DATA.with_name("groups.json")
 MUSIC_STATE = DATA.with_name("music-state.json")
 SHOW_STATE = DATA.with_name("show-state.json")
+TV_STATE = DATA.with_name("tv-state.json")
 SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
@@ -353,7 +354,8 @@ class Controller:
         self.gif_capture = asyncio.Lock()
         self.photo_lock = asyncio.Lock()
         self.track_lock = asyncio.Lock()
-        self.media_player = options.get('media_player', '').strip()
+        self.media_player = (json.loads(TV_STATE.read_text(encoding='utf-8')).get('player', '')
+                             if TV_STATE.exists() else options.get('media_player', '').strip())
         self.ha_media_until = 0.0
         self.ha_media_states = []
         self.track_until = 0.0
@@ -707,6 +709,39 @@ class Controller:
     def ha_headers():
         return {"Authorization": "Bearer " + os.environ["SUPERVISOR_TOKEN"]}
 
+    async def media_players(self, request):
+        try:
+            async with ClientSession(timeout=ClientTimeout(total=4)) as session:
+                async with session.get("http://supervisor/core/api/states",
+                                       headers=self.ha_headers(), allow_redirects=False) as response:
+                    response.raise_for_status()
+                    states = await response.json()
+        except (ClientError, TimeoutError, ValueError, KeyError) as exc:
+            raise web.HTTPBadGateway() from exc
+        players = []
+        for state in states:
+            entity = state.get("entity_id", "")
+            if re.fullmatch(r"media_player\.[a-z0-9_]+", entity):
+                attrs = state.get("attributes") or {}
+                players.append({"id": entity, "name": attrs.get("friendly_name") or entity,
+                                "state": state.get("state")})
+        players.sort(key=lambda item: (item["state"] != "playing", item["name"].casefold(), item["id"]))
+        return web.json_response({"players": players, "selected": self.media_player})
+
+    async def select_media_player(self, request):
+        data = await request.json()
+        player = data.get("player")
+        if not isinstance(player, str) or (player and not re.fullmatch(r"media_player\.[a-z0-9_]+", player)):
+            raise web.HTTPBadRequest()
+        async with self.track_lock:
+            temp = TV_STATE.with_suffix(".tmp")
+            temp.write_text(json.dumps({"player": player}), encoding="utf-8")
+            temp.replace(TV_STATE)
+            self.media_player = player
+            self.ha_media_until = self.track_until = 0.0
+            self.ha_media_states = []
+        return web.json_response({"ok": True})
+
     async def home_assistant_media(self, now, track):
         if not self.media_player and not track:
             return None
@@ -787,7 +822,8 @@ class Controller:
                             and video.path.lower().endswith((".mp4", ".webm"))):
                         track["video"] = media
                     self.track_state = {"track": track, "available": True}
-            return web.json_response(self.track_state, headers={"Cache-Control": "no-store"})
+            return web.json_response(dict(self.track_state, player=self.media_player),
+                                     headers={"Cache-Control": "no-store"})
 
     async def now_playing_art(self, request):
         async with self.track_lock:
@@ -898,6 +934,8 @@ class Controller:
         app.router.add_post("/setup-music", self.setup_music)
         app.router.add_get("/music-preview", self.music_preview)
         app.router.add_get("/now-playing", self.now_playing)
+        app.router.add_get("/media-players", self.media_players)
+        app.router.add_post("/media-players", self.select_media_player)
         app.router.add_get("/now-playing-art", self.now_playing_art)
         app.router.add_post("/music-gif", self.music_gif)
         return app
