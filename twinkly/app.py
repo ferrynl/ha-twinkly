@@ -20,6 +20,7 @@ DATA = Path("/data/devices.json")
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
 MAX_DEVICES = 40
+MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe'))
 LOG = logging.getLogger("twinkly")
 
 
@@ -400,12 +401,16 @@ class Controller:
         return web.json_response({"effects": device.effects, "error": None if ok else device.error})
 
     async def setup_music(self, request):
+        data = await request.json()
+        style = data.get("style") if isinstance(data, dict) else None
+        if style is not None and (not isinstance(style, str) or style not in MUSIC_STYLES):
+            raise web.HTTPBadRequest()
         if self.source != "127.0.0.1":
             return web.json_response({"message": "Automatische koppeling vereist LedFX op dezelfde Home Assistant-host en ddp_source 127.0.0.1."})
         async with self.music_setup:
             try:
                 async with ClientSession(base_url="http://127.0.0.1:8888", timeout=ClientTimeout(total=10)) as session:
-                    await configure_ledfx(session)
+                    await configure_ledfx(session, style)
             except (ClientError, TimeoutError, ValueError, KeyError) as exc:
                 LOG.warning("LedFX setup: %s", exc)
                 return web.json_response({"message": f"LedFX koppelen mislukt: {exc or type(exc).__name__}"})
@@ -427,7 +432,7 @@ class Controller:
         return app
 
 
-async def configure_ledfx(session):
+async def configure_ledfx(session, style=None):
     async def api(method, path, body=None):
         async with session.request(method, "/api" + path, json=body, allow_redirects=False) as response:
             data = await response.json()
@@ -471,8 +476,9 @@ async def configure_ledfx(session):
         device = (await api("POST", "/devices", {"type": "ddp", "config": config}))["device"]
 
     path = f"/virtuals/{device['id']}/effects"
-    if not (await api("GET", path)).get("effect"):
-        await api("POST", path, {"type": "energy", "config": {}})
+    active = (await api("GET", path)).get("effect") or {}
+    if not active or (style and style != active.get("type")):
+        await api("POST", path, {"type": style or "energy", "config": {}})
 
 
 @web.middleware

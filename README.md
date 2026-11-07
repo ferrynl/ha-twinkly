@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.4 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.5 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -11,7 +11,7 @@ Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpa
 
 ## Music Assistant en LedFx
 
-Draait LedFX met Sendspin op dezelfde Home Assistant-host? Klik in Twinkly Kerst op **Music Assistant koppelen**. De app zoekt de Sendspin-server, kiest die als actieve audiobron in LedFX en maakt zo nodig één DDP-uitgang met een starteffect aan. Voeg daarna **LedFx Twinkly** toe aan de afspeelgroep in Music Assistant. De stappen hieronder zijn ook handmatig uitvoerbaar.
+Draait LedFX met Sendspin op dezelfde Home Assistant-host? Klik in Twinkly Kerst op **Music Assistant koppelen**. De app zoekt de Sendspin-server, kiest die als actieve audiobron in LedFX en maakt zo nodig één DDP-uitgang met een starteffect aan. Voeg daarna **LedFx Twinkly** toe aan de afspeelgroep in Music Assistant. Onder **Muziekstijl** kies je een LedFX-effect voor de gedeelde uitgang. Kies **Stijl toepassen** om het effect te wisselen. De stappen hieronder zijn ook handmatig uitvoerbaar.
 
 1. Installeer LedFx met Sendspin-ondersteuning die past bij je Music Assistant-versie. Zie de [Sendspin-handleiding van LedFx](https://docs.ledfx.app/en/latest/settings/sendspin.html).
 2. Voeg in LedFx onder **Settings → Features** een Sendspin-server toe. Selecteer die onder **Settings → Audio**. Zet de LedFx-speler aan in Music Assistant en voeg hem toe aan een afspeelgroep met een compatibele speaker.

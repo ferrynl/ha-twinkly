@@ -10,6 +10,7 @@
 <select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
 <section><h2 data-text="all"></h2><div class="controls" id="all"></div>
 <div class="controls gap" id="music-setup"></div>
+<div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
 <p id="message" role="status"></p></section>
 <div id="devices"></div>
@@ -22,6 +23,13 @@ const strings = {
  de:['Lichtsteuerung','Alle Lichter','Ein','Aus','Farbe','Helligkeit %','Musik','Musik stoppen','Music Assistant verbinden','IP hinzufügen','Netzwerk durchsuchen','Wird ausgeführt…','Befehl verarbeitet.','LedFx-Frames werden empfangen','Warte auf einen LedFx-Musikeffekt','Verbindung zur App fehlt','Effekte laden','Effekt auswählen','Effekt','Film','Keine lokalen Effekte gefunden','Geräte gefunden','Musik aktiviert','Twinkly-IPv4-Adresse','LedFX eingerichtet. Füge LedFx Twinkly zur Wiedergabegruppe in Music Assistant hinzu.','Einrichtung fehlgeschlagen']
 };
 const previewNotes = {nl:'Voorbeeldbeelden ter illustratie',en:'Illustrative previews',es:'Vistas previas ilustrativas',de:'Illustrative Vorschaubilder'};
+const musicStyles = {
+ nl:['Muziekstijl','Stijl toepassen','Muziekstijl ingesteld.','Energiepuls','Kleurenspectrum','Bas en slag','Kleurgolf','Stroboscoop (snelle flitsen)'],
+ en:['Music style','Apply style','Music style applied.','Energy pulse','Colour spectrum','Bass and beat','Colour wave','Strobe (rapid flashes)'],
+ es:['Estilo musical','Aplicar estilo','Estilo aplicado.','Pulso de energía','Espectro de colores','Bajos y ritmo','Onda de color','Estroboscopio (destellos rápidos)'],
+ de:['Musikstil','Stil anwenden','Musikstil angewendet.','Energiepuls','Farbspektrum','Bass und Takt','Farbwelle','Stroboskop (schnelle Blitze)']
+};
+const styleIds = ['energy','spectrum','power','wavelength','strobe'];
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -127,6 +135,13 @@ button(byId('music-setup'), 'setup', async () => {
   const result = await request('setup-music', {});
   return result.ok ? t('setupDone') : t('setupFailed') + ' · ' + result.message;
 }, true);
+const styleSelect = byId('music-style');
+const styleButton = document.createElement('button');
+styleButton.onclick = () => perform(styleButton, async () => {
+  const result = await request('setup-music', {style:styleSelect.value});
+  return result.ok ? musicStyles[lang.value][2] : t('setupFailed') + ' · ' + result.message;
+});
+byId('music-styles').append(styleButton);
 async function register(ip) {
   const data = await request('register', {ip});
   return t('found') + ' · ' + data.added + ' ' + data.errors.join(' · ');
@@ -136,6 +151,12 @@ button(byId('scan'),'add', () => register(byId('ip').value.trim()));
 button(byId('scan'),'scan', () => register(''));
 function translate() {
   document.documentElement.lang = lang.value;
+  const labels = musicStyles[lang.value];
+  const selected = styleSelect.value || 'energy';
+  byId('style-label').textContent = labels[0];
+  styleButton.textContent = labels[1];
+  styleSelect.replaceChildren(...styleIds.map((id,index) => new Option(labels[index+3],id)));
+  styleSelect.value = selected;
   document.querySelectorAll('[data-text]').forEach(el => translated(el, el.dataset.text));
   document.querySelectorAll('[data-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.label)));
   for (const card of cards.values()) renderEffects(card);
