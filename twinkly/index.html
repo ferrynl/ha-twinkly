@@ -41,6 +41,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 #pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-top:10px}.pattern-tile{display:grid;text-align:left;gap:6px;min-width:0}.pattern-tile i{display:block;height:28px;border-radius:5px;background:var(--palette)}.pattern-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:inset 0 0 0 1px #9debcf}.pattern-section .music-heading h2{margin:0}
 .gif-library summary{cursor:pointer;color:#b7ecd9}.gif-library input,.gif-library select{min-width:0;max-width:100%}#gif-library-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}.gif-item{display:grid;gap:6px;padding:8px;border:1px solid #47566a;border-radius:8px;min-width:0;overflow-wrap:anywhere}.gif-item img{width:100%;height:65px;object-fit:contain;background:#080c12;border-radius:5px}.gif-item a{color:#ffe2a5}.gif-item button[aria-pressed=true]{border-color:#9debcf}
 .pattern-categories{margin-top:10px}.mixdesk .pattern-categories button{min-height:32px;font-size:.84rem}.pattern-categories button[aria-pressed=true]{border-color:#9debcf;color:#a9ffe4}
+.matrix-library summary{cursor:pointer;color:#b7ecd9}#matrix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,96px),1fr));gap:8px}.mixdesk .matrix-tile{display:grid;align-content:start;gap:6px;min-width:0;text-align:center;font-size:.79rem;padding:6px;overflow-wrap:anywhere}.matrix-tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#000;border-radius:5px;image-rendering:pixelated}.mixdesk .matrix-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:0 0 0 1px #9debcf}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -56,7 +57,8 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 </div><div class="desk-channel live-monitor"><div class="music-heading"><h2 id="monitor-title"></h2><span id="monitor-count"></span></div>
 <canvas id="monitor-strip" width="480" height="36"></canvas>
 <div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
-<div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="controls pattern-categories" id="pattern-categories"></div><div id="pattern-grid"></div><details class="gap gif-library"><summary id="gif-library-title"></summary>
+<div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="controls pattern-categories" id="pattern-categories"></div><div id="pattern-grid"></div><details class="gap matrix-library" id="matrix-gallery"><summary id="matrix-title"></summary><div class="controls pattern-categories" id="matrix-themes"></div><div id="matrix-grid" class="gap"></div></details>
+<details class="gap gif-library"><summary id="gif-library-title"></summary>
 <form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
 <div id="gif-library-list" class="gap"></div></details></div></div>
 <div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
@@ -232,8 +234,17 @@ const patternCategories = {
 const categoryIds = ['classic','winter','lounge','nature','neon','sparkle'];
 let selectedCategory = 'classic';
 function patternName(id) {
+  if (id.startsWith('matrix:')) return matrixCatalog.find(item => 'matrix:' + item.id === id)?.name || id.slice(7);
   return extraPatterns[id]?.[1] || patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(id)] || id;
 }
+const matrixLabels = {
+ nl:['Matrix-GIF’s','Winter','Kerst','Neon','Oceaan','Goud','Matrix-GIF’s konden niet worden geladen.'],
+ en:['Matrix GIFs','Winter','Christmas','Neon','Ocean','Gold','Could not load matrix GIFs.'],
+ es:['GIF de matriz','Invierno','Navidad','Neón','Océano','Oro','No se pudieron cargar los GIF.'],
+ de:['Matrix-GIFs','Winter','Weihnachten','Neon','Ozean','Gold','Matrix-GIFs konnten nicht geladen werden.']
+};
+const matrixThemes = ['winter','festive','neon','ocean','gold'];
+let matrixCatalog = [], matrixTheme = 'winter', matrixSignature = '', matrixLoading = false;
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -932,7 +943,7 @@ function renderPatterns() {
   const target = JSON.parse(patternTarget.value || '{"id":"*"}');
   const selected = devices.filter(device => target.group ? groups[target.group]?.members.includes(device.id)
     : target.id === '*' || target.id === device.id);
-  for (const tile of [...byId('pattern-grid').querySelectorAll('button'), ...byId('gif-library-list').querySelectorAll('button[data-pattern]')]) {
+  for (const tile of [...byId('pattern-grid').querySelectorAll('button'), ...byId('gif-library-list').querySelectorAll('button[data-pattern]'), ...byId('matrix-grid').querySelectorAll('button[data-pattern]')]) {
     tile.setAttribute('aria-pressed',String(selected.length > 0 && selected.every(d => d.pattern === tile.dataset.pattern)));
   }
   byId('pattern-stop').disabled = !selected.some(device => device.pattern);
@@ -1040,6 +1051,44 @@ for (const [id, payload] of [
     });
   };
 }
+function renderMatrixGallery() {
+  const labels = matrixLabels[lang.value];
+  byId('matrix-title').textContent = labels[0] + ' · 50';
+  const signature = [lang.value,matrixTheme,matrixCatalog.length].join(':');
+  if (signature === matrixSignature) return;
+  matrixSignature = signature;
+  const tabs = byId('matrix-themes'), grid = byId('matrix-grid');
+  tabs.replaceChildren();
+  grid.replaceChildren();
+  matrixThemes.forEach((theme,index) => {
+    const button = document.createElement('button');
+    button.textContent = labels[index+1];
+    button.setAttribute('aria-pressed',String(theme === matrixTheme));
+    button.onclick = () => { matrixTheme = theme; renderMatrixGallery(); };
+    tabs.append(button);
+  });
+  for (const effect of matrixCatalog.filter(item => item.theme === matrixTheme)) {
+    const tile = document.createElement('button'), image = document.createElement('img');
+    tile.className = 'matrix-tile';
+    tile.dataset.pattern = 'matrix:' + effect.id;
+    image.alt = ''; image.loading = 'lazy';
+    image.src = './matrix-gifs/' + encodeURIComponent(effect.id);
+    tile.append(image,effect.name);
+    tile.onclick = () => perform(tile,() => patternCommand('pattern',tile.dataset.pattern));
+    grid.append(tile);
+  }
+  renderPatterns();
+}
+byId('matrix-gallery').ontoggle = async () => {
+  if (!byId('matrix-gallery').open || matrixCatalog.length || matrixLoading) return;
+  matrixLoading = true;
+  try {
+    matrixCatalog = await request('matrix-gifs');
+    renderMatrixGallery();
+  } catch {
+    byId('message').textContent = matrixLabels[lang.value][6];
+  } finally { matrixLoading = false; }
+};
 function translate() {
   document.documentElement.lang = lang.value;
   const gif = gifLabels[lang.value], gifPattern = byId('gif-pattern'), priorGif = gifPattern.value;
@@ -1060,6 +1109,7 @@ function translate() {
   }));
   if (priorGif) gifPattern.value = priorGif;
   renderGifLibrary();
+  renderMatrixGallery();
   byId('pattern-title').textContent = patternLabels[lang.value][0];
   byId('pattern-target-label').textContent = patternLabels[lang.value][1];
   byId('pattern-stop').textContent = patternLabels[lang.value][2];

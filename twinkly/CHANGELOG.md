@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.31
+
+- Voeg 50 originele geanimeerde matrix-GIF’s toe met vierkante previews.
+- Groepeer ze in vijf thema’s en bewaar de GIF-bestanden in een aparte map in de add-on.
+
 ## 0.1.30
 
 - Voeg 50 ingebouwde livepatronen toe in vijf nieuwe categorieën.

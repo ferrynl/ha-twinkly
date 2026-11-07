@@ -33,6 +33,8 @@ TV_STATE = DATA.with_name("tv-state.json")
 SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
 GIF_LIBRARY = DATA.with_name("gif-library")
+MATRIX_GIFS = Path(__file__).resolve().with_name("matrix_gifs")
+MATRIX_ID = re.compile(r"(?:winter|festive|neon|ocean|gold)-(?:[1-9]|10)")
 GIF_LIMIT = 512 * 1024
 GIF_ID = re.compile(r"[a-f0-9]{12}-[a-zA-Z0-9_-]{1,48}")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
@@ -558,8 +560,8 @@ class Controller:
             fading = False
             if now >= device.retry:
                 if pattern:
-                    if pattern.startswith("gif:"):
-                        timing, frames = self.gif_patterns[pattern[4:]]
+                    if pattern.startswith(("gif:", "matrix:")):
+                        timing, frames = self.gif_patterns[pattern]
                         index = bisect.bisect_right(timing, int(now * 1000) % timing[-1])
                         frame = frames[index]
                     else:
@@ -823,7 +825,8 @@ class Controller:
             raise web.HTTPBadRequest()
         if action == "pattern" and (not isinstance(value, str)
                 or (value not in PATTERN_PALETTES
-                    and not (value.startswith("gif:") and GIF_ID.fullmatch(value[4:])))):
+                    and not (value.startswith("gif:") and GIF_ID.fullmatch(value[4:]))
+                    and not (value.startswith("matrix:") and MATRIX_ID.fullmatch(value[7:])))):
             raise web.HTTPBadRequest()
         if action == "effect":
             if (not isinstance(value, list) or len(value) != 2
@@ -841,11 +844,12 @@ class Controller:
             if any(key not in self.devices for key in keys):
                 raise web.HTTPNotFound()
             if action == "pattern":
-                if value.startswith("gif:") and value[4:] not in self.gif_patterns:
-                    gif_id = value[4:]
+                if value.startswith(("gif:", "matrix:")) and value not in self.gif_patterns:
+                    kind, gif_id = value.split(":", 1)
+                    root = MATRIX_GIFS if kind == "matrix" else GIF_LIBRARY
                     try:
-                        self.gif_patterns[gif_id] = await asyncio.to_thread(
-                            self.decode_gif, (GIF_LIBRARY / (gif_id + ".gif")).read_bytes())
+                        self.gif_patterns[value] = await asyncio.to_thread(
+                            self.decode_gif, (root / (gif_id + ".gif")).read_bytes(), kind == "matrix")
                     except (OSError, ValueError) as exc:
                         raise web.HTTPBadRequest(text="GIF unavailable") from exc
                 self.music.difference_update(keys)
@@ -1071,7 +1075,7 @@ class Controller:
                                          "X-Content-Type-Options": "nosniff"})
 
     @staticmethod
-    def decode_gif(raw):
+    def decode_gif(raw, matrix=False):
         if len(raw) > GIF_LIMIT:
             raise ValueError("GIF exceeds 512 KiB")
         frames, timing = [], []
@@ -1088,10 +1092,23 @@ class Controller:
                     raise ValueError("GIF exceeds 120 frames")
                 total += min(5000, max(40, image.info.get("duration", 100)))
                 timing.append(total)
-                frames.append(image.convert("RGB").resize((PIXELS, 1), Image.Resampling.BOX).tobytes())
+                size = (12, 10) if matrix else (PIXELS, 1)
+                sampler = Image.Resampling.NEAREST if matrix else Image.Resampling.BOX
+                frames.append(image.convert("RGB").resize(size, sampler).tobytes())
         if not frames:
             raise ValueError("Empty GIF")
         return tuple(timing), tuple(frames)
+
+    async def matrix_catalog(self, request):
+        return web.FileResponse(MATRIX_GIFS / "catalog.json")
+
+    async def matrix_gif(self, request):
+        key = request.match_info["id"]
+        if not MATRIX_ID.fullmatch(key):
+            raise web.HTTPNotFound()
+        return web.FileResponse(MATRIX_GIFS / (key + ".gif"), headers={
+            "Content-Type": "image/gif", "X-Content-Type-Options": "nosniff",
+        })
 
     async def list_gifs(self, request):
         entries = [{"id": path.stem, "name": path.stem.split("-", 1)[1].replace("_", " ")}
@@ -1131,7 +1148,7 @@ class Controller:
                 if "gif:" + gif_id in self.patterns.values():
                     raise web.HTTPConflict(text="Stop the GIF before deleting it")
                 (GIF_LIBRARY / (gif_id + ".gif")).unlink(missing_ok=True)
-                self.gif_patterns.pop(gif_id, None)
+                self.gif_patterns.pop("gif:" + gif_id, None)
             return web.json_response({"ok": True})
         name = data.get("name")
         if not isinstance(name, str) or not name.strip() or len(name) > 80:
@@ -1160,7 +1177,7 @@ class Controller:
                 temp = path.with_suffix(".tmp")
                 temp.write_bytes(raw)
                 temp.replace(path)
-            self.gif_patterns[gif_id] = decoded
+            self.gif_patterns["gif:" + gif_id] = decoded
         return web.json_response({"id": gif_id})
 
     async def gif_file(self, request):
@@ -1255,6 +1272,8 @@ class Controller:
         app.router.add_post("/media-players", self.select_media_player)
         app.router.add_get("/now-playing-art", self.now_playing_art)
         app.router.add_post("/music-gif", self.music_gif)
+        app.router.add_get("/matrix-gifs", self.matrix_catalog)
+        app.router.add_get("/matrix-gifs/{id}", self.matrix_gif)
         app.router.add_get("/gifs", self.list_gifs)
         app.router.add_post("/gifs", self.save_gif)
         app.router.add_get("/gifs/{id}", self.gif_file)
