@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
+from PIL import Image
 from xled import HighControlInterface
 
 DATA = Path("/data/devices.json")
@@ -26,7 +27,7 @@ IMAGES = DATA.with_name("effect-images")
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
 MAX_DEVICES = 40
-MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe'))
+MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe', 'scroll', 'bands', 'blade_power_plus', 'magnitude', 'fire'))
 LOG = logging.getLogger("twinkly")
 
 
@@ -273,6 +274,7 @@ class Controller:
         self.music = set()
         self.edit = asyncio.Lock()
         self.music_setup = asyncio.Lock()
+        self.gif_capture = asyncio.Lock()
         self.probe = asyncio.Semaphore(6)
         if DATA.exists():
             for row in json.loads(DATA.read_text()):
@@ -498,6 +500,40 @@ class Controller:
                    for entry in device.effects] if ok else []
         return web.json_response({"effects": catalog, "error": None if ok else device.error})
 
+    def music_frame(self):
+        if time.monotonic() - self.ddp.received < 1.5:
+            return self.ddp.frame
+        return None
+
+    async def music_preview(self, request):
+        frame = self.music_frame()
+        return web.Response(body=frame or b"", content_type="application/octet-stream",
+                            headers={"Cache-Control": "no-store"})
+
+    @staticmethod
+    def encode_gif(frames):
+        images = [Image.frombytes("RGB", (PIXELS, 1), frame)
+                  .resize((PIXELS * 3, 64), Image.Resampling.NEAREST)
+                  .quantize(colors=128) for frame in frames]
+        with io.BytesIO() as output:
+            images[0].save(output, format="GIF", save_all=True,
+                           append_images=images[1:], duration=100, loop=0)
+            return output.getvalue()
+
+    async def music_gif(self, request):
+        if self.gif_capture.locked():
+            raise web.HTTPConflict()
+        async with self.gif_capture:
+            frames = []
+            for _ in range(30):
+                frame = self.music_frame()
+                if frame is None:
+                    raise web.HTTPServiceUnavailable()
+                frames.append(frame)
+                await asyncio.sleep(0.1)
+            result = await asyncio.to_thread(self.encode_gif, frames)
+        return web.Response(body=result, content_type="image/gif", headers={"Cache-Control": "no-store"})
+
     async def setup_music(self, request):
         data = await request.json()
         style = data.get("style") if isinstance(data, dict) else None
@@ -531,6 +567,8 @@ class Controller:
         app.router.add_get("/effect-image", self.effect_image)
         app.router.add_post("/effect-image", self.effect_image)
         app.router.add_post("/setup-music", self.setup_music)
+        app.router.add_get("/music-preview", self.music_preview)
+        app.router.add_post("/music-gif", self.music_gif)
         return app
 
 

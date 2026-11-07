@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.9
+
+- Voeg Lichtloop, Muziekbanden, Blade Power+, Frequentiepuls en Muziekvuur toe.
+- Bekijk de echte LedFX-frames als bewegende lichtbalk en neem een downloadbaar gifje op.
+
 ## 0.1.8
 
 - Maak, bewerk en verwijder groepen en bedien de gekozen lampen tegelijk.

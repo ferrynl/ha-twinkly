@@ -6,6 +6,7 @@
 .power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
 .led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
 #group-cards{display:grid;gap:12px;margin-top:14px}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
+#music-preview,#music-gif{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-gif-link{display:inline-block;margin-top:8px;color:#ffe2a5}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
@@ -13,6 +14,9 @@
 <section><h2 data-text="all"></h2><div class="controls" id="all"></div>
 <div class="controls gap" id="music-setup"></div>
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
+<div class="controls gap" id="music-preview-tools"></div>
+<div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
+<div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
 <div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
 <p id="message" role="status"></p></section>
 <section><h2 id="group-title"></h2><form id="group-form">
@@ -39,7 +43,19 @@ const musicStyles = {
  es:['Estilo musical','Aplicar estilo','Estilo aplicado.','Pulso de energía','Espectro de colores','Bajos y ritmo','Onda de color','Estroboscopio (destellos rápidos)'],
  de:['Musikstil','Stil anwenden','Musikstil angewendet.','Energiepuls','Farbspektrum','Bass und Takt','Farbwelle','Stroboskop (schnelle Blitze)']
 };
-const styleIds = ['energy','spectrum','power','wavelength','strobe'];
+const moreStyles = {
+ nl:['Lichtloop','Muziekbanden','Blade Power+','Frequentiepuls','Muziekvuur'],
+ en:['Light scroll','Music bands','Blade Power+','Frequency pulse','Music fire'],
+ es:['Desplazamiento de luz','Bandas musicales','Blade Power+','Pulso de frecuencia','Fuego musical'],
+ de:['Lichtlauf','Musikbänder','Blade Power+','Frequenzpuls','Musikfeuer']
+};
+const previewText = {
+ nl:['Livevoorbeeld','Voorbeeld sluiten','Gifje opnemen','Gifje downloaden','Wacht op LedFX-frames. Start muziek en pas een stijl toe.','Opname duurt ongeveer 3 seconden.'],
+ en:['Live preview','Close preview','Record GIF','Download GIF','Waiting for LedFX frames. Play music and apply a style.','Recording takes about 3 seconds.'],
+ es:['Vista en directo','Cerrar vista','Grabar GIF','Descargar GIF','Esperando datos de LedFX. Reproduce música y aplica un estilo.','La grabación dura unos 3 segundos.'],
+ de:['Live-Vorschau','Vorschau schließen','GIF aufnehmen','GIF herunterladen','Warte auf LedFX-Frames. Spiele Musik ab und wende einen Stil an.','Die Aufnahme dauert etwa 3 Sekunden.']
+};
+const styleIds = ['energy','spectrum','power','wavelength','strobe','scroll','bands','blade_power_plus','magnitude','fire'];
 const layoutLabels = {
  nl:['Ledkaart laden','Geen ledposities ontvangen','ledposities','Berekende indeling','Draai ledkaart'],
  en:['Load LED map','No LED positions received','LED positions','Generated layout','Rotate LED map'],
@@ -338,6 +354,56 @@ styleButton.onclick = () => perform(styleButton, async () => {
   return result.ok ? musicStyles[lang.value][2] : t('setupFailed') + ' · ' + result.message;
 });
 byId('music-styles').append(styleButton);
+const livePanel = byId('music-preview-panel');
+const previewButton = document.createElement('button'), gifButton = document.createElement('button');
+let previewTimer, gifUrl;
+function updatePreviewLabels() {
+  const labels = previewText[lang.value];
+  previewButton.textContent = labels[livePanel.hidden ? 0 : 1];
+  gifButton.textContent = labels[2];
+  byId('music-gif-link').textContent = labels[3];
+  byId('music-gif').alt = labels[0];
+  byId('music-preview').setAttribute('aria-label',labels[0]);
+}
+async function paintPreview() {
+  if (livePanel.hidden) return;
+  if (!document.hidden) {
+    const canvas = byId('music-preview'), ctx = canvas.getContext('2d');
+    let frame = [];
+    try {
+      const response = await fetch('./music-preview',{cache:'no-store'});
+      if (response.ok) frame = new Uint8Array(await response.arrayBuffer());
+    } catch {}
+    if (livePanel.hidden) return;
+    ctx.fillStyle = '#0b1616';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    byId('music-preview-status').textContent = frame.length ? '' : previewText[lang.value][4];
+    for (let i=0; i+2<frame.length; i+=3) {
+      ctx.fillStyle = 'rgb(' + frame[i] + ',' + frame[i+1] + ',' + frame[i+2] + ')';
+      ctx.fillRect(i,0,3,canvas.height);
+    }
+  }
+  previewTimer = setTimeout(paintPreview,125);
+}
+previewButton.onclick = () => {
+  livePanel.hidden = !livePanel.hidden;
+  clearTimeout(previewTimer);
+  updatePreviewLabels();
+  if (!livePanel.hidden) paintPreview();
+};
+gifButton.onclick = () => perform(gifButton, async () => {
+  byId('message').textContent = previewText[lang.value][5];
+  const response = await fetch('./music-gif',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  if (response.status === 503) return previewText[lang.value][4];
+  if (!response.ok) throw Error('HTTP ' + response.status);
+  if (gifUrl) URL.revokeObjectURL(gifUrl);
+  gifUrl = URL.createObjectURL(await response.blob());
+  byId('music-gif').src = gifUrl;
+  byId('music-gif-link').href = gifUrl;
+  byId('music-gif-panel').hidden = false;
+  return t('done');
+});
+byId('music-preview-tools').append(previewButton,gifButton);
 async function register(ip) {
   const data = await request('register', {ip});
   return t('found') + ' · ' + data.added + ' ' + data.errors.join(' · ');
@@ -356,7 +422,9 @@ function translate() {
   const selected = styleSelect.value || 'energy';
   byId('style-label').textContent = labels[0];
   styleButton.textContent = labels[1];
-  styleSelect.replaceChildren(...styleIds.map((id,index) => new Option(labels[index+3],id)));
+  const options = labels.slice(3).concat(moreStyles[lang.value]);
+  styleSelect.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
+  updatePreviewLabels();
   styleSelect.value = selected;
   document.querySelectorAll('[data-text]').forEach(el => translated(el, el.dataset.text));
   document.querySelectorAll('[data-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.label)));

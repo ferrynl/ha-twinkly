@@ -1,6 +1,6 @@
 # Twinkly Kerst voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.8 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.9 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -40,3 +40,7 @@ Stel indien nodig `discovery_broadcast` in op het broadcastadres van je eigen LA
 Maak onder **Groepen** een groep met een naam en de gewenste lampen. Bedien aan/uit, kleur, helderheid en muziek voor die selectie, of pas de leden later aan.
 
 Kies bij een effect **Afbeelding uploaden** en selecteer een JPG, PNG of WebP van maximaal 10 MB. De browser verkleint de afbeelding naar een stilstaand JPEG-voorbeeld. Groepen en voorbeelden blijven in de appdata staan en zijn zichtbaar op andere apparaten die dezelfde Home Assistant-installatie gebruiken.
+
+## Muziekvoorbeeld
+
+Kies een muziekstijl en klik **Stijl toepassen**. **Livevoorbeeld** toont de RGB-uitvoer van LedFX als lichtbalk. Met **Gifje opnemen** neem je drie seconden van de ontvangen frames op. Het voorbeeld verschijnt in het dashboard en kan worden gedownload. Beide functies hebben actieve LedFX-frames nodig en kunnen ook worden gebruikt voordat je Muziek op een Twinkly-lamp inschakelt.
