@@ -1,6 +1,6 @@
 # Twinkly Control Center voor Home Assistant
 
-Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.29 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
+Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpaneel en muziekeffecten. Versie 0.1.30 is een proefversie. Beschikbare modi verschillen per model en firmware. Het is verstandig om op één RGB- en één RGBW-controller te beginnen en vervolgens de rest toe te voegen.
 
 ## Installeren
 
@@ -71,7 +71,7 @@ Het Twinkly-beeldmerk is lokaal opgenomen als transparant SVG, gebaseerd op [Sim
 
 De kop gebruikt het volledige [officiële Twinkly-logo](https://twinkly.com/cdn/shop/files/Twinkly_Logo_White.svg) met een gouden kleurverloop. De add-on haalt het SVG bij de eerste weergave op en bewaart het in de lokale appdata. Het bestaande kleine beeldmerk blijft het icoon van het browsertabblad.
 
-De **Live effectengalerij** streamt acht eigen patronen naar één lamp, een groep of alle lampen. Ze gebruiken geen opslagplaats op de controller. Kies **Stop live-effect** om de vorige lampmodus te herstellen.
+De **Live effectengalerij** streamt 58 eigen patronen naar één lamp, een groep of alle lampen. Ze gebruiken geen opslagplaats op de controller. Kies **Stop live-effect** om de vorige lampmodus te herstellen.
 
 De mengtafel bevat een GIF-bibliotheek. Upload een GIF, maak een GIF uit een live patroon of importeer een rechtstreekse HTTPS-URL als die site browserdownloads via CORS toestaat. De bibliotheek bewaart maximaal 30 GIF’s van elk maximaal 512 KiB en 120 frames. De app vertaalt de GIF-kleuren naar één rij voor de leds. Je kunt het origineel weer downloaden.
 

@@ -40,6 +40,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .desk-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.music-grid{grid-template-columns:minmax(0,1fr) minmax(0,.8fr)}.track-tv{max-width:330px}.track-display{max-height:190px}.desk-fader input{width:0}.quick-colors{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:13px}.quick-colors>span,#monitor-count,.monitor-meter{font-size:.84rem;color:#bed0df}.mixdesk .quick-color{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:5px 8px}.quick-color i,.monitor-device i{width:10px;height:10px;flex:none;border-radius:50%;background:var(--swatch,#66727f);box-shadow:0 0 8px var(--swatch,#66727f)}#monitor-strip{display:block;width:100%;height:36px;border:1px solid #415268;border-radius:8px;background:#090e15}.monitor-meter{display:flex;align-items:center;gap:8px;margin:8px 0}.monitor-meter meter{width:min(35%,180px);accent-color:#80e8bf}.monitor-devices{display:flex;flex-wrap:wrap;gap:6px}.mixdesk .monitor-device{display:flex;align-items:center;gap:7px;min-height:32px;max-width:100%;text-align:left;font-size:.81rem;padding:5px 8px;overflow-wrap:anywhere}.monitor-device.is-music i{--swatch:#af82ff}.monitor-device.is-on i{--swatch:#62e5b0}.device-focus{outline:2px solid #9debcf;outline-offset:3px}@media(max-width:1120px){.music-grid{grid-template-columns:1fr}.track-tv{max-width:330px}}@media(max-width:760px){.desk-grid{grid-template-columns:1fr}}
 #pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-top:10px}.pattern-tile{display:grid;text-align:left;gap:6px;min-width:0}.pattern-tile i{display:block;height:28px;border-radius:5px;background:var(--palette)}.pattern-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:inset 0 0 0 1px #9debcf}.pattern-section .music-heading h2{margin:0}
 .gif-library summary{cursor:pointer;color:#b7ecd9}.gif-library input,.gif-library select{min-width:0;max-width:100%}#gif-library-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}.gif-item{display:grid;gap:6px;padding:8px;border:1px solid #47566a;border-radius:8px;min-width:0;overflow-wrap:anywhere}.gif-item img{width:100%;height:65px;object-fit:contain;background:#080c12;border-radius:5px}.gif-item a{color:#ffe2a5}.gif-item button[aria-pressed=true]{border-color:#9debcf}
+.pattern-categories{margin-top:10px}.mixdesk .pattern-categories button{min-height:32px;font-size:.84rem}.pattern-categories button[aria-pressed=true]{border-color:#9debcf;color:#a9ffe4}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -55,7 +56,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 </div><div class="desk-channel live-monitor"><div class="music-heading"><h2 id="monitor-title"></h2><span id="monitor-count"></span></div>
 <canvas id="monitor-strip" width="480" height="36"></canvas>
 <div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
-<div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div id="pattern-grid"></div><details class="gap gif-library"><summary id="gif-library-title"></summary>
+<div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="controls pattern-categories" id="pattern-categories"></div><div id="pattern-grid"></div><details class="gap gif-library"><summary id="gif-library-title"></summary>
 <form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
 <div id="gif-library-list" class="gap"></div></details></div></div>
 <div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
@@ -221,6 +222,18 @@ const gifLabels = {
  es:['Biblioteca GIF','Nombre del GIF','Subir GIF','Importar URL','Crear GIF del patrón','Reproducir','Descargar','Eliminar','Elige un GIF de hasta 512 KiB.','El sitio debe permitir la descarga desde el navegador.','Usa un enlace HTTPS público.'],
  de:['GIF-Bibliothek','GIF-Name','GIF hochladen','URL importieren','GIF aus Muster erstellen','Abspielen','Herunterladen','Löschen','Wähle ein GIF bis 512 KiB.','Die Website muss Browser-Downloads erlauben.','Öffentliche HTTPS-Adresse erforderlich.']
 };
+const extraPatterns = {"winter-1":["winter","Frosted Pine","#103829,#37a67a,#def7ee"],"winter-2":["winter","Holly Berry","#153f27,#b81d38,#ffb25d"],"winter-3":["winter","Silent Night","#080e3c,#425aa9,#f3d9a0"],"winter-4":["winter","Gingerbread","#512419,#c76032,#ffe1ae"],"winter-5":["winter","Silver Snow","#142036,#94c0dd,#effcff"],"winter-6":["winter","Candy Cane","#d41538,#fff4de,#95162b"],"winter-7":["winter","Winter Hearth","#2e0908,#c7412d,#ffaf4d"],"winter-8":["winter","Mistletoe","#092d1e,#28884c,#d3dc78"],"winter-9":["winter","Sugar Plum","#321041,#a4498e,#ffadcf"],"winter-10":["winter","Christmas Gold","#341a0a,#b27b2e,#ffdf90"],"lounge-1":["lounge","Amber Lounge","#201220,#bd652d,#ffd791"],"lounge-2":["lounge","Rose Quartz","#371b40,#cf6994,#ffdbce"],"lounge-3":["lounge","Velvet Dusk","#18082d,#4f2b88,#c765b5"],"lounge-4":["lounge","Candle Room","#2a1000,#996021,#ffd78a"],"lounge-5":["lounge","Moonlit Jazz","#090d24,#38517c,#a6cae0"],"lounge-6":["lounge","Coffee Glow","#21120d,#915734,#efbb79"],"lounge-7":["lounge","Copper Sky","#441c26,#bb4d38,#f8bb82"],"lounge-8":["lounge","Lavender Mist","#211c4a,#7264b0,#e4caff"],"lounge-9":["lounge","Soft Jade","#0e2e26,#4b9276,#b3dfac"],"lounge-10":["lounge","Peach Cloud","#461d33,#c96462,#ffdab1"],"nature-1":["nature","Deep Reef","#061533,#087c93,#40f1c2"],"nature-2":["nature","Rainforest","#062824,#267b3e,#b6ef63"],"nature-3":["nature","Lava River","#250509,#ac2508,#ff9833"],"nature-4":["nature","Glacier Run","#111a52,#267de4,#caf8ff"],"nature-5":["nature","Coral Garden","#36124a,#f04d72,#ffbf86"],"nature-6":["nature","Desert Wind","#442331,#b36540,#ffd68a"],"nature-7":["nature","Spring Meadow","#173936,#73b548,#ffe876"],"nature-8":["nature","Blue Lagoon","#051d43,#007a9e,#74f5f1"],"nature-9":["nature","Autumn Leaves","#3a1820,#b83d26,#f1b753"],"nature-10":["nature","Northern Sky","#130d49,#15ca93,#b368e7"],"neon-1":["neon","Laser Lime","#052710,#61ff24,#ccff79"],"neon-2":["neon","Pink Circuit","#32042e,#fc1ac2,#ffa5ef"],"neon-3":["neon","Electric Blue","#080d46,#1670ff,#76faff"],"neon-4":["neon","Cyber Sunset","#440c3a,#ff3263,#ffb322"],"neon-5":["neon","Acid Pulse","#122921,#73ff70,#fffc45"],"neon-6":["neon","Ultraviolet","#210d55,#752dff,#db77ff"],"neon-7":["neon","Arcade Rush","#151741,#ff326a,#24f4e2"],"neon-8":["neon","Neon Mint","#04352e,#19ffbd,#adffef"],"neon-9":["neon","Magenta Drive","#301040,#ce22ff,#ff476c"],"neon-10":["neon","Voltage","#071649,#2b8bff,#ecff4d"],"sparkle-1":["sparkle","Champagne Stars","#291907,#c2944e,#fff0ad"],"sparkle-2":["sparkle","Diamond Dust","#121b30,#86b5d0,#ffffff"],"sparkle-3":["sparkle","Fireflies","#102418,#8ea734,#fff58d"],"sparkle-4":["sparkle","Ruby Glitter","#340614,#c91745,#ff9dae"],"sparkle-5":["sparkle","Sapphire Spark","#081d4a,#296bf2,#8adfff"],"sparkle-6":["sparkle","Amethyst Dust","#23123b,#9344c7,#ebb5ff"],"sparkle-7":["sparkle","Mint Jewels","#092b25,#32caa2,#b5ffe6"],"sparkle-8":["sparkle","Copper Sparks","#321508,#bc512b,#ffbb74"],"sparkle-9":["sparkle","Pearl Lights","#242032,#a992ae,#fff1e6"],"sparkle-10":["sparkle","Cosmic Glitter","#13142e,#5360cf,#ffb4e0"]};
+const patternCategories = {
+  nl:['Klassiekers','Kerst & winter','Lounge','Natuur','Neon','Twinkels'],
+  en:['Classics','Christmas & winter','Lounge','Nature','Neon','Sparkles'],
+  es:['Clásicos','Navidad e invierno','Lounge','Naturaleza','Neón','Destellos'],
+  de:['Klassiker','Weihnachten & Winter','Lounge','Natur','Neon','Funkeln']
+};
+const categoryIds = ['classic','winter','lounge','nature','neon','sparkle'];
+let selectedCategory = 'classic';
+function patternName(id) {
+  return extraPatterns[id]?.[1] || patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(id)] || id;
+}
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -567,7 +580,7 @@ function render() {
     power.off.classList.toggle("power-active", d.mode === "off");
     title.textContent = d.name;
     card.manageTitle.textContent = d.name;
-    info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : '', d.pattern ? (d.pattern.startsWith('gif:') ? d.pattern.split('-').slice(1).join('-').replaceAll('_',' ') : patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(d.pattern)]) : ''].filter(Boolean).join(' · ');
+    info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : '', d.pattern ? (d.pattern.startsWith('gif:') ? d.pattern.split('-').slice(1).join('-').replaceAll('_',' ') : patternName(d.pattern)) : ''].filter(Boolean).join(' · ');
     error.textContent = d.error || '';
     error.hidden = !d.error;
   }
@@ -890,16 +903,28 @@ function renderPatterns() {
     patternTarget.replaceChildren(...options.map(([label,target]) => new Option(label,JSON.stringify(target))));
     if (options.some(([,target]) => JSON.stringify(target) === current)) patternTarget.value = current;
   }
-  if (patternCardLanguage !== lang.value) {
-    patternCardLanguage = lang.value;
+  const languageAndCategory = lang.value + ':' + selectedCategory;
+  if (patternCardLanguage !== languageAndCategory) {
+    patternCardLanguage = languageAndCategory;
+    const categories = byId('pattern-categories');
+    categories.replaceChildren();
+    for (const [index,category] of categoryIds.entries()) {
+      const tab = document.createElement('button');
+      tab.textContent = patternCategories[lang.value][index];
+      tab.setAttribute('aria-pressed',String(category === selectedCategory));
+      tab.onclick = () => { selectedCategory = category; renderPatterns(); };
+      categories.append(tab);
+    }
     const grid = byId('pattern-grid');
     grid.replaceChildren();
-    Object.entries(patternStyles).forEach(([id,palette],index) => {
+    const presets = selectedCategory === 'classic' ? Object.entries(patternStyles) :
+      Object.entries(extraPatterns).filter(([,item]) => item[0] === selectedCategory).map(([id,item]) => [id,item[2]]);
+    presets.forEach(([id,palette]) => {
       const tile = document.createElement('button'), swatch = document.createElement('i');
       tile.className = 'pattern-tile'; tile.dataset.pattern = id;
       swatch.style.setProperty('--palette','linear-gradient(90deg,' + palette + ')');
       swatch.setAttribute('aria-hidden','true');
-      tile.append(swatch,labels[index+3]);
+      tile.append(swatch,patternName(id));
       tile.onclick = () => perform(tile,() => patternCommand('pattern',id));
       grid.append(tile);
     });
@@ -1026,7 +1051,13 @@ function translate() {
   byId('gif-upload').setAttribute('aria-label',gif[2]);
   byId('gif-url').setAttribute('aria-label',gif[3]);
   gifPattern.setAttribute('aria-label',gif[4]);
-  gifPattern.replaceChildren(...Object.keys(patternStyles).map((id,index) => new Option(patternLabels[lang.value][index+3],id)));
+  gifPattern.replaceChildren(...categoryIds.map((category,index) => {
+    const group = document.createElement('optgroup');
+    group.label = patternCategories[lang.value][index];
+    const ids = category === 'classic' ? Object.keys(patternStyles) : Object.keys(extraPatterns).filter(id => extraPatterns[id][0] === category);
+    group.append(...ids.map(id => new Option(patternName(id),id)));
+    return group;
+  }));
   if (priorGif) gifPattern.value = priorGif;
   renderGifLibrary();
   byId('pattern-title').textContent = patternLabels[lang.value][0];

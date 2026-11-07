@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.30
+
+- Voeg 50 ingebouwde livepatronen toe in vijf nieuwe categorieën.
+- Gebruik dezelfde categorieën bij het maken van GIF’s.
+
 ## 0.1.29
 
 - Herken ook GIPHY-afbeeldingslinks met een versietoken of met i.giphy.com.
