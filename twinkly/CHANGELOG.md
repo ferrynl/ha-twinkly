@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 0.1.27
+
+- Verplaats de live-effectengalerij naar de mengtafel.
+- Upload, maak, importeer en download GIF’s in een lokale bibliotheek.
+- Speel GIF-kleuren rechtstreeks af op lampen of groepen.
+
 ## 0.1.26
 
 - Voeg acht live patronen toe voor een lamp, groep of alle lampen zonder ze op de controllers op te slaan.

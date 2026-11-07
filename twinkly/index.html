@@ -39,6 +39,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .workspace-header .workspace-brand{display:inline-flex;flex-direction:column;align-items:center;gap:0;margin:0;--wordmark-gold:linear-gradient(150deg,#fff1ba 7%,#e5ba62 55%,#bf852d)}.workspace-brand .twinkly-logo{background:var(--wordmark-gold)}.control-wordmark{font:700 clamp(.9rem,2.1vw,1.55rem)/1.15 Georgia,serif;letter-spacing:.13em;color:#e5ba62;background:var(--wordmark-gold);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
 .desk-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.music-grid{grid-template-columns:minmax(0,1fr) minmax(0,.8fr)}.track-tv{max-width:330px}.track-display{max-height:190px}.desk-fader input{width:0}.quick-colors{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:13px}.quick-colors>span,#monitor-count,.monitor-meter{font-size:.84rem;color:#bed0df}.mixdesk .quick-color{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:5px 8px}.quick-color i,.monitor-device i{width:10px;height:10px;flex:none;border-radius:50%;background:var(--swatch,#66727f);box-shadow:0 0 8px var(--swatch,#66727f)}#monitor-strip{display:block;width:100%;height:36px;border:1px solid #415268;border-radius:8px;background:#090e15}.monitor-meter{display:flex;align-items:center;gap:8px;margin:8px 0}.monitor-meter meter{width:min(35%,180px);accent-color:#80e8bf}.monitor-devices{display:flex;flex-wrap:wrap;gap:6px}.mixdesk .monitor-device{display:flex;align-items:center;gap:7px;min-height:32px;max-width:100%;text-align:left;font-size:.81rem;padding:5px 8px;overflow-wrap:anywhere}.monitor-device.is-music i{--swatch:#af82ff}.monitor-device.is-on i{--swatch:#62e5b0}.device-focus{outline:2px solid #9debcf;outline-offset:3px}@media(max-width:1120px){.music-grid{grid-template-columns:1fr}.track-tv{max-width:330px}}@media(max-width:760px){.desk-grid{grid-template-columns:1fr}}
 #pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-top:10px}.pattern-tile{display:grid;text-align:left;gap:6px;min-width:0}.pattern-tile i{display:block;height:28px;border-radius:5px;background:var(--palette)}.pattern-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:inset 0 0 0 1px #9debcf}.pattern-section .music-heading h2{margin:0}
+.gif-library summary{cursor:pointer;color:#b7ecd9}.gif-library input,.gif-library select{min-width:0;max-width:100%}#gif-library-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}.gif-item{display:grid;gap:6px;padding:8px;border:1px solid #47566a;border-radius:8px;min-width:0;overflow-wrap:anywhere}.gif-item img{width:100%;height:65px;object-fit:contain;background:#080c12;border-radius:5px}.gif-item a{color:#ffe2a5}.gif-item button[aria-pressed=true]{border-color:#9debcf}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -54,7 +55,9 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 </div><div class="desk-channel live-monitor"><div class="music-heading"><h2 id="monitor-title"></h2><span id="monitor-count"></span></div>
 <canvas id="monitor-strip" width="480" height="36"></canvas>
 <div class="monitor-meter"><span id="monitor-level-label"></span><meter id="monitor-level" min="0" max="100" value="0"></meter><output id="monitor-value">—</output></div>
-<div class="monitor-devices" id="monitor-devices"></div></div></div>
+<div class="monitor-devices" id="monitor-devices"></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div id="pattern-grid"></div><details class="gap gif-library"><summary id="gif-library-title"></summary>
+<form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
+<div id="gif-library-list" class="gap"></div></details></div></div>
 <div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
@@ -64,7 +67,6 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
 </div></div></div></div></section>
 <section id="group-section" hidden><h2 id="group-title"></h2><div id="group-cards"></div></section>
-<section class="pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div id="pattern-grid"></div></section>
 <section class="devices-section"><h2 id="device-title"></h2><div id="devices"></div></section></div>
 <div id="settings-page" hidden><div class="settings-grid">
 <section><h2 id="settings-general"></h2><select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></section>
@@ -212,6 +214,12 @@ const patternStyles = {
  fire:'#2b0300,#ff3500,#ffc22f',ice:'#0a183c,#1e81ff,#a5f2ff',
  ocean:'#030d34,#005faf,#1adec2',candy:'#de1023,#ffeed2,#de1023,#ffeed2',
  sunset:'#5f1066,#ea2b6e,#ffa830',sparkle:'#422c15,#ffc068,#533211,#ffc068'
+};
+const gifLabels = {
+ nl:['GIF-bibliotheek','Naam gifje','GIF uploaden','Importeer URL','Maak GIF van patroon','Afspelen','Downloaden','Verwijderen','Kies een GIF van maximaal 512 KiB.','De site moet het downloaden vanuit de browser toestaan.','Geldige openbare HTTPS-link vereist.'],
+ en:['GIF library','GIF name','Upload GIF','Import URL','Make GIF from pattern','Play','Download','Delete','Choose a GIF up to 512 KiB.','The site must allow browser downloads.','Enter a public HTTPS URL.'],
+ es:['Biblioteca GIF','Nombre del GIF','Subir GIF','Importar URL','Crear GIF del patrón','Reproducir','Descargar','Eliminar','Elige un GIF de hasta 512 KiB.','El sitio debe permitir la descarga desde el navegador.','Usa un enlace HTTPS público.'],
+ de:['GIF-Bibliothek','GIF-Name','GIF hochladen','URL importieren','GIF aus Muster erstellen','Abspielen','Herunterladen','Löschen','Wähle ein GIF bis 512 KiB.','Die Website muss Browser-Downloads erlauben.','Öffentliche HTTPS-Adresse erforderlich.']
 };
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
@@ -559,7 +567,7 @@ function render() {
     power.off.classList.toggle("power-active", d.mode === "off");
     title.textContent = d.name;
     card.manageTitle.textContent = d.name;
-    info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : '', d.pattern ? patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(d.pattern)] : ''].filter(Boolean).join(' · ');
+    info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : '', d.pattern ? (d.pattern.startsWith('gif:') ? d.pattern.split('-').slice(1).join('-').replaceAll('_',' ') : patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(d.pattern)]) : ''].filter(Boolean).join(' · ');
     error.textContent = d.error || '';
     error.hidden = !d.error;
   }
@@ -899,15 +907,109 @@ function renderPatterns() {
   const target = JSON.parse(patternTarget.value || '{"id":"*"}');
   const selected = devices.filter(device => target.group ? groups[target.group]?.members.includes(device.id)
     : target.id === '*' || target.id === device.id);
-  for (const tile of byId('pattern-grid').querySelectorAll('button')) {
+  for (const tile of [...byId('pattern-grid').querySelectorAll('button'), ...byId('gif-library-list').querySelectorAll('button[data-pattern]')]) {
     tile.setAttribute('aria-pressed',String(selected.length > 0 && selected.every(d => d.pattern === tile.dataset.pattern)));
   }
   byId('pattern-stop').disabled = !selected.some(device => device.pattern);
 }
 patternTarget.onchange = renderPatterns;
 byId('pattern-stop').onclick = () => perform(byId('pattern-stop'),() => patternCommand('stop-pattern'));
+const gifLimit = 512*1024;
+let libraryGifs = [];
+function renderGifLibrary() {
+  const labels = gifLabels[lang.value], list = byId('gif-library-list');
+  list.replaceChildren();
+  for (const gif of libraryGifs) {
+    const item = document.createElement('div'), image = document.createElement('img');
+    const title = document.createElement('strong'), play = document.createElement('button');
+    const download = document.createElement('a'), remove = document.createElement('button');
+    item.className = 'gif-item';
+    title.textContent = gif.name;
+    image.loading = 'lazy'; image.alt = gif.name;
+    image.src = './gifs/' + encodeURIComponent(gif.id);
+    play.textContent = labels[5]; play.dataset.pattern = 'gif:' + gif.id;
+    play.onclick = () => perform(play,() => patternCommand('pattern',play.dataset.pattern));
+    download.textContent = labels[6]; download.href = image.src; download.download = gif.name + '.gif';
+    remove.textContent = labels[7];
+    remove.onclick = () => perform(remove,async () => {
+      await request('gifs',{delete:gif.id});
+      await loadGifLibrary();
+      return t('done');
+    });
+    item.append(image,title,play,download,remove); list.append(item);
+  }
+  renderPatterns();
+}
+async function loadGifLibrary() {
+  libraryGifs = (await request('gifs')).gifs;
+  renderGifLibrary();
+}
+function encodeGifBytes(bytes) {
+  if (bytes.length > gifLimit || bytes.length < 6 ||
+      !['GIF87a','GIF89a'].includes(String.fromCharCode(...bytes.slice(0,6)))) throw Error(gifLabels[lang.value][8]);
+  let binary = '';
+  for (let offset=0; offset<bytes.length; offset+=8192) binary += String.fromCharCode(...bytes.subarray(offset,offset+8192));
+  return btoa(binary);
+}
+async function importGif() {
+  const labels = gifLabels[lang.value];
+  let url;
+  try { url = new URL(byId('gif-url').value.trim()); } catch { throw Error(labels[10]); }
+  if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+      !/^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i.test(url.hostname) ||
+      /\.(local|lan|internal|localhost|home|test|invalid)$/i.test(url.hostname)) throw Error(labels[10]);
+  let response;
+  try {
+    response = await fetch(url.href,{mode:'cors',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',
+      signal:AbortSignal.timeout(10000)});
+  } catch { throw Error(labels[9]); }
+  if (!response.ok || !response.body) throw Error(labels[9]);
+  const reader = response.body.getReader(), bytes = new Uint8Array(gifLimit);
+  let length = 0;
+  try {
+    while (true) {
+      const {done,value} = await reader.read();
+      if (done) break;
+      if (length + value.length > gifLimit) throw Error(labels[8]);
+      bytes.set(value,length); length += value.length;
+    }
+  } finally { await reader.cancel(); }
+  return encodeGifBytes(bytes.subarray(0,length));
+}
+byId('gif-form').onsubmit = event => event.preventDefault();
+for (const [id, payload] of [
+  ['gif-upload-button', async () => {
+    const file = byId('gif-upload').files[0];
+    if (!file || file.size > gifLimit) throw Error(gifLabels[lang.value][8]);
+    return {image:encodeGifBytes(new Uint8Array(await file.arrayBuffer()))};
+  }],
+  ['gif-import-button', async () => ({image:await importGif()})],
+  ['gif-create-button', async () => ({pattern:byId('gif-pattern').value})]
+]) {
+  const el = byId(id);
+  el.onclick = () => {
+    if (!byId('gif-name').reportValidity()) return;
+    perform(el,async () => {
+      await request('gifs',{name:byId('gif-name').value.trim(),...await payload()});
+      await loadGifLibrary();
+      return t('done');
+    });
+  };
+}
 function translate() {
   document.documentElement.lang = lang.value;
+  const gif = gifLabels[lang.value], gifPattern = byId('gif-pattern'), priorGif = gifPattern.value;
+  ['gif-library-title','gif-upload-button','gif-import-button','gif-create-button'].forEach((id,index) => {
+    byId(id).textContent = gif[[0,2,3,4][index]];
+  });
+  byId('gif-name').placeholder = gif[1];
+  byId('gif-name').setAttribute('aria-label',gif[1]);
+  byId('gif-upload').setAttribute('aria-label',gif[2]);
+  byId('gif-url').setAttribute('aria-label',gif[3]);
+  gifPattern.setAttribute('aria-label',gif[4]);
+  gifPattern.replaceChildren(...Object.keys(patternStyles).map((id,index) => new Option(patternLabels[lang.value][index+3],id)));
+  if (priorGif) gifPattern.value = priorGif;
+  renderGifLibrary();
   byId('pattern-title').textContent = patternLabels[lang.value][0];
   byId('pattern-target-label').textContent = patternLabels[lang.value][1];
   byId('pattern-stop').textContent = patternLabels[lang.value][2];
@@ -983,4 +1085,5 @@ const poll = async () => {
 poll();
 pollTrack();
 loadTvSources();
+loadGifLibrary().catch(() => {});
 </script></html>

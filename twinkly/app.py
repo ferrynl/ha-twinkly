@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import bisect
 import hashlib
 import uuid
 import xml.etree.ElementTree as ET
@@ -31,6 +32,9 @@ SHOW_STATE = DATA.with_name("show-state.json")
 TV_STATE = DATA.with_name("tv-state.json")
 SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
+GIF_LIBRARY = DATA.with_name("gif-library")
+GIF_LIMIT = 512 * 1024
+GIF_ID = re.compile(r"[a-f0-9]{12}-[a-zA-Z0-9_-]{1,48}")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
 WORDMARK = DATA.with_name("twinkly-wordmark.svg")
 WORDMARK_URL = "https://twinkly.com/cdn/shop/files/Twinkly_Logo_White.svg"
@@ -391,6 +395,8 @@ class Controller:
         self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
         self.music = set()
         self.patterns = {}
+        self.gif_patterns = {}
+        self.gif_library_lock = asyncio.Lock()
         self.edit = asyncio.Lock()
         self.music_setup = asyncio.Lock()
         self.active_style = (json.loads(MUSIC_STATE.read_text(encoding='utf-8')).get('style')
@@ -474,7 +480,12 @@ class Controller:
             fading = False
             if now >= device.retry:
                 if pattern:
-                    frame = live_pattern(pattern, int(now * self.fps), self.fps)
+                    if pattern.startswith("gif:"):
+                        timing, frames = self.gif_patterns[pattern[4:]]
+                        index = bisect.bisect_right(timing, int(now * 1000) % timing[-1])
+                        frame = frames[index]
+                    else:
+                        frame = live_pattern(pattern, int(now * self.fps), self.fps)
                     await device.run(device.send, frame)
                 elif active:
                     fade_started = None
@@ -732,7 +743,9 @@ class Controller:
             value = bytes.fromhex(value[1:])
         if action == "brightness" and (type(value) is not int or not 0 <= value <= 100):
             raise web.HTTPBadRequest()
-        if action == "pattern" and (not isinstance(value, str) or value not in PATTERN_PALETTES):
+        if action == "pattern" and (not isinstance(value, str)
+                or (value not in PATTERN_PALETTES
+                    and not (value.startswith("gif:") and GIF_ID.fullmatch(value[4:])))):
             raise web.HTTPBadRequest()
         if action == "effect":
             if (not isinstance(value, list) or len(value) != 2
@@ -750,6 +763,13 @@ class Controller:
             if any(key not in self.devices for key in keys):
                 raise web.HTTPNotFound()
             if action == "pattern":
+                if value.startswith("gif:") and value[4:] not in self.gif_patterns:
+                    gif_id = value[4:]
+                    try:
+                        self.gif_patterns[gif_id] = await asyncio.to_thread(
+                            self.decode_gif, (GIF_LIBRARY / (gif_id + ".gif")).read_bytes())
+                    except (OSError, ValueError) as exc:
+                        raise web.HTTPBadRequest(text="GIF unavailable") from exc
                 self.music.difference_update(keys)
                 self.patterns.update(dict.fromkeys(keys, value))
                 return web.json_response({"failed": []})
@@ -972,6 +992,82 @@ class Controller:
                                 headers={"Cache-Control": "private, max-age=86400",
                                          "X-Content-Type-Options": "nosniff"})
 
+    @staticmethod
+    def decode_gif(raw):
+        if len(raw) > GIF_LIMIT:
+            raise ValueError("GIF exceeds 512 KiB")
+        frames, timing = [], []
+        with Image.open(io.BytesIO(raw), formats=["GIF"]) as image:
+            if image.width * image.height > 1_000_000:
+                raise ValueError("GIF dimensions too large")
+            total = 0
+            for index in range(121):
+                try:
+                    image.seek(index)
+                except EOFError:
+                    break
+                if index == 120:
+                    raise ValueError("GIF exceeds 120 frames")
+                total += min(5000, max(40, image.info.get("duration", 100)))
+                timing.append(total)
+                frames.append(image.convert("RGB").resize((PIXELS, 1), Image.Resampling.BOX).tobytes())
+        if not frames:
+            raise ValueError("Empty GIF")
+        return tuple(timing), tuple(frames)
+
+    async def list_gifs(self, request):
+        entries = [{"id": path.stem, "name": path.stem.split("-", 1)[1].replace("_", " ")}
+                   for path in sorted(GIF_LIBRARY.glob("*.gif")) if GIF_ID.fullmatch(path.stem)]
+        return web.json_response({"gifs": entries}, headers={"Cache-Control": "no-store"})
+
+    async def save_gif(self, request):
+        data = await request.json()
+        if "delete" in data:
+            gif_id = data["delete"]
+            if not isinstance(gif_id, str) or not GIF_ID.fullmatch(gif_id):
+                raise web.HTTPBadRequest()
+            async with self.edit, self.gif_library_lock:
+                if "gif:" + gif_id in self.patterns.values():
+                    raise web.HTTPConflict(text="Stop the GIF before deleting it")
+                (GIF_LIBRARY / (gif_id + ".gif")).unlink(missing_ok=True)
+                self.gif_patterns.pop(gif_id, None)
+            return web.json_response({"ok": True})
+        name = data.get("name")
+        if not isinstance(name, str) or not name.strip() or len(name) > 80:
+            raise web.HTTPBadRequest()
+        slug = re.sub(r"[^a-zA-Z0-9-]+", "_", name).strip("_")[:48] or "GIF"
+        pattern = data.get("pattern")
+        try:
+            if isinstance(pattern, str) and pattern in PATTERN_PALETTES:
+                frames = [live_pattern(pattern, index, 10) for index in range(30)]
+                raw = await asyncio.to_thread(self.encode_gif, frames)
+            else:
+                raw = base64.b64decode(data.get("image", ""), validate=True)
+            decoded = await asyncio.to_thread(self.decode_gif, raw)
+        except (ValueError, OSError, TypeError, Image.DecompressionBombError) as exc:
+            raise web.HTTPBadRequest(text="Invalid GIF, or limits exceeded") from exc
+        gif_id = hashlib.sha256(raw).hexdigest()[:12] + "-" + slug
+        async with self.gif_library_lock:
+            GIF_LIBRARY.mkdir(exist_ok=True)
+            path = GIF_LIBRARY / (gif_id + ".gif")
+            if not path.is_file():
+                if sum(1 for _ in GIF_LIBRARY.glob("*.gif")) >= 30:
+                    raise web.HTTPConflict(text="GIF library is full")
+                temp = path.with_suffix(".tmp")
+                temp.write_bytes(raw)
+                temp.replace(path)
+            self.gif_patterns[gif_id] = decoded
+        return web.json_response({"id": gif_id})
+
+    async def gif_file(self, request):
+        gif_id = request.match_info["id"]
+        if not GIF_ID.fullmatch(gif_id):
+            raise web.HTTPNotFound()
+        path = GIF_LIBRARY / (gif_id + ".gif")
+        if not path.is_file():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path, headers={"Content-Type": "image/gif", "X-Content-Type-Options": "nosniff"})
+
     def music_frame(self):
         if time.monotonic() - self.ddp.received < 1.5:
             return self.ddp.frame
@@ -1032,7 +1128,7 @@ class Controller:
 
     def app(self):
         self.edit_scan = asyncio.Lock()
-        app = web.Application(middlewares=[ingress_only], client_max_size=240_000)
+        app = web.Application(middlewares=[ingress_only], client_max_size=720_000)
         app.cleanup_ctx.append(self.stream)
         app.router.add_get("/", lambda _: web.FileResponse("index.html"))
         app.router.add_get("/twinkly.svg", lambda _: web.FileResponse("twinkly.svg"))
@@ -1055,6 +1151,9 @@ class Controller:
         app.router.add_post("/media-players", self.select_media_player)
         app.router.add_get("/now-playing-art", self.now_playing_art)
         app.router.add_post("/music-gif", self.music_gif)
+        app.router.add_get("/gifs", self.list_gifs)
+        app.router.add_post("/gifs", self.save_gif)
+        app.router.add_get("/gifs/{id}", self.gif_file)
         return app
 
 
