@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 0.1.10
+
+- Schermbrede, responsieve DJ-mengtafel met licht- en muziekbediening.
+- Apparaatdiagnose met firmware, hardware, ledgegevens en wifi-informatie als de controller die meldt.
+
 ## 0.1.9
 
 - Voeg Lichtloop, Muziekbanden, Blade Power+, Frequentiepuls en Muziekvuur toe.

@@ -7,17 +7,37 @@
 .led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
 #group-cards{display:grid;gap:12px;margin-top:14px}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
 #music-preview,#music-gif{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-gif-link{display:inline-block;margin-top:8px;color:#ffe2a5}
+
+main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
+#devices{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}
+.mixdesk{color:#f4f6fa;border:1px solid #586271;background:linear-gradient(155deg,#363d47,#161b23 32%,#0d1118 79%);box-shadow:0 10px 0 #080b10,0 17px 0 #38404a,0 28px 38px #0008,inset 0 1px 1px #ffffff50;padding:clamp(12px,2vw,24px);margin-bottom:34px}
+.desk-brand{display:flex;align-items:center;gap:10px;font-size:.8rem;letter-spacing:.18em;margin-bottom:14px}
+.desk-lamp{width:8px;height:8px;background:#55e2ad;border-radius:100%;box-shadow:0 0 13px #55e2ad}
+.desk-model{margin-left:auto;color:#afc0d2}.desk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.desk-channel{min-width:0;padding:clamp(12px,2vw,23px);border:1px solid #444e60;border-radius:16px;background:linear-gradient(#202834,#10151d);box-shadow:inset 0 2px 6px #0009}
+.desk-channel h2{font-size:.85rem;letter-spacing:.13em;text-transform:uppercase;color:#c6d2e5}
+.mixdesk button{background:linear-gradient(#414d60,#202838);border:1px solid #69788d;box-shadow:0 3px 0 #080b11,inset 0 1px #ffffff35;min-height:42px}
+.mixdesk button:hover{filter:brightness(1.22)}.mixdesk button:active{transform:translateY(2px);box-shadow:0 1px 0 #080b11}
+.mixdesk button.primary{color:#09291f;background:linear-gradient(#95ffe0,#42cfa2);border-color:#a3ffe4}
+.desk-controls input[type=color]{width:62px;height:62px;border-radius:50%;background:repeating-conic-gradient(#67738a 0 8deg,#353e50 8deg 16deg);border:3px solid #a7b4c7;box-shadow:0 5px 8px #000a;padding:9px}
+.desk-controls input[type=color]::-webkit-color-swatch{border-radius:50%;border:1px solid #b7c6d9}
+.desk-fader{flex:1 0 100%;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;background:#0d121a;border:1px solid #323d4d;border-radius:12px}
+.desk-fader input{flex:1 1 130px;min-width:0;padding:0;accent-color:#67e3bd}.desk-fader output{font:700 1rem monospace;color:#9fffe0;min-width:4ch}
+.desk-scan{border-top:1px solid #414b59;padding-top:14px}.mixdesk [hidden]{display:none}
+.device-info{margin-top:12px}.device-info dl[hidden]{display:none}.device-info dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:10px 0 0;gap:1px;background:#3a5851;border:1px solid #3a5851;border-radius:10px;overflow:hidden}
+.device-info dt,.device-info dd{margin:0;padding:7px;background:#122422;overflow-wrap:anywhere;font-size:.86rem}.device-info dt{color:#d1e6df}.device-info dd{color:#ffe4a8}
+@media(max-width:760px){.desk-grid{grid-template-columns:1fr}.desk-controls button{flex:1 1 auto}.mixdesk{border-radius:16px}}
 </style>
 <main>
 <header><div><p class="eyebrow" data-text="tag"></p><h1>Twinkly Kerst</h1><p class="status" id="audio" role="status"></p></div>
 <select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></header>
-<section><h2 data-text="all"></h2><div class="controls" id="all"></div>
+<section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div><div class="desk-grid"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div></div><div class="desk-channel desk-music"><h2 id="desk-music-title"></h2>
 <div class="controls gap" id="music-setup"></div>
 <div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <div class="controls gap" id="music-preview-tools"></div>
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
-<div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
+</div></div><div class="controls gap desk-scan" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
 <p id="message" role="status"></p></section>
 <section><h2 id="group-title"></h2><form id="group-form">
 <div class="controls"><input id="group-name" maxlength="60" required><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
@@ -69,6 +89,13 @@ const extraLabels = {
  de:['Gruppen','Gruppenname','Gruppe speichern','Abbrechen','Bearbeiten','Löschen','Wähle mindestens ein Licht aus.','Bild hochladen','Bild entfernen','Wähle ein JPG, PNG oder WebP bis 10 MB.']
 };
 const extra = index => extraLabels[lang.value][index];
+const detailsText = {
+ nl:['Muziekkanaal','Apparaatinfo laden','Niet gemeld','Firmware','Wifi-signaal','Wifi-netwerk','Wifi-kanaal','Model','Hardwareversie','Uptime','Leds','Framerate','Netwerkmodus','Wifi-status'],
+ en:['Music channel','Load device info','Not reported','Firmware','Wi-Fi signal','Wi-Fi network','Wi-Fi channel','Model','Hardware version','Uptime','LEDs','Frame rate','Network mode','Wi-Fi status'],
+ es:['Canal de música','Cargar información','Sin datos','Firmware','Señal wifi','Red wifi','Canal wifi','Modelo','Versión de hardware','Tiempo activo','LEDs','Tasa de fotogramas','Modo de red','Estado wifi'],
+ de:['Musikkanal','Geräteinfo laden','Nicht gemeldet','Firmware','WLAN-Signal','WLAN-Netzwerk','WLAN-Kanal','Modell','Hardwareversion','Betriebszeit','LEDs','Bildrate','Netzwerkmodus','WLAN-Status']
+};
+const detailKeys = ['firmware_version','rssi','ssid','channel','product_code','hardware_version','uptime','number_of_led','frame_rate','network_mode','status'];
 const keys = 'tag all on off color brightness music stop setup add scan busy done receiving waiting disconnected load choose effect movie empty found enabled ip setupDone setupFailed'.split(' ');
 const byId = id => document.getElementById(id);
 const cards = new Map();
@@ -116,7 +143,18 @@ function controls(parent, id, group) {
   const level = document.createElement('input');
   level.type = 'number'; level.min = 0; level.max = 100; level.value = 65; level.dataset.label = 'brightness';
   level.setAttribute('aria-label',t('brightness'));
-  parent.append(level); button(parent,'brightness', () => run(id,'brightness',level.valueAsNumber,group));
+  if (id === '*') {
+    const fader = document.createElement('div'), output = document.createElement('output');
+    fader.className = 'desk-fader';
+    level.type = 'range';
+    level.oninput = () => { output.textContent = level.value + '%'; };
+    level.oninput();
+    fader.append(level,output);
+    button(fader,'brightness', () => run(id,'brightness',level.valueAsNumber,group), true);
+    parent.append(fader);
+  } else {
+    parent.append(level); button(parent,'brightness', () => run(id,'brightness',level.valueAsNumber,group));
+  }
   return power;
 }
 async function encodeImage(file) {
@@ -286,6 +324,22 @@ byId('group-form').onsubmit = event => {
     return t('done');
   });
 };
+function drawDetails(card) {
+  const labels = detailsText[lang.value];
+  card.detailButton.textContent = labels[1];
+  if (!card.details) return;
+  card.detailList.replaceChildren();
+  const ordered = [...detailKeys, ...Object.keys(card.details).filter(key => !detailKeys.includes(key))];
+  for (const key of ordered) {
+    const name = document.createElement('dt'), value = document.createElement('dd');
+    const index = detailKeys.indexOf(key);
+    name.textContent = index < 0 ? key.replaceAll('_',' ') : labels[index+3];
+    const raw = card.details[key];
+    value.textContent = raw == null ? labels[2] : String(raw) + (key === 'rssi' && Number(raw) < 0 ? ' dBm' : '');
+    card.detailList.append(name,value);
+  }
+  card.detailList.hidden = false;
+}
 function render() {
   renderGroups();
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
@@ -327,7 +381,21 @@ function render() {
       rotation.oninput = () => drawLayout(card);
       map.append(mapButton,mapInfo,canvas,rotation);
       drawLayout(card);
-      article.append(title, info, error, actions, effects, map);
+      const details = document.createElement('div');
+      details.className = 'device-info';
+      card.detailButton = document.createElement('button');
+      card.detailList = document.createElement('dl');
+      card.detailList.hidden = true;
+      card.detailButton.onclick = () => perform(card.detailButton, async () => {
+        const result = await request('details?id=' + encodeURIComponent(d.id));
+        if (result.error) return result.error;
+        card.details = result.details;
+        drawDetails(card);
+        return t('done');
+      });
+      details.append(card.detailButton,card.detailList);
+      drawDetails(card);
+      article.append(title, info, error, actions, details, effects, map);
       byId('devices').append(article);
       card.power = controls(actions, d.id);
       cards.set(d.id, card);
@@ -413,6 +481,7 @@ button(byId('scan'),'add', () => register(byId('ip').value.trim()));
 button(byId('scan'),'scan', () => register(''));
 function translate() {
   document.documentElement.lang = lang.value;
+  byId('desk-music-title').textContent = detailsText[lang.value][0];
   byId('group-title').textContent = extra(0);
   byId('group-name').placeholder = extra(1);
   byId('group-name').setAttribute('aria-label',extra(1));
@@ -428,7 +497,7 @@ function translate() {
   styleSelect.value = selected;
   document.querySelectorAll('[data-text]').forEach(el => translated(el, el.dataset.text));
   document.querySelectorAll('[data-label]').forEach(el => el.setAttribute('aria-label',t(el.dataset.label)));
-  for (const card of cards.values()) { renderEffects(card); drawLayout(card); }
+  for (const card of cards.values()) { renderEffects(card); drawLayout(card); drawDetails(card); }
   byId('message').textContent = '';
   render();
 }

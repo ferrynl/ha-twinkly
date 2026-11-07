@@ -101,6 +101,8 @@ class Device:
         self.effects_until = 0.0
         self.layout = None
         self.layout_until = 0.0
+        self.details = None
+        self.details_until = 0.0
         self.rt_check = 0.0
         self.retry = 0.0
         self.error = None
@@ -156,6 +158,39 @@ class Device:
                 continue
         self.color((255, 190, 110))
         self.last_mode = "color"
+
+    def load_details(self):
+        if time.monotonic() < self.details_until:
+            return
+        info = self.api("gestalt")
+        details = {key: info[key] for key in (
+            "product_name", "product_code", "product_version", "hardware_version",
+            "firmware_version", "fw_family", "led_type", "led_version", "wire_type",
+            "hw_id", "mac", "uuid", "uptime", "flash_size", "max_supported_led",
+            "base_leds_number", "number_of_led", "led_profile", "bytes_per_led",
+            "frame_rate", "movie_capacity", "rssi",
+        ) if key in info}
+        for path in ("fw/version", "network/status"):
+            try:
+                data = self.api(path)
+            except (HTTPError, ApplicationError, ValueError):
+                continue
+            if path == "fw/version":
+                details["firmware_version"] = data.get("version") or details.get("firmware_version")
+            else:
+                station = data.get("station") or {}
+                access_point = data.get("ap") or {}
+                details.update({key: station[key] for key in ("ssid", "ip", "gw", "mask", "status")
+                                if key in station})
+                details["network_mode"] = data.get("mode")
+                details["rssi"] = station.get("rssi", data.get("rssi", details.get("rssi")))
+                channel = station.get("channel") or data.get("channel")
+                if channel is None and data.get("mode") == 0:
+                    channel = access_point.get("channel")
+                details["channel"] = channel
+        self.details = {key: value for key, value in details.items()
+                        if isinstance(value, (str, int, float, bool)) and value != ""}
+        self.details_until = time.monotonic() + 60
 
     def load_layout(self):
         if time.monotonic() < self.layout_until:
@@ -483,6 +518,14 @@ class Controller:
                 for key, ok in zip(keys, results) if not ok
             ]})
 
+    async def details(self, request):
+        device = self.devices.get(request.query.get("id"))
+        if device is None:
+            raise web.HTTPNotFound()
+        ok = await device.run(device.load_details)
+        return web.json_response({"details": device.details if ok else None,
+                                  "error": None if ok else device.error})
+
     async def layout(self, request):
         device = self.devices.get(request.query.get("id"))
         if device is None:
@@ -561,6 +604,7 @@ class Controller:
         app.router.add_get("/status", self.status)
         app.router.add_get("/effects", self.effects)
         app.router.add_get("/layout", self.layout)
+        app.router.add_get("/details", self.details)
         app.router.add_post("/register", self.register)
         app.router.add_post("/control", self.control)
         app.router.add_post("/groups", self.save_group)
