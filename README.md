@@ -5,7 +5,7 @@ Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpa
 ## Installeren
 
 1. Open in Home Assistant **Instellingen → Apps → Appwinkel → ⋮ → Repositories**.
-2. Voeg `https://github.com/ferrynl/ha-twinkly` toe. Zoek **Twinkly Control Center**, installeer de app en start hem.
+2. Voeg `https://github.com/ferrynl/ha-apps` toe. Zoek **Twinkly Control Center**, installeer de app en start hem.
 3. Open de webinterface en kies **Zoeken op netwerk**. Broadcast werkt binnen hetzelfde subnet. Gebruik **IP toevoegen** bij gemiste apparaten en reserveer de adressen in DHCP.
 4. Test aan/uit, kleur en dimmen per apparaat. **Aan** herstelt de laatst gebruikte modus als die bekend is. Anders probeert de app een warme vaste kleur en daarna alternatieve apparaatmodi. Gebruik **Kleur** voor een vaste RGB-kleur. Kies **Effecten laden** op een apparaatkaart om de opgeslagen Twinkly-films en ingebouwde effecten van dat apparaat te zien. Gebruik **Afspelen op lamp** om het echte effect te zien. Je kunt per lamp herkenbare namen bewaren in je browser. Cloud- en galerie-effecten zijn beschikbaar zodra de officiële app ze als lokaal effect naar de controller heeft geschreven.
 
