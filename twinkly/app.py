@@ -10,6 +10,7 @@ import os
 from urllib.parse import urlsplit
 from requests.exceptions import HTTPError, RequestException, Timeout
 from xled.exceptions import ApplicationError
+import fcntl
 import functools
 import io
 import ipaddress
@@ -21,7 +22,7 @@ import struct
 import time
 from pathlib import Path
 
-from aiohttp import ClientError, ClientSession, ClientTimeout, web
+from aiohttp import ClientConnectorError, ClientError, ClientSession, ClientTimeout, web
 from PIL import Image
 from xled import HighControlInterface
 
@@ -63,7 +64,22 @@ def discover(broadcast):
     found = set()
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.sendto(b"\x01discover", (broadcast, 5555))
+        targets = {broadcast}
+        for _, name in socket.if_nameindex():
+            interface = struct.pack("256s", name.encode())
+            try:
+                flags = struct.unpack_from("H", fcntl.ioctl(sock, 0x8913, interface), 16)[0]  # SIOCGIFFLAGS
+                if flags & 0x3 != 0x3:  # IFF_UP and IFF_BROADCAST
+                    continue
+                address = fcntl.ioctl(sock, 0x8919, interface)  # SIOCGIFBRDADDR
+                targets.add(socket.inet_ntoa(address[20:24]))
+            except OSError:
+                continue
+        for target in sorted(targets):
+            try:
+                sock.sendto(b"\x01discover", (target, 5555))
+            except OSError as exc:
+                LOG.debug("Twinkly broadcast naar %s mislukt: %s", target, exc)
         deadline = time.monotonic() + 2
         while len(found) < MAX_DEVICES and time.monotonic() < deadline:
             sock.settimeout(max(0.001, deadline - time.monotonic()))
@@ -697,7 +713,7 @@ class Controller:
             hosts = [data["ip"]] if data.get("ip") else await asyncio.to_thread(discover, self.broadcast)
             if not hosts:
                 return web.json_response({"added": 0, "errors": [
-                    f"Geen UDP-antwoord via {self.broadcast}:5555. Probeer een IP-adres of stel het broadcastadres van je LAN in."
+                    "Geen Twinkly-antwoord op UDP-poort 5555. Controleer of de lampen op hetzelfde LAN zitten of voeg hun IP-adres toe."
                 ]})
             results = await asyncio.gather(*(self.add(host) for host in hosts), return_exceptions=True)
         return web.json_response({"added": sum(isinstance(x, dict) for x in results),
@@ -1382,6 +1398,10 @@ class Controller:
             result = await asyncio.to_thread(self.encode_gif, frames)
         return web.Response(body=result, content_type="image/gif", headers={"Cache-Control": "no-store"})
 
+    async def ledfx_status(self, request):
+        async with ClientSession(base_url=LEDFX_URL, timeout=ClientTimeout(total=3)) as session:
+            return web.json_response(await check_ledfx(session))
+
     async def setup_music(self, request):
         data = await request.json()
         style = data.get("style") if isinstance(data, dict) else None
@@ -1391,7 +1411,10 @@ class Controller:
             return web.json_response({"message": "Automatische koppeling vereist LedFX op dezelfde Home Assistant-host en ddp_source 127.0.0.1."})
         async with self.music_setup:
             try:
-                async with ClientSession(base_url="http://127.0.0.1:8888", timeout=ClientTimeout(total=10)) as session:
+                async with ClientSession(base_url=LEDFX_URL, timeout=ClientTimeout(total=10)) as session:
+                    check = await check_ledfx(session)
+                    if not check["ok"]:
+                        return web.json_response(check)
                     active_style = await configure_ledfx(session, style)
                 self.active_style = active_style
                 temp = MUSIC_STATE.with_suffix('.tmp')
@@ -1424,6 +1447,7 @@ class Controller:
         app.router.add_get("/product-photo/{key}", self.product_photo)
         app.router.add_get("/effect-image", self.effect_image)
         app.router.add_post("/effect-image", self.effect_image)
+        app.router.add_get("/ledfx-status", self.ledfx_status)
         app.router.add_post("/setup-music", self.setup_music)
         app.router.add_get("/music-preview", self.music_preview)
         app.router.add_get("/now-playing", self.now_playing)
@@ -1439,6 +1463,24 @@ class Controller:
         return app
 
 
+LEDFX_URL = "http://127.0.0.1:8888"
+
+
+async def check_ledfx(session):
+    try:
+        async with session.get("/api/info", allow_redirects=False) as response:
+            info = await response.json() if response.status == 200 else None
+    except (ClientConnectorError, TimeoutError):
+        return {"ok": False, "message": "LedFX is onbereikbaar op 127.0.0.1:8888. Installeer of start de LedFX-app en controleer de logs."}
+    except (ClientError, ValueError):
+        info = None
+    if not isinstance(info, dict) or not isinstance(info.get("features"), dict):
+        return {"ok": False, "message": "Poort 8888 reageert, maar geeft geen herkenbare LedFX-informatie. Controleer de app en poort."}
+    if not info["features"].get("sendspin"):
+        return {"ok": False, "message": "LedFX draait. Installeer of update naar een LedFX-versie met Sendspin-ondersteuning."}
+    return {"ok": True, "message": "LedFX draait en ondersteunt Sendspin. Je kunt Music Assistant koppelen."}
+
+
 async def configure_ledfx(session, style=None):
     async def api(method, path, body=None):
         async with session.request(method, "/api" + path, json=body, allow_redirects=False) as response:
@@ -1447,10 +1489,6 @@ async def configure_ledfx(session, style=None):
                 reason = data.get("payload", {}).get("reason", f"HTTP {response.status}")
                 raise ValueError(f"{path}: {reason}")
             return data
-
-    info = await api("GET", "/info")
-    if not info.get("features", {}).get("sendspin"):
-        raise ValueError("Deze LedFX-engine biedt geen Sendspin.")
 
     server_id = "twinkly-music"
     servers = (await api("GET", "/sendspin/servers"))["servers"]

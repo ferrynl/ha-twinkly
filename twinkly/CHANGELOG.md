@@ -1,3 +1,8 @@
+# 0.1.35
+
+- Detecteer automatisch de broadcastadressen van actieve netwerkinterfaces.
+- Controleer de lokale LedFX-API en Sendspin en toon installatie- en startinstructies.
+
 # Wijzigingslogboek
 
 ## 0.1.34

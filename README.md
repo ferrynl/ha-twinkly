@@ -11,6 +11,8 @@ Lokale Home Assistant OS-app voor RGB- en RGBW-Twinkly-verlichting met een webpa
 
 ## Music Assistant en LedFx
 
+Gebruik **LedFX controleren** in de muziekinstellingen. Twinkly vraagt lokaal `/api/info` op en controleert Sendspin. Bij een onbereikbare API kan de controle een gestopte installatie en een ontbrekende installatie niet onderscheiden. Open dan **LedFX installeren en starten** voor de stappen en de link naar de [LedFX-repository met Sendspin](https://github.com/Switch123456789/Home-Assistant-Apps).
+
 Draait LedFX met Sendspin op dezelfde Home Assistant-host? Klik in Twinkly Control Center op **Music Assistant koppelen**. De app zoekt de Sendspin-server, kiest die als actieve audiobron in LedFX en maakt zo nodig één DDP-uitgang met een starteffect aan. Voeg daarna **LedFx Twinkly** toe aan de afspeelgroep in Music Assistant. Onder **Muziekstijl** kies je een LedFX-effect voor de gedeelde uitgang. Kies **Stijl toepassen** om het effect te wisselen. De stappen hieronder zijn ook handmatig uitvoerbaar.
 
 1. Installeer LedFx met Sendspin-ondersteuning die past bij je Music Assistant-versie. Zie de [Sendspin-handleiding van LedFx](https://docs.ledfx.app/en/latest/settings/sendspin.html).
@@ -33,7 +35,7 @@ De app verdeelt hetzelfde effect over de ledvolgorde per controller. Via **Ledka
 
 ## Als zoeken of bedienen niet werkt
 
-Stel indien nodig `discovery_broadcast` in op het broadcastadres van je eigen LAN en herstart de app. Gebruik vanuit de Home Assistant Terminal `curl -v --max-time 5 http://TWINKLY_IP/xled/v1/gestalt` en vervang TWINKLY_IP door het adres van de lamp. Als toevoegen lukt maar bedienen faalt, toont de webinterface de fout per apparaat.
+De app probeert automatisch de broadcastadressen van actieve netwerkinterfaces en het ingestelde `discovery_broadcast` (standaard `255.255.255.255`). Laat die instelling normaal op de standaardwaarde staan. Gebruik vanuit de Home Assistant Terminal `curl -v --max-time 5 http://TWINKLY_IP/xled/v1/gestalt` en vervang TWINKLY_IP door het adres van de lamp. Als toevoegen lukt maar bedienen faalt, toont de webinterface de fout per apparaat.
 
 ## Groepen en effectafbeeldingen
 

@@ -87,7 +87,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <section class="devices-section"><h2 id="device-title"></h2><div id="devices"></div></section></div>
 <div id="settings-page" hidden><div class="settings-grid">
 <section><h2 id="settings-general"></h2><select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></section>
-<section><h2 id="settings-music"></h2><div class="controls gap" id="music-setup"></div><div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
+<section><h2 id="settings-music"></h2><div class="controls gap" id="music-setup"></div><p id="ledfx-status" role="status"></p><details><summary>LedFX installeren en starten</summary><ol><li>Open in Home Assistant Instellingen → Apps → Appwinkel → ⋮ → Repositories.</li><li>Voeg <a href="https://github.com/Switch123456789/Home-Assistant-Apps" target="_blank" rel="noopener noreferrer">de LedFX-repository met Sendspin</a> toe en installeer LedFX.</li><li>Klik op Starten en zet Starten bij opstarten aan. Controleer bij een fout het tabblad Logboek.</li><li>Ga terug naar Twinkly, controleer LedFX en klik daarna op Music Assistant koppelen. Voeg LedFx Twinkly toe aan de afspeelgroep in Music Assistant.</li></ol></details><div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
 </section>
 <section><h2 id="settings-discover"></h2><div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
 </section>
@@ -629,6 +629,21 @@ button(byId('music-setup'), 'setup', async () => {
   const result = await request('setup-music', {});
   return result.ok ? t('setupDone') : t('setupFailed') + ' · ' + result.message;
 }, true);
+const ledfxCheck = document.createElement('button');
+ledfxCheck.textContent = 'LedFX controleren';
+ledfxCheck.onclick = async () => {
+  const output = byId('ledfx-status');
+  ledfxCheck.disabled = true;
+  output.textContent = 'LedFX controleren…';
+  try {
+    output.textContent = (await request('ledfx-status')).message;
+  } catch {
+    output.textContent = 'De Twinkly-app kon de LedFX-controle niet uitvoeren.';
+  } finally {
+    ledfxCheck.disabled = false;
+  }
+};
+byId('music-setup').append(ledfxCheck);
 const styleSelect = byId('music-style');
 const styleButton = document.createElement('button');
 const activeStyleLabels = {
