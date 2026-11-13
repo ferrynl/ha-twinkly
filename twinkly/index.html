@@ -7,7 +7,7 @@
 .power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
 .led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
 #group-cards{display:grid;gap:12px;margin-top:14px}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
-#music-preview,#music-gif,#music-demo{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-demo,#music-gif{max-width:300px}#music-gif-link,#music-demo-link{display:inline-block;margin-top:8px;color:#ffe2a5}
+#music-preview,#music-gif{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-gif{max-width:300px}#music-gif-link,#music-demo-link{display:inline-block;margin-top:8px;color:#ffe2a5}
 
 main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 #devices{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}
@@ -41,9 +41,12 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 #pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-top:10px}.pattern-tile{display:grid;text-align:left;gap:6px;min-width:0}.pattern-tile i{display:block;height:28px;border-radius:5px;background:var(--palette)}.pattern-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:inset 0 0 0 1px #9debcf}.pattern-section .music-heading h2{margin:0}
 .gif-library summary{cursor:pointer;color:#b7ecd9}.gif-library input,.gif-library select{min-width:0;max-width:100%}#gif-library-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}.gif-item{display:grid;gap:6px;padding:8px;border:1px solid #47566a;border-radius:8px;min-width:0;overflow-wrap:anywhere}.gif-item img{width:100%;height:65px;object-fit:contain;background:#080c12;border-radius:5px}.gif-item a{color:#ffe2a5}.gif-item button[aria-pressed=true]{border-color:#9debcf}
 .pattern-categories{margin-top:10px}.mixdesk .pattern-categories button{min-height:32px;font-size:.84rem}.pattern-categories button[aria-pressed=true]{border-color:#9debcf;color:#a9ffe4}
-.matrix-library summary{cursor:pointer;color:#b7ecd9}#matrix-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,96px),1fr));gap:8px}.mixdesk .matrix-tile{display:grid;align-content:start;gap:6px;min-width:0;text-align:center;font-size:.79rem;padding:6px;overflow-wrap:anywhere}.matrix-tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#000;border-radius:5px;image-rendering:pixelated}.mixdesk .matrix-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:0 0 0 1px #9debcf}
+.matrix-library summary{cursor:pointer;color:#b7ecd9}#matrix-grid,#music-style-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,96px),1fr));gap:8px}.mixdesk .matrix-tile{display:grid;align-content:start;gap:6px;min-width:0;text-align:center;font-size:.79rem;padding:6px;overflow-wrap:anywhere}.matrix-tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#000;border-radius:5px;image-rendering:pixelated}.mixdesk .matrix-tile[aria-pressed=true]{border-color:#9debcf;box-shadow:0 0 0 1px #9debcf}
 .matrix-library h3{font-size:.92rem;margin:10px 0 4px;color:#d7f1e9}#matrix-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,100px),1fr))}
 #favorite-tiles .favorite-tile{display:grid;gap:4px;width:105px;text-align:center;font-size:.78rem}#favorite-tiles img{width:100%;aspect-ratio:1;object-fit:contain;background:#080b10;border-radius:4px}#builder-shows{display:grid;gap:6px}#builder-steps{padding-left:1.7rem}#builder-steps li{margin:6px 0}#builder-steps button{min-height:28px;padding:3px 7px;margin-left:5px}#builder-status{font-size:.85rem;color:#c4d9eb}#builder-effect,#favorite-effect{max-width:100%;min-width:0}
+#music-demo-link[hidden]{display:none}
+#music-style-grid .matrix-tile img{width:100%;aspect-ratio:1;object-fit:contain;background:#101927;border-radius:5px}
+#music-style-grid .matrix-tile[aria-pressed="true"]{border-color:#a6e6d0;color:#b7ffe8}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
@@ -73,13 +76,16 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 </details></div></div>
 <div class="desk-stack"><div class="desk-channel desk-music"><div class="music-heading"><h2 id="desk-music-title"></h2><p class="status" id="audio" role="status"></p></div>
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
-<div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
+<div class="music-actions">
 <p id="active-music-style" class="status"></p>
-<details class="gap" id="music-demo-panel"><summary id="music-demo-title"></summary><img id="music-demo" width="300" height="320" alt=""><a id="music-demo-link" download></a></details>
 <div class="controls gap" id="music-preview-tools"></div>
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
-</div></div></div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="matrix-library" id="matrix-gallery"><h3 id="matrix-title"></h3><div class="controls pattern-categories" id="matrix-themes"></div><div id="matrix-grid" class="gap"></div></div>
+</div></div><h3 id="style-label"></h3>
+<div id="music-style-grid" role="group" aria-labelledby="style-label"></div>
+<p id="music-style-status" class="status" role="status"></p>
+<a id="music-demo-link" download hidden></a>
+</div><div class="desk-channel pattern-section"><div class="music-heading"><h2 id="pattern-title"></h2><div class="controls"><label for="pattern-target" id="pattern-target-label"></label><select id="pattern-target"></select><button id="pattern-stop"></button></div></div><div class="matrix-library" id="matrix-gallery"><h3 id="matrix-title"></h3><div class="controls pattern-categories" id="matrix-themes"></div><div id="matrix-grid" class="gap"></div></div>
 <div class="controls pattern-categories" id="pattern-categories"></div><div id="pattern-grid"></div>
 <details class="gap gif-library"><summary id="gif-library-title"></summary>
 <form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
@@ -645,53 +651,59 @@ ledfxCheck.onclick = async () => {
   }
 };
 byId('music-setup').append(ledfxCheck);
-const styleSelect = byId('music-style');
-const styleButton = document.createElement('button');
+const musicGrid = byId('music-style-grid');
 const activeStyleLabels = {
-  nl:['Actieve muziekstijl','Nog onbekend'],
-  en:['Active music style','Unknown'],
-  es:['Estilo musical activo','Desconocido'],
-  de:['Aktiver Musikstil','Unbekannt']
+  nl:['Actieve muziekstijl','Nog onbekend','Voorbeeld-gif downloaden'],
+  en:['Active music style','Unknown','Download demo GIF'],
+  es:['Estilo musical activo','Desconocido','Descargar GIF de ejemplo'],
+  de:['Aktiver Musikstil','Unbekannt','Beispiel-GIF herunterladen']
 };
-let draftStyle = false;
-const demoPanel = byId('music-demo-panel');
-const demoLabels = {
-  nl:['Voorbeeld op een kerstboom (simulatie)','Voorbeeld-gif downloaden'],
-  en:['Christmas tree preview (simulation)','Download demo GIF'],
-  es:['Vista en un árbol de Navidad (simulación)','Descargar GIF de ejemplo'],
-  de:['Vorschau am Weihnachtsbaum (Simulation)','Beispiel-GIF herunterladen']
-};
-function updateMusicDemo() {
-  const [title, download] = demoLabels[lang.value];
-  byId('music-demo-title').textContent = title;
-  const demo = byId('music-demo'), link = byId('music-demo-link');
-  demo.alt = title + ' · ' + styleSelect.selectedOptions[0]?.textContent;
-  link.textContent = download;
-  if (!demoPanel.open || !styleSelect.value) return;
-  const url = './music-demo/' + styleSelect.value;
-  if (demo.getAttribute('src') !== url) demo.src = url;
-  link.href = url;
-  link.download = 'twinkly-' + styleSelect.value + '.gif';
-}
-demoPanel.ontoggle = updateMusicDemo;
-styleSelect.onchange = () => { draftStyle = true; updateMusicDemo(); };
 function renderActiveStyle() {
   const active = status?.active_music_style;
-  const index = styleIds.indexOf(active);
   const options = musicStyles[lang.value].slice(3).concat(moreStyles[lang.value]);
-  const [label, unknown] = activeStyleLabels[lang.value];
-  byId('active-music-style').textContent = label + ' · ' + (options[index] || active || unknown);
-  if (!draftStyle && index >= 0 && styleSelect.value !== active) {
-    styleSelect.value = active;
-    updateMusicDemo();
+  const [label, unknown, download] = activeStyleLabels[lang.value];
+  byId('active-music-style').textContent = label + ' · ' + (options[styleIds.indexOf(active)] || active || unknown);
+  for (const tile of musicGrid.children) tile.setAttribute('aria-pressed', String(tile.dataset.style === active));
+  const link = byId('music-demo-link');
+  link.hidden = !styleIds.includes(active);
+  if (!link.hidden) {
+    link.href = './music-demo/' + active;
+    link.download = 'twinkly-' + active + '.gif';
+    link.textContent = download;
   }
 }
-styleButton.onclick = () => perform(styleButton, async () => {
-  const result = await request('setup-music', {style:styleSelect.value});
-  if (result.ok) draftStyle = false;
-  return result.ok ? musicStyles[lang.value][2] : t('setupFailed') + ' · ' + result.message;
-});
-byId('music-styles').append(styleButton);
+function renderMusicGallery(options) {
+  if (!musicGrid.children.length) {
+    for (const style of styleIds) {
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'matrix-tile';
+      tile.dataset.style = style;
+      const image = document.createElement('img');
+      image.alt = '';
+      image.loading = 'lazy';
+      image.src = './music-demo/' + style;
+      tile.append(image, document.createElement('span'));
+      tile.onclick = () => perform(tile, async () => {
+        const feedback = byId('music-style-status');
+        feedback.textContent = t('busy');
+        try {
+          const result = await request('setup-music', {style});
+          feedback.textContent = result.ok ? musicStyles[lang.value][2] : t('setupFailed') + ' · ' + result.message;
+          return feedback.textContent;
+        } catch (error) {
+          feedback.textContent = error.message;
+          throw error;
+        }
+      });
+      musicGrid.append(tile);
+    }
+  }
+  Array.from(musicGrid.children).forEach((tile, index) => {
+    tile.lastElementChild.textContent = options[index];
+  });
+  renderActiveStyle();
+}
 const livePanel = byId('music-preview-panel');
 const previewButton = document.createElement('button'), gifButton = document.createElement('button');
 let previewTimer, gifUrl;
@@ -821,7 +833,6 @@ async function applyScene(scene) {
     if (!setup.ok) return setup.message;
     await request('show',{master:scene.level});
     masterDraft = false;
-    draftStyle = false;
   }
   const result = await request('control',{...target,action:scene.mode});
   return result.failed.length ? result.failed.join(' · ') : t('done');
@@ -1349,15 +1360,11 @@ function translate() {
   byId('group-save').textContent = extra(2);
   byId('group-cancel').textContent = extra(3);
   const labels = musicStyles[lang.value];
-  const selected = styleSelect.value || 'energy';
   byId('style-label').textContent = labels[0];
-  styleButton.textContent = labels[1];
   const options = labels.slice(3).concat(moreStyles[lang.value]);
-  styleSelect.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
+  renderMusicGallery(options);
   updatePreviewLabels();
-  styleSelect.value = selected;
-  updateMusicDemo();
-  const sceneStyle = byId('scene-style'), prior = sceneStyle.value || selected;
+  const sceneStyle = byId('scene-style'), prior = sceneStyle.value || 'energy';
   sceneStyle.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
   sceneStyle.value = prior;
   sceneStyle.setAttribute('aria-label',labels[0]);

@@ -1,3 +1,8 @@
+# 0.1.37
+
+- Kies uit zestien bewegende kerstboom-GIF’s in de muziekgalerij.
+- Pas een muziekstijl met één klik toe en herken de actieve stijl aan de groene rand.
+
 # 0.1.36
 
 - Voeg zes LedFX-muziekstijlen toe aan de bediening en scènes.
