@@ -49,7 +49,7 @@ PRODUCT_PHOTO_URLS = {
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
 MAX_DEVICES = 40
-MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe', 'scroll', 'bands', 'blade_power_plus', 'magnitude', 'fire', 'rain', 'melt', 'melt_and_sparkle', 'scan', 'water', 'energy2'))
+MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe', 'scroll', 'bands', 'blade_power_plus', 'magnitude', 'fire', 'rain', 'melt', 'melt_and_sparkle', 'scan', 'water', 'energy2', 'bar', 'blocks', 'equalizer', 'lava_lamp', 'pitchSpectrum', 'scan_multi', 'scan_and_flare', 'scroll_plus', 'vumeter', 'multiBar'))
 LOG = logging.getLogger("twinkly")
 
 
@@ -1427,6 +1427,9 @@ class Controller:
                 x = i / PIXELS
                 wave = 0.5 + 0.5 * math.cos(math.tau * (x * 2 - time))
                 sweep = (0.5 + 0.5 * math.cos(math.tau * (x - time))) ** 12
+                phase = math.tau * time
+                band = i // 24
+                band_level = 0.5 + 0.5 * math.sin(phase + band * 1.7)
                 hue, level = {
                     "energy": (0.76 + x * 0.15, 0.16 + 0.84 * beat * wave),
                     "spectrum": (x + time, 0.28 + 0.72 * wave),
@@ -1444,6 +1447,16 @@ class Controller:
                     "scan": (0.94, 0.08 + 0.92 * sweep),
                     "water": (0.47 + 0.14 * wave, 0.24 + 0.76 * wave ** 2),
                     "energy2": (time + x * 0.25, 0.12 + 0.88 * wave * (0.45 + beat * 0.55)),
+                    "bar": (0.07 + time, 0.09 + 0.91 * ((x - time * 3) % 1 < 0.45)),
+                    "blocks": (band / 5 + time, 0.18 + 0.82 * band_level ** 2),
+                    "equalizer": (0.36 - x * 0.28, 0.1 + 0.9 * (i % 24 < band_level * 24)),
+                    "lava_lamp": (0.82 + wave * 0.23, 0.18 + 0.82 * wave ** 3),
+                    "pitchSpectrum": (time + band / 5, 0.16 + 0.84 * band_level * wave),
+                    "scan_multi": (x + 0.35, 0.1 + 0.9 * wave ** 14),
+                    "scan_and_flare": (0.10 + 0.44 * (1 - sweep), 0.16 + 0.84 * max(sweep, beat * wave)),
+                    "scroll_plus": (0.55 + 0.28 * wave, 0.15 + 0.85 * max(sweep, wave ** 5)),
+                    "vumeter": (0.33 * (1 - x), 0.08 + 0.92 * (x < 0.25 + 0.74 * beat)),
+                    "multiBar": (band / 5, 0.1 + 0.9 * ((x * 5 - time * 2 + band * 0.36) % 1 < 0.35)),
                 }[style]
                 saturation = 0.06 if style == "strobe" else 0.86
                 frame.extend(int(channel * 255) for channel in colorsys.hsv_to_rgb(hue % 1, saturation, level))

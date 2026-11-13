@@ -1,3 +1,7 @@
+# 0.1.40
+
+- Voeg tien LedFX-muziekstijlen toe, elk met een geanimeerd kerstboomvoorbeeld.
+
 # 0.1.39
 
 - Herstel de opstartfout van 0.1.38.
