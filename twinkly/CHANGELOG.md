@@ -1,3 +1,8 @@
+# 0.1.39
+
+- Herstel de opstartfout van 0.1.38.
+- Controleer Python-syntax, dashboard en geanimeerde muziek-GIF’s tijdens de Docker-build.
+
 # 0.1.38
 
 - Voorkom dat de browser na een update een oude Twinkly-interface blijft gebruiken.
