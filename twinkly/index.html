@@ -7,7 +7,7 @@
 .power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
 .led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
 #group-cards{display:grid;gap:12px;margin-top:14px}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
-#music-preview,#music-gif{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-gif-link{display:inline-block;margin-top:8px;color:#ffe2a5}
+#music-preview,#music-gif,#music-demo{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-demo,#music-gif{max-width:300px}#music-gif-link,#music-demo-link{display:inline-block;margin-top:8px;color:#ffe2a5}
 
 main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 #devices{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}
@@ -75,6 +75,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <div class="music-grid"><div class="track-tv"><div class="track-display"><div id="track-idle" aria-hidden="true">♪</div><img id="track-art" alt="" referrerpolicy="no-referrer" hidden></div><div class="track-screen"><div><p id="track-label"></p><strong id="track-title"></strong><p id="track-byline"></p></div></div></div>
 <div class="music-actions"><div class="controls gap" id="music-styles"><label for="music-style" id="style-label"></label><select id="music-style"></select></div>
 <p id="active-music-style" class="status"></p>
+<details class="gap" id="music-demo-panel"><summary id="music-demo-title"></summary><img id="music-demo" width="300" height="320" alt=""><a id="music-demo-link" download></a></details>
 <div class="controls gap" id="music-preview-tools"></div>
 <div id="music-preview-panel" class="gap" hidden><canvas id="music-preview" width="360" height="64"></canvas><p id="music-preview-status" role="status"></p></div>
 <div id="music-gif-panel" class="gap" hidden><img id="music-gif" alt=""><a id="music-gif-link" download="twinkly-muziekeffect.gif"></a></div>
@@ -119,10 +120,10 @@ const musicStyles = {
  de:['Musikstil','Stil anwenden','Musikstil angewendet.','Energiepuls','Farbspektrum','Bass und Takt','Farbwelle','Stroboskop (schnelle Blitze)']
 };
 const moreStyles = {
- nl:['Lichtloop','Muziekbanden','Blade Power+','Frequentiepuls','Muziekvuur'],
- en:['Light scroll','Music bands','Blade Power+','Frequency pulse','Music fire'],
- es:['Desplazamiento de luz','Bandas musicales','Blade Power+','Pulso de frecuencia','Fuego musical'],
- de:['Lichtlauf','Musikbänder','Blade Power+','Frequenzpuls','Musikfeuer']
+ nl:['Lichtloop','Muziekbanden','Blade Power+','Frequentiepuls','Muziekvuur',"Lichtregen","Vloeiende kleuren","Gouden fonkeling","Lichtscanner","Watergolven","Energiepuls 2"],
+ en:['Light scroll','Music bands','Blade Power+','Frequency pulse','Music fire',"Light rain","Melting colours","Golden sparkle","Light scanner","Water ripples","Energy pulse 2"],
+ es:['Desplazamiento de luz','Bandas musicales','Blade Power+','Pulso de frecuencia','Fuego musical',"Lluvia de luz","Colores fluidos","Destellos dorados","Escáner de luz","Ondas de agua","Pulso de energía 2"],
+ de:['Lichtlauf','Musikbänder','Blade Power+','Frequenzpuls','Musikfeuer',"Lichtregen","Fließende Farben","Goldenes Funkeln","Lichtscanner","Wasserwellen","Energiepuls 2"]
 };
 const previewText = {
  nl:['Livevoorbeeld','Voorbeeld sluiten','Gifje opnemen','Gifje downloaden','Wacht op LedFX-frames. Start muziek en pas een stijl toe.','Opname duurt ongeveer 3 seconden.'],
@@ -130,7 +131,7 @@ const previewText = {
  es:['Vista en directo','Cerrar vista','Grabar GIF','Descargar GIF','Esperando datos de LedFX. Reproduce música y aplica un estilo.','La grabación dura unos 3 segundos.'],
  de:['Live-Vorschau','Vorschau schließen','GIF aufnehmen','GIF herunterladen','Warte auf LedFX-Frames. Spiele Musik ab und wende einen Stil an.','Die Aufnahme dauert etwa 3 Sekunden.']
 };
-const styleIds = ['energy','spectrum','power','wavelength','strobe','scroll','bands','blade_power_plus','magnitude','fire'];
+const styleIds = ["energy","spectrum","power","wavelength","strobe","scroll","bands","blade_power_plus","magnitude","fire","rain","melt","melt_and_sparkle","scan","water","energy2"];
 const layoutLabels = {
  nl:['Ledkaart laden','Geen ledposities ontvangen','ledposities','Berekende indeling','Draai ledkaart'],
  en:['Load LED map','No LED positions received','LED positions','Generated layout','Rotate LED map'],
@@ -653,14 +654,37 @@ const activeStyleLabels = {
   de:['Aktiver Musikstil','Unbekannt']
 };
 let draftStyle = false;
-styleSelect.onchange = () => { draftStyle = true; };
+const demoPanel = byId('music-demo-panel');
+const demoLabels = {
+  nl:['Voorbeeld op een kerstboom (simulatie)','Voorbeeld-gif downloaden'],
+  en:['Christmas tree preview (simulation)','Download demo GIF'],
+  es:['Vista en un árbol de Navidad (simulación)','Descargar GIF de ejemplo'],
+  de:['Vorschau am Weihnachtsbaum (Simulation)','Beispiel-GIF herunterladen']
+};
+function updateMusicDemo() {
+  const [title, download] = demoLabels[lang.value];
+  byId('music-demo-title').textContent = title;
+  const demo = byId('music-demo'), link = byId('music-demo-link');
+  demo.alt = title + ' · ' + styleSelect.selectedOptions[0]?.textContent;
+  link.textContent = download;
+  if (!demoPanel.open || !styleSelect.value) return;
+  const url = './music-demo/' + styleSelect.value;
+  if (demo.getAttribute('src') !== url) demo.src = url;
+  link.href = url;
+  link.download = 'twinkly-' + styleSelect.value + '.gif';
+}
+demoPanel.ontoggle = updateMusicDemo;
+styleSelect.onchange = () => { draftStyle = true; updateMusicDemo(); };
 function renderActiveStyle() {
   const active = status?.active_music_style;
   const index = styleIds.indexOf(active);
   const options = musicStyles[lang.value].slice(3).concat(moreStyles[lang.value]);
   const [label, unknown] = activeStyleLabels[lang.value];
   byId('active-music-style').textContent = label + ' · ' + (options[index] || active || unknown);
-  if (!draftStyle && index >= 0) styleSelect.value = active;
+  if (!draftStyle && index >= 0 && styleSelect.value !== active) {
+    styleSelect.value = active;
+    updateMusicDemo();
+  }
 }
 styleButton.onclick = () => perform(styleButton, async () => {
   const result = await request('setup-music', {style:styleSelect.value});
@@ -1332,6 +1356,7 @@ function translate() {
   styleSelect.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
   updatePreviewLabels();
   styleSelect.value = selected;
+  updateMusicDemo();
   const sceneStyle = byId('scene-style'), prior = sceneStyle.value || selected;
   sceneStyle.replaceChildren(...styleIds.map((id,index) => new Option(options[index],id)));
   sceneStyle.value = prior;

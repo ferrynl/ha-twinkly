@@ -1,3 +1,9 @@
+# 0.1.36
+
+- Voeg zes LedFX-muziekstijlen toe aan de bediening en scènes.
+- Bekijk en download een geanimeerd kerstboomvoorbeeld per muziekstijl.
+- Neem live LedFX-frames op als kerstboom-GIF.
+
 # 0.1.35
 
 - Detecteer automatisch de broadcastadressen van actieve netwerkinterfaces.

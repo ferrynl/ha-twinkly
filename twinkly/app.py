@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 from aiohttp import ClientConnectorError, ClientError, ClientSession, ClientTimeout, web
-from PIL import Image
+from PIL import Image, ImageDraw
 from xled import HighControlInterface
 
 DATA = Path("/data/devices.json")
@@ -49,7 +49,7 @@ PRODUCT_PHOTO_URLS = {
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
 MAX_DEVICES = 40
-MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe', 'scroll', 'bands', 'blade_power_plus', 'magnitude', 'fire'))
+MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe', 'scroll', 'bands', 'blade_power_plus', 'magnitude', 'fire', 'rain', 'melt', 'melt_and_sparkle', 'scan', 'water', 'energy2'))
 LOG = logging.getLogger("twinkly")
 
 
@@ -1376,13 +1376,87 @@ class Controller:
 
     @staticmethod
     def encode_gif(frames):
-        images = [Image.frombytes("RGB", (PIXELS, 1), frame)
-                  .resize((PIXELS * 3, 64), Image.Resampling.NEAREST)
-                  .quantize(colors=128) for frame in frames]
+        background = Image.new("RGB", (300, 320), "#101927")
+        draw = ImageDraw.Draw(background)
+        draw.ellipse((36, 286, 264, 311), fill="#233347")
+        draw.rectangle((138, 256, 162, 296), fill="#79503c")
+        for top, bottom, half_width in ((115, 281, 121), (69, 217, 96), (34, 158, 68)):
+            draw.polygon([(150, top), (150 - half_width, bottom),
+                          (150 + half_width, bottom)], fill="#153f35", outline="#286353")
+        star = []
+        for i in range(10):
+            angle = math.tau * i / 10 - math.pi / 2
+            radius = 15 if i % 2 == 0 else 6
+            star.append((150 + radius * math.cos(angle), 34 + radius * math.sin(angle)))
+        draw.polygon(star, fill="#ffe099")
+
+        points = []
+        for i in range(PIXELS):
+            row, column = divmod(i, 12)
+            y = 270 - row * 22
+            width = (y - 30) * 0.44
+            position = (column + 0.5) / 12
+            if row % 2:
+                position = 1 - position
+            points.append((round(150 + (2 * position - 1) * width), y - round(7 * math.sin(math.pi * position))))
+
+        images = []
+        for frame in frames:
+            image = background.copy()
+            draw = ImageDraw.Draw(image)
+            for i, (x, y) in enumerate(points):
+                color = tuple(frame[i * 3:i * 3 + 3])
+                glow = tuple(int(channel * 0.26) for channel in color)
+                draw.ellipse((x - 4, y - 4, x + 4, y + 4), fill=glow)
+                draw.ellipse((x - 2, y - 2, x + 2, y + 2), fill=color)
+            images.append(image.quantize(colors=128))
         with io.BytesIO() as output:
             images[0].save(output, format="GIF", save_all=True,
                            append_images=images[1:], duration=100, loop=0)
             return output.getvalue()
+
+    @staticmethod
+    @functools.lru_cache(maxsize=len(MUSIC_STYLES))
+    def demo_music_gif(style):
+        frames = []
+        for tick in range(30):
+            time = tick / 30
+            beat = (0.5 + 0.5 * math.cos(math.tau * time * 3)) ** 3
+            frame = bytearray()
+            for i in range(PIXELS):
+                x = i / PIXELS
+                wave = 0.5 + 0.5 * math.cos(math.tau * (x * 2 - time))
+                sweep = (0.5 + 0.5 * math.cos(math.tau * (x - time))) ** 12
+                hue, level = {
+                    "energy": (0.76 + x * 0.15, 0.16 + 0.84 * beat * wave),
+                    "spectrum": (x + time, 0.28 + 0.72 * wave),
+                    "power": (0.02 + x * 0.1, 0.12 + 0.88 * (x < 0.28 + beat * 0.68)),
+                    "wavelength": (0.48 + 0.22 * wave, 0.24 + 0.76 * wave),
+                    "strobe": (0.14, 0.18 + 0.8 * (tick < 3)),
+                    "scroll": (0.3 + 0.14 * wave, 0.14 + 0.86 * sweep),
+                    "bands": ((i // 24) / 5, 0.2 + 0.8 * (beat if (i // 24) % 2 else wave)),
+                    "blade_power_plus": (0.82 + 0.18 * wave, 0.12 + 0.88 * max(sweep, beat * wave)),
+                    "magnitude": (0.56, 0.12 + 0.88 * (abs(x - 0.5) < 0.10 + beat * 0.38)),
+                    "fire": (0.015 + 0.1 * wave, (1 - x) * (0.38 + 0.62 * wave)),
+                    "rain": (0.58, 0.10 + 0.9 * (1 - (3 * x + time * 2) % 1) ** 8),
+                    "melt": (0.88 + 0.22 * wave, 0.32 + 0.68 * wave),
+                    "melt_and_sparkle": (0.12 + x * 0.1, 0.24 + 0.76 * max(wave * 0.5, (0.5 + 0.5 * math.cos(i * 2.4 + math.tau * time)) ** 18)),
+                    "scan": (0.94, 0.08 + 0.92 * sweep),
+                    "water": (0.47 + 0.14 * wave, 0.24 + 0.76 * wave ** 2),
+                    "energy2": (time + x * 0.25, 0.12 + 0.88 * wave * (0.45 + beat * 0.55)),
+                }[style]
+                saturation = 0.06 if style == "strobe" else 0.86
+                frame.extend(int(channel * 255) for channel in colorsys.hsv_to_rgb(hue % 1, saturation, level))
+            frames.append(bytes(frame))
+        return Controller.encode_gif(frames)
+
+    async def music_demo(self, request):
+        style = request.match_info["style"]
+        if style not in MUSIC_STYLES:
+            raise web.HTTPNotFound()
+        result = await asyncio.to_thread(self.demo_music_gif, style)
+        return web.Response(body=result, content_type="image/gif",
+                            headers={"Cache-Control": "private, max-age=3600"})
 
     async def music_gif(self, request):
         if self.gif_capture.locked():
@@ -1393,7 +1467,7 @@ class Controller:
                 frame = self.music_frame()
                 if frame is None:
                     raise web.HTTPServiceUnavailable()
-                frames.append(frame)
+                frames.append(self.dim_frame(frame, self.show["master"]))
                 await asyncio.sleep(0.1)
             result = await asyncio.to_thread(self.encode_gif, frames)
         return web.Response(body=result, content_type="image/gif", headers={"Cache-Control": "no-store"})
@@ -1454,6 +1528,7 @@ class Controller:
         app.router.add_get("/media-players", self.media_players)
         app.router.add_post("/media-players", self.select_media_player)
         app.router.add_get("/now-playing-art", self.now_playing_art)
+        app.router.add_get("/music-demo/{style}", self.music_demo)
         app.router.add_post("/music-gif", self.music_gif)
         app.router.add_get("/matrix-gifs", self.matrix_catalog)
         app.router.add_get("/matrix-gifs/{id}", self.matrix_gif)
