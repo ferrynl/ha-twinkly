@@ -1506,7 +1506,7 @@ class Controller:
         self.edit_scan = asyncio.Lock()
         app = web.Application(middlewares=[ingress_only], client_max_size=720_000)
         app.cleanup_ctx.append(self.stream)
-        app.router.add_get("/", lambda _: web.FileResponse("index.html"))
+        app.router.add_get("/", lambda _: web.FileResponse(\n            "index.html", headers={"Cache-Control": "no-store"}))
         app.router.add_get("/twinkly.svg", lambda _: web.FileResponse("twinkly.svg"))
         app.router.add_get("/twinkly-wordmark.svg", self.twinkly_wordmark)
         app.router.add_get("/status", self.status)

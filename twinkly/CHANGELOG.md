@@ -1,3 +1,7 @@
+# 0.1.38
+
+- Voorkom dat de browser na een update een oude Twinkly-interface blijft gebruiken.
+
 # 0.1.37
 
 - Kies uit zestien bewegende kerstboom-GIF’s in de muziekgalerij.
