@@ -169,16 +169,46 @@ const detailKeys = ['firmware_version','rssi','ssid','channel','product_code','h
 const productLabels = {
  nl:'Model',en:'Model',es:'Modelo',de:'Modell'
 };
+const productModels = [
+  [/^TWW(?:480|500)STP[A-Z0-9]*$/, "Twinkly Matrix", "matrix"],
+  [/^TWS\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Strings", "strings-multicolor", {SPP: "strings-rgbw", GOP: "strings-gold-silver"}],
+  [/^TW3RD\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Reindeer", "reindeers"],
+  [/^TWTT\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Tree Topper", "tree-topper"],
+  [/^TWSHD\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Strings HD", "strings-hd"],
+  [/^TWKP\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Pearls", "strings-usb-c-pearls"],
+  [/^TG50P4425P00$/, "Twinkly Pre-lit Tree", "pre-lit-tree"],
+  [/^TWW\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Curtain", "curtain", {SPP: "curtain-rgbw"}],
+  [/^TWQ\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Squares", "squares"],
+  [/^TWPL\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Permanent Lights", "permanent-lights"],
+  [/^TWI\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Icicle", "icicle-multicolor", {SPP: "icicle-multicolor-white", GOP: "icicle-gold-silver"}],
+  [/^TWKC\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Candles", "strings-usb-c-candles"],
+  [/^TWD\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Dots", "dots"],
+  [/^TWL\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Line", "line"],
+  [/^GD20P4425P0X$/, "Twinkly Pre-lit Wreath", "pre-lit-wreath"],
+  [/^TWC9\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly C9 Bulbs", "c9-bulbs"],
+  [/^TWKS\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Stars", "strings-usb-c-stars"],
+  [/^TWP\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Light Tree 3D", "light-tree"],
+  [/^TWN\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Net Lights", "net-lights"],
+  [/^TWFL\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Flex", "flex"],
+  [/^TWKH\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Hearts", "strings-usb-c-hearts"],
+  [/^TWB\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Spritzer", "spritzer"],
+  [/^TWF\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Festoon", "festoon-multicolor", {GOP: "festoon-gold-silver"}],
+  [/^GT90P4425P0X$/, "Twinkly Pre-lit Garland", "pre-lit-garland"],
+  [/^TWC\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Cluster", "cluster-multicolor", {SPP: "cluster-multicolor-white", GOP: "cluster-gold-silver"}],
+  [/^TW3DB\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Spheres", "spheres"],
+  [/^TWWT\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Light Tree 2D", "light-tree-2d"],
+  [/^TWDJ\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Lightwall", "lightwall"],
+];
 function modelInfo(code, device) {
-  const strings = /^TWS(\d{2,4})(SPP|STP|GOP)[A-Z0-9-]*$/i.exec(code);
-  if (strings) {
-    const rgbw = strings[2].toUpperCase() === 'SPP';
-    const suffix = {SPP:'RGB+W',STP:'RGB',GOP:'AWW'}[strings[2].toUpperCase()];
-    return {name:'Twinkly Strings · ' + device.leds + ' LEDs · ' + suffix,
-      photo:rgbw ? 'strings-rgbw' : ''};
-  }
-  if (/^TWL\d{2,4}STW[A-Z0-9-]*$/i.test(code)) {
-    return {name:'Twinkly Line · ' + device.leds + ' LEDs',photo:'line'};
+  const sku = code.trim().toUpperCase().split('-')[0];
+  for (const [pattern, name, photo, variants] of productModels) {
+    const match = pattern.exec(sku);
+    if (match) {
+      return {
+        name: [name, device.leds && device.leds + ' LEDs', device.profile].filter(Boolean).join(' · '),
+        photo: variants?.[match[1]] || photo,
+      };
+    }
   }
   return {name:productLabels[lang.value] + ' · ' + code};
 }
@@ -186,7 +216,7 @@ function drawProduct(card, device) {
   const code = typeof device.product_code === 'string' ? device.product_code.trim() : '';
   card.product.hidden = !code;
   if (!code) return;
-  const signature = code + '/' + device.leds + '/' + lang.value;
+  const signature = code + '/' + device.leds + '/' + device.profile + '/' + lang.value;
   if (card.productSignature === signature) return;
   card.productSignature = signature;
   const model = modelInfo(code,device);
@@ -199,14 +229,16 @@ function drawProduct(card, device) {
     body.append(subtitle);
   }
   card.product.replaceChildren();
-  if (model.photo) {
-    const photo = document.createElement('img');
-    photo.loading = 'lazy'; photo.referrerPolicy = 'no-referrer';
-    photo.alt = model.name;
-    photo.onerror = () => { photo.hidden = true; };
-    photo.src = './product-photo/' + model.photo;
-    card.product.append(photo);
-  }
+  const photo = document.createElement('img');
+  photo.loading = 'lazy';
+  photo.alt = model.photo ? model.name : '';
+  photo.onerror = () => {
+    photo.onerror = null;
+    photo.alt = '';
+    photo.src = './twinkly.svg';
+  };
+  photo.src = model.photo ? './product-photo/' + model.photo : './twinkly.svg';
+  card.product.append(photo);
   card.product.append(body);
 }
 const showText = {
