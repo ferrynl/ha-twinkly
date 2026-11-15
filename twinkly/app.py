@@ -285,6 +285,8 @@ class Device:
         self.last_warning_at = 0.0
         self.error = None
         self.offline = False
+        self.wifi_observation = None
+        self.network_details = {}
         self.removed = False
         self.replies = 0
         self.mapping = tuple(3 * (i * PIXELS // row["leds"]) for i in range(row["leds"]))
@@ -380,9 +382,12 @@ class Device:
                 details.update({key: station[key] for key in ("ssid", "ip", "gw", "mask", "status")
                                 if key in station})
                 details["network_mode"] = data.get("mode")
+                details["ap_ssid"] = access_point.get("ssid")
+                details["ap_ip"] = access_point.get("ip")
+                details["bssid"] = station.get("bssid")
                 details["rssi"] = station.get("rssi", data.get("rssi", details.get("rssi")))
                 channel = station.get("channel") or data.get("channel")
-                if channel is None and data.get("mode") == 0:
+                if channel is None and data.get("mode") in (0, 2):
                     channel = access_point.get("channel")
                 details["channel"] = channel
         self.details = {key: value for key, value in details.items()
@@ -513,6 +518,9 @@ class Device:
                 )
                 newly_offline = offline and not self.offline
                 if offline:
+                    self.wifi_observation = None
+                    self.network_details = {}
+                    self.details_until = 0
                     self.offline = True
                     self.mode = None
                 elif self.replies != replies or status is not None:
@@ -741,6 +749,67 @@ class Controller:
             "devices": [dict(d.row, music=k in self.music, mode=d.mode, offline=d.offline, error=d.error, product_code=d.product_code, pattern=self.patterns.get(k))
                         for k, d in self.devices.items()],
         })
+
+    async def network(self, request):
+        async with self.network_lock:
+            devices = list(self.devices.values())
+            if time.monotonic() >= self.network_until or devices != self.network_devices:
+                await asyncio.gather(*(self.observe_wifi(device) for device in devices))
+                self.network_devices = devices
+                self.network_until = time.monotonic() + 30
+            rows = [self.network_row(device) for device in self.devices.values()]
+
+        for row in rows:
+            if row["kind"] != "wifi":
+                continue
+            peers = [peer for peer in rows if peer["id"] != row["id"] and peer["kind"] == "ap"
+                     and peer["ssid"] == row["ssid"] and peer["ap_ip"] == row["gateway"]]
+            if len(peers) == 1:
+                row["peer"] = peers[0]["id"]
+        return web.json_response({"devices": rows}, headers={"Cache-Control": "no-store"})
+
+    async def observe_wifi(self, device):
+        ok = await device.run(device.load_details, automatic=True)
+        details = device.details if ok and not device.offline else {}
+        ssid = details.get("ssid")
+        station_ip = details.get("ip")
+        if (details.get("network_mode") != 1 or details.get("status") not in (None, 5, "5")
+                or not isinstance(ssid, str) or not station_ip or station_ip == "0.0.0.0"):
+            device.wifi_observation = None
+            device.network_details = details
+            return
+        measured_at = device.details_until - 60
+        identity = (ssid, station_ip, details.get("gw"), details.get("bssid"))
+        previous = device.wifi_observation
+        since = measured_at
+        if previous and previous[0] == identity and measured_at - previous[2] <= 100:
+            since = previous[1]
+        device.wifi_observation = (identity, since, measured_at)
+        device.network_details = details
+
+    @staticmethod
+    def network_row(device):
+        row = {key: device.row[key] for key in ("id", "name", "ip")}
+        details = device.network_details
+        row["kind"] = "unknown"
+        if device.offline:
+            row["kind"] = "offline"
+        elif device.wifi_observation:
+            (ssid, _, gateway, bssid), since, measured_at = device.wifi_observation
+            rssi = details.get("rssi")
+            try:
+                rssi = float(rssi)
+            except (TypeError, ValueError):
+                rssi = None
+            row.update(kind="wifi", ssid=ssid, gateway=gateway, bssid=bssid,
+                       rssi=rssi if rssi is not None and -120 <= rssi < 0 else None,
+                       channel=details.get("channel"), seconds=max(0, int(measured_at - since)))
+        elif details.get("network_mode") == 2 and details.get("ap_ssid"):
+            ap_ip = details.get("ap_ip")
+            row.update(kind="ap", ssid=details["ap_ssid"],
+                       ap_ip=ap_ip if ap_ip and ap_ip != "0.0.0.0" else row["ip"],
+                       channel=details.get("channel"))
+        return row
 
     async def remove_device(self, request):
         key = (await request.json()).get("id")
@@ -1581,6 +1650,9 @@ class Controller:
 
     def app(self):
         self.edit_scan = asyncio.Lock()
+        self.network_lock = asyncio.Lock()
+        self.network_until = 0
+        self.network_devices = []
         app = web.Application(middlewares=[ingress_only], client_max_size=720_000)
         app.cleanup_ctx.append(self.stream)
         app.router.add_get("/", lambda _: web.FileResponse(
@@ -1588,6 +1660,7 @@ class Controller:
         app.router.add_get("/twinkly.svg", lambda _: web.FileResponse("twinkly.svg"))
         app.router.add_get("/twinkly-wordmark.svg", self.twinkly_wordmark)
         app.router.add_get("/status", self.status)
+        app.router.add_get("/network", self.network)
         app.router.add_get("/effects", self.effects)
         app.router.add_get("/layout", self.layout)
         app.router.add_get("/details", self.details)
