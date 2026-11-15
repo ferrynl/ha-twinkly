@@ -1,5 +1,7 @@
 # Twinkly Control Center voor Home Assistant
 
+![Twinkly Control Center](twinkly/logo.png)
+
 Bedien je Twinkly RGB- en RGBW-verlichting lokaal in Home Assistant. Groepeer lampen, bouw lichtshows met scènes en geanimeerde GIF's en laat de verlichting meebewegen met muziek via LedFX en Music Assistant. Het dashboard toont ook apparaatinfo, wifi-signaal en de ledkaart wanneer je controller die gegevens levert.
 
 ## Kies je versie in Home Assistant

@@ -1,7 +1,7 @@
 name: Twinkly Control Center
 slug: twinkly_kerst
-version: "0.1.41"
-description: Bedien Twinkly-lampen en groepen, bouw lichtshows en synchroniseer effecten met muziek via LedFX.
+version: "0.1.42"
+description: Groepeer je Twinkly-lampen en speel lichtshows af op muziek.
 url: https://github.com/ferrynl/ha-twinkly
 arch:
   - amd64
