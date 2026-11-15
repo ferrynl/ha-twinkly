@@ -42,7 +42,7 @@ jobs:
           bash scripts/smoke.sh "$RUNNER_TEMP/twinkly" 18489
           bash scripts/smoke.sh "$RUNNER_TEMP/twinkly_beta" 18491
   publish:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     needs: tests
     concurrency:
       group: twinkly-release
@@ -67,20 +67,35 @@ jobs:
         run: |
           set -euo pipefail
           version=$(python -c 'import yaml; print(yaml.safe_load(open("twinkly/config.yaml"))["version"])')
-          flags=(--latest)
-          if [[ "$CHANNEL" == beta ]]; then
-            version="$version-beta.$BETA_NUMBER"
-            flags=(--prerelease --latest=false)
-          fi
-          python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly" "$version"
-          awk 'NR > 1 && /^# / { exit } NR > 1 { print }' twinkly/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-          test -s "$RUNNER_TEMP/notes.md"
-          if git ls-remote --exit-code --tags origin "refs/tags/v$version"; then
-            echo "Tag v$version bestaat al. Kies een nieuwe versie." >&2
-            exit 1
+          publish() {
+            local release_version="$1"
+            shift
+            if git ls-remote --exit-code --tags origin "refs/tags/v$release_version"; then
+              if [[ "$GITHUB_EVENT_NAME" == push ]] && gh release view "v$release_version" >/dev/null; then
+                return
+              fi
+              echo "Tag v$release_version bestaat al. Kies een nieuwe versie." >&2
+              exit 1
+            else
+              test "$?" -eq 2
+            fi
+            rm -rf "$RUNNER_TEMP/twinkly-release"
+            python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly-release" "$release_version"
+            awk 'NR > 1 && /^# / { exit } NR > 1 { print }' twinkly/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+            test -s "$RUNNER_TEMP/notes.md"
+            gh release create "v$release_version" --target "$GITHUB_SHA" \
+              --title "Twinkly Control Center $release_version" \
+              --notes-file "$RUNNER_TEMP/notes.md" "$@"
+          }
+
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            # Provision both channels once for the initial rollout.
+            if [[ "$version" == 0.1.41 ]]; then
+              publish "$version-beta.1" --prerelease --latest=false
+              publish "$version" --latest
+            fi
+          elif [[ "$CHANNEL" == beta ]]; then
+            publish "$version-beta.$BETA_NUMBER" --prerelease --latest=false
           else
-            test "$?" -eq 2
+            publish "$version" --latest
           fi
-          gh release create "v$version" --target "$GITHUB_SHA" \
-            --title "Twinkly Control Center $version" \
-            --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
