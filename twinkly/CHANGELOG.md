@@ -1,3 +1,8 @@
+# 0.1.42
+
+- Geef beide Home Assistant-appkaarten een eigen icoon en een korte beschrijving.
+- Voeg een logo en introductie toe aan beide apppagina’s.
+
 # 0.1.41
 
 - Kies in Home Assistant tussen de stabiele app en een afzonderlijke bèta zodra die beschikbaar is.

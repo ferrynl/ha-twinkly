@@ -1,3 +1,4 @@
+import struct
 import tempfile
 import unittest
 from pathlib import Path
@@ -35,6 +36,29 @@ class PrepareReleaseTest(unittest.TestCase):
         self.assertIn("TWINKLY_HTTP_PORT=18491 TWINKLY_DDP_PORT=18492",
                       (self.target / "Dockerfile").read_text(encoding="utf-8"))
         self.assertTrue((self.target / "CHANGELOG.md").read_text(encoding="utf-8").startswith(f"# {version}\n"))
+
+    def test_store_presentation_for_both_channels(self):
+        for suffix, description in (
+            ("", "Groepeer je Twinkly-lampen en speel lichtshows af op muziek."),
+            ("-beta.1", "Probeer als eerste nieuwe Twinkly-lichtshows en muziekeffecten."),
+        ):
+            with self.subTest(channel=suffix):
+                target = self.target.with_name(f"app{suffix}")
+                prepare(self.source, target, f"{self.version}{suffix}")
+                config = yaml.safe_load((target / "config.yaml").read_text(encoding="utf-8"))
+                self.assertEqual(config["description"], description)
+                artwork = self.source / "beta_branding" if suffix else self.source
+                for filename, size in (("icon.png", (128, 128)), ("logo.png", (500, 200))):
+                    data = (target / filename).read_bytes()
+                    self.assertEqual(data, (artwork / filename).read_bytes())
+                    self.assertEqual(data[:8], b"\\x89PNG\\r\\n\\x1a\\n")
+                    self.assertEqual(struct.unpack(">II", data[16:24]), size)
+                    if suffix:
+                        self.assertNotEqual(data, (self.source / filename).read_bytes())
+                intro = (target / "README.md").read_text(encoding="utf-8")
+                self.assertIn("LedFX", intro)
+                self.assertEqual("vroege toegang" in intro, bool(suffix))
+                self.assertFalse((target / "beta_branding").exists())
 
     def test_rejects_wrong_or_malformed_version(self):
         for version in ("99999.0.0", f"{self.version}-beta.0", "nightly"):

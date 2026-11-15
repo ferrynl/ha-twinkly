@@ -16,6 +16,11 @@ def prepare(source, target, version):
         raise ValueError("Release version or stable slug does not match config.yaml")
 
     shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__"))
+    beta_branding = target / "beta_branding"
+    if match[4]:
+        for filename in ("icon.png", "logo.png", "README.md"):
+            (beta_branding / filename).replace(target / filename)
+    shutil.rmtree(beta_branding)
     if not match[4]:
         return
 
@@ -23,7 +28,7 @@ def prepare(source, target, version):
         name="Twinkly Control Center Beta",
         slug="twinkly_kerst_beta",
         version=version,
-        description="Probeer nieuwe Twinkly-functies voor lichtshows, groepsbediening en muziekeffecten.",
+        description="Probeer als eerste nieuwe Twinkly-lichtshows en muziekeffecten.",
         boot="manual",
         ingress_port=18491,
     )
