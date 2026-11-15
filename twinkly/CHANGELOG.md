@@ -1,3 +1,9 @@
+# 0.1.41
+
+- Kies in Home Assistant tussen de stabiele app en een afzonderlijke bèta zodra die beschikbaar is.
+- GitHub valideert beide installatievarianten en controleert de containerstart vóór publicatie.
+- Werk de beschrijving en installatiehandleiding bij.
+
 # 0.1.40
 
 - Voeg tien LedFX-muziekstijlen toe, elk met een geanimeerd kerstboomvoorbeeld.

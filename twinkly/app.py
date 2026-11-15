@@ -26,6 +26,9 @@ from aiohttp import ClientConnectorError, ClientError, ClientSession, ClientTime
 from PIL import Image, ImageDraw
 from xled import HighControlInterface
 
+HTTP_PORT = int(os.environ.get("TWINKLY_HTTP_PORT", "18489"))
+DDP_PORT = int(os.environ.get("TWINKLY_DDP_PORT", "18490"))
+
 DATA = Path("/data/devices.json")
 GROUPS = DATA.with_name("groups.json")
 MUSIC_STATE = DATA.with_name("music-state.json")
@@ -662,7 +665,7 @@ class Controller:
     async def stream(self, app):
         loop = asyncio.get_running_loop()
         transport, _ = await loop.create_datagram_endpoint(
-            lambda: self.ddp, local_addr=("127.0.0.1" if self.source == "127.0.0.1" else "0.0.0.0", 18490)
+            lambda: self.ddp, local_addr=("127.0.0.1" if self.source == "127.0.0.1" else "0.0.0.0", DDP_PORT)
         )
         workers = {}
 
@@ -1600,7 +1603,7 @@ async def configure_ledfx(session, style=None):
     if index != audio.get("active_device_index"):
         await api("PUT", "/audio/devices", {"audio_device": index})
 
-    config = {"name": "Twinkly Control Center", "ip_address": "127.0.0.1", "port": 18490,
+    config = {"name": "Twinkly Control Center", "ip_address": "127.0.0.1", "port": DDP_PORT,
               "pixel_count": PIXELS, "destination_id": 1}
     devices = (await api("GET", "/devices"))["devices"]
     device = next((item for item in devices.values() if item["type"] == "ddp"
@@ -1637,4 +1640,4 @@ if __name__ == "__main__":
         lambda record: not record.getMessage().startswith("Unexpected HTTP status code 401 to request ")
     )
     options = json.loads(Path("/data/options.json").read_text())
-    web.run_app(Controller(options).app(), host="0.0.0.0", port=18489, access_log=None)
+    web.run_app(Controller(options).app(), host="0.0.0.0", port=HTTP_PORT, access_log=None)
