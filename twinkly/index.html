@@ -113,6 +113,14 @@ const strings = {
  es:['Control de iluminación','Todas las luces','Encender','Apagar','Color','Brillo %','Música','Detener música','Conectar Music Assistant','Añadir IP','Buscar en la red','Procesando…','Orden procesada.','Recibiendo datos de LedFx','Esperando un efecto musical de LedFx','Conexión con la aplicación no disponible','Cargar efectos','Elige un efecto','Efecto','Película','No se encontraron efectos locales','Dispositivos encontrados','Música activada','Dirección IPv4 de Twinkly','LedFX configurado. Añade LedFx Twinkly al grupo de reproducción de Music Assistant.','Error de configuración'],
  de:['Lichtsteuerung','Alle Lichter','Ein','Aus','Farbe','Helligkeit %','Musik','Musik stoppen','Music Assistant verbinden','IP hinzufügen','Netzwerk durchsuchen','Wird ausgeführt…','Befehl verarbeitet.','LedFx-Frames werden empfangen','Warte auf einen LedFx-Musikeffekt','Verbindung zur App fehlt','Effekte laden','Effekt auswählen','Effekt','Film','Keine lokalen Effekte gefunden','Geräte gefunden','Musik aktiviert','Twinkly-IPv4-Adresse','LedFX eingerichtet. Füge LedFx Twinkly zur Wiedergabegruppe in Music Assistant hinzu.','Einrichtung fehlgeschlagen']
 };
+const deviceLabels = {
+ nl:['Offline','Lamp verwijderen','Wil je deze lamp uit Twinkly Control Center verwijderen?','Lamp verwijderd.','De lamp is weer online.','Opdracht mislukt. Bekijk de app-logboeken in Home Assistant.'],
+ en:['Offline','Remove light','Remove this light from Twinkly Control Center?','Light removed.','The light is back online.','Command failed. Check the app logs in Home Assistant.'],
+ es:['Sin conexión','Quitar luz','¿Quitar esta luz de Twinkly Control Center?','Luz eliminada.','La luz vuelve a estar en línea.','La orden falló. Consulta los registros de la app en Home Assistant.'],
+ de:['Offline','Lampe entfernen','Diese Lampe aus Twinkly Control Center entfernen?','Lampe entfernt.','Die Lampe ist wieder online.','Befehl fehlgeschlagen. Prüfe das App-Protokoll in Home Assistant.']
+};
+const deviceLabel = index => deviceLabels[lang.value][index];
+const deviceError = error => deviceLabel(error === 'offline' ? 0 : 5);
 const effectLabels = {
  nl:['Probeer het echte effect op de lamp. Geef het daarna een herkenbare naam.','Afspelen op lamp','Eigen naam','Naam opslaan'],
  en:['Play the actual effect on the light, then give it a name you recognise.','Play on light','Custom name','Save name'],
@@ -285,7 +293,7 @@ const lang = byId('language');
 lang.value = localStorage.getItem('twinkly-language') || 'nl';
 if (!lang.value) lang.value = 'nl';
 const t = key => strings[lang.value][keys.indexOf(key)];
-let busy = false, status;
+let busy = false, status, statusRequest = 0;
 async function request(path, data) {
   const response = await fetch('./' + path, data === undefined ? {cache:'no-store'} : {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
@@ -311,9 +319,15 @@ function button(parent, key, action, primary = false) {
   parent.append(el);
   return el;
 }
+function controlResult(result) {
+  const messages = [];
+  if (result.offline?.length) messages.push(deviceLabel(0) + ' · ' + result.offline.join(', '));
+  if (result.failed.length) messages.push(deviceLabel(5) + ' ' + result.failed.join(', '));
+  return messages.join(' · ') || t('done');
+}
 async function run(id, action, value, group) {
   const result = await request('control', {id, action, value, group});
-  return result.failed.length ? result.failed.join(' · ') : t('done');
+  return controlResult(result);
 }
 function controls(parent, id, group) {
   const power = {};
@@ -547,11 +561,21 @@ function render() {
   renderGroups();
   renderShow();
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
+  if (status) {
+    const registered = new Set(status.devices.map(device => device.id));
+    for (const [id, card] of cards) {
+      if (!registered.has(id)) {
+        card.article.remove();
+        card.manage.remove();
+        cards.delete(id);
+      }
+    }
+  }
   for (const d of status?.devices || []) {
     if (!cards.has(d.id)) {
       const article = document.createElement('article');
       const title = document.createElement('h3'), info = document.createElement('p'), error = document.createElement('p');
-      error.className = 'error';
+      error.setAttribute('role', 'status');
       const actions = document.createElement('div'), effects = document.createElement('div');
       actions.className = 'controls'; effects.className = 'gap';
       const grid = document.createElement('div');
@@ -565,7 +589,7 @@ function render() {
       article.tabIndex = -1;
       const loadEffects = async () => {
         const result = await request('effects?id=' + encodeURIComponent(d.id));
-        if (result.error) return result.error;
+        if (result.error) return deviceError(result.error);
         card.effects = result.effects;
         renderEffects(card);
         return card.effects.length ? t('done') : t('empty');
@@ -588,7 +612,7 @@ function render() {
       card.mapButton = mapButton;
       mapButton.onclick = () => perform(mapButton, async () => {
         const result = await request('layout?id=' + encodeURIComponent(d.id));
-        if (result.error) return result.error;
+        if (result.error) return deviceError(result.error);
         card.layout = result.layout;
         drawLayout(card);
         schedulePreview();
@@ -604,7 +628,7 @@ function render() {
       card.detailList.hidden = true;
       card.detailButton.onclick = () => perform(card.detailButton, async () => {
         const result = await request('details?id=' + encodeURIComponent(d.id));
-        if (result.error) return result.error;
+        if (result.error) return deviceError(result.error);
         card.details = result.details;
         drawDetails(card);
         return t('done');
@@ -613,7 +637,21 @@ function render() {
       drawDetails(card);
       card.product = document.createElement('div');
       card.product.className = 'product-card';
-      article.append(title, card.product, info, error, actions, details, effects, map);
+      const remove = document.createElement('button');
+      const removeRow = document.createElement('div');
+      removeRow.className = 'controls';
+      remove.onclick = () => {
+        if (!confirm(card.title.textContent + '\n\n' + deviceLabel(2))) return;
+        return perform(remove, async () => {
+          const result = await request('remove-device', {id:d.id});
+          return deviceLabel(result.ok ? 3 : 4);
+        });
+      };
+      removeRow.append(remove);
+      const deviceControls = document.createElement('div');
+      deviceControls.append(actions, details, effects, map);
+      Object.assign(card, {deviceControls, manage, remove, removeRow});
+      article.append(title, card.product, info, error, deviceControls, removeRow);
       byId('devices').append(article);
       card.power = controls(actions, d.id);
       cards.set(d.id, card);
@@ -626,11 +664,22 @@ function render() {
     title.textContent = d.name;
     card.manageTitle.textContent = d.name;
     info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : '', d.pattern ? (d.pattern.startsWith('gif:') ? d.pattern.split('-').slice(1).join('-').replaceAll('_',' ') : patternName(d.pattern)) : ''].filter(Boolean).join(' · ');
-    error.textContent = d.error || '';
-    error.hidden = !d.error;
+    error.textContent = d.offline ? deviceLabel(0) : d.error ? deviceError(d.error) : '';
+    error.className = d.offline ? 'status' : 'error';
+    error.hidden = !d.offline && !d.error;
+    card.deviceControls.hidden = d.offline === true;
+    card.manage.hidden = d.offline === true;
+    card.remove.textContent = deviceLabel(1);
+    card.removeRow.hidden = d.offline !== true;
   }
 }
-async function refresh() { status = await request('status'); render(); }
+async function refresh() {
+  const sequence = ++statusRequest;
+  const current = await request('status');
+  if (sequence !== statusRequest) return;
+  status = current;
+  render();
+}
 controls(byId('all'), '*');
 button(byId('music-setup'), 'setup', async () => {
   const result = await request('setup-music', {});
@@ -835,7 +884,7 @@ async function applyScene(scene) {
     masterDraft = false;
   }
   const result = await request('control',{...target,action:scene.mode});
-  return result.failed.length ? result.failed.join(' · ') : t('done');
+  return controlResult(result);
 }
 function renderShow() {
   const show = status?.show;

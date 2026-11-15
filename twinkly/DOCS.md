@@ -18,6 +18,12 @@ Beide staan in [Ferry’s Home Assistant-apps](https://github.com/ferrynl/ha-app
 3. Open de webinterface en kies **Zoeken op netwerk**. Broadcast werkt binnen hetzelfde subnet. Gebruik **IP toevoegen** bij gemiste apparaten en reserveer de adressen in DHCP.
 4. Test aan/uit, kleur en dimmen per apparaat. **Aan** herstelt de laatst gebruikte modus als die bekend is. Anders probeert de app een warme vaste kleur en daarna alternatieve apparaatmodi. Gebruik **Kleur** voor een vaste RGB-kleur. Kies **Effecten laden** op een apparaatkaart om de opgeslagen Twinkly-films en ingebouwde effecten van dat apparaat te zien. Gebruik **Afspelen op lamp** om het echte effect te zien. Je kunt per lamp herkenbare namen bewaren in je browser. Cloud- en galerie-effecten zijn beschikbaar zodra de officiële app ze als lokaal effect naar de controller heeft geschreven.
 
+## Offline lampen en logboeken
+
+Een onbereikbare lamp krijgt **Offline** op de apparaatkaart. Twinkly Control Center blijft de verbinding controleren. Met **Lamp verwijderen** haal je de offline lamp uit het dashboard. Voeg je dezelfde lamp later opnieuw toe via **Zoeken op netwerk** of **IP toevoegen**, dan komen de bestaande groepskoppelingen terug.
+
+Open in Home Assistant **Instellingen → Apps → Twinkly Control Center → Logboeken**. Daar staan verbindingsfouten met tijdstip, lampnaam, IP-adres, actie en technische oorzaak. Het logboek meldt ook wanneer een lamp weer online is of is verwijderd. Voor de bèta open je het logboek van **Twinkly Control Center Beta**.
+
 ## Music Assistant en LedFx
 
 Gebruik **LedFX controleren** in de muziekinstellingen. Twinkly vraagt lokaal `/api/info` op en controleert Sendspin. Bij een onbereikbare API kan de controle een gestopte installatie en een ontbrekende installatie niet onderscheiden. Open dan **LedFX installeren en starten** voor de stappen en de link naar de [LedFX-repository met Sendspin](https://github.com/Switch123456789/Home-Assistant-Apps).
