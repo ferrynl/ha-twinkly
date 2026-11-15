@@ -139,6 +139,7 @@ PATTERN_PALETTES = {
     "candy": ((222, 16, 35), (255, 238, 210)),
     "sunset": ((95, 16, 102), (234, 43, 110), (255, 168, 48)),
     "sparkle": (),
+    "rgb-test": ((255, 0, 0), (0, 255, 0), (0, 0, 255)),
 }
 
 
@@ -199,6 +200,9 @@ PATTERN_PALETTES.update({name: preset[2] for name, preset in PATTERN_PRESETS.ite
 
 @functools.lru_cache(maxsize=64)
 def live_pattern(name, tick, fps):
+    if name == "rgb-test":
+        palette = PATTERN_PALETTES[name]
+        return bytes(palette[(tick // (3 * fps)) % len(palette)]) * PIXELS
     time_seconds = tick / fps
     frame = bytearray()
     preset = PATTERN_PRESETS.get(name)
