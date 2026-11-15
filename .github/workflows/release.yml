@@ -1,0 +1,86 @@
+name: Twinkly-tests en release
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Publicatiekanaal
+        type: choice
+        options: [beta, stable]
+        required: true
+      beta_number:
+        description: Bètanummer (alleen voor bèta)
+        type: string
+        default: '1'
+permissions:
+  contents: read
+jobs:
+  tests:
+    name: Twinkly-tests (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML==6.0.2
+      - name: Controleer de releasevelden en test de app
+        run: |
+          python -m unittest discover -s scripts -v
+          version=$(python -c 'import yaml; print(yaml.safe_load(open("twinkly/config.yaml"))["version"])')
+          python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly" "$version"
+          python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly_beta" "$version-beta.1"
+          bash scripts/smoke.sh "$RUNNER_TEMP/twinkly" 18489
+          bash scripts/smoke.sh "$RUNNER_TEMP/twinkly_beta" 18491
+  publish:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: tests
+    concurrency:
+      group: twinkly-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML==6.0.2
+      - name: Publiceer de geteste commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ inputs.channel }}
+          BETA_NUMBER: ${{ inputs.beta_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(python -c 'import yaml; print(yaml.safe_load(open("twinkly/config.yaml"))["version"])')
+          flags=(--latest)
+          if [[ "$CHANNEL" == beta ]]; then
+            version="$version-beta.$BETA_NUMBER"
+            flags=(--prerelease --latest=false)
+          fi
+          python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly" "$version"
+          awk 'NR > 1 && /^# / { exit } NR > 1 { print }' twinkly/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version"; then
+            echo "Tag v$version bestaat al. Kies een nieuwe versie." >&2
+            exit 1
+          else
+            test "$?" -eq 2
+          fi
+          gh release create "v$version" --target "$GITHUB_SHA" \
+            --title "Twinkly Control Center $version" \
+            --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
