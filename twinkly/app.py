@@ -8,6 +8,7 @@ import colorsys
 import math
 import os
 from urllib.parse import urlsplit
+from requests.exceptions import ConnectionError as LampConnectionError
 from requests.exceptions import HTTPError, RequestException, Timeout
 from xled.exceptions import ApplicationError
 import fcntl
@@ -283,6 +284,9 @@ class Device:
         self.last_warning = None
         self.last_warning_at = 0.0
         self.error = None
+        self.offline = False
+        self.removed = False
+        self.replies = 0
         self.mapping = tuple(3 * (i * PIXELS // row["leds"]) for i in range(row["leds"]))
 
     def connect(self):
@@ -302,6 +306,7 @@ class Device:
                 response = session.post(path, json=payload)
         except AssertionError as exc:
             raise ValueError(f'{path}: XLED kon de sessie of het antwoord niet valideren') from exc
+        self.replies += 1
         response.raise_for_status()
         data = response.json()
         if data.get("code") != 1000:
@@ -457,7 +462,9 @@ class Device:
             self.set_mode(kind)
             self.last_mode = kind
         elif action == "brightness":
-            self.client.set_brightness(value).raise_for_status()
+            response = self.client.set_brightness(value)
+            self.replies += 1
+            response.raise_for_status()
 
     def send(self, frame):
         now = time.monotonic()
@@ -476,8 +483,17 @@ class Device:
         for packet in packets:
             self.realtime_socket.sendto(packet, (self.row["ip"], 7777))
 
-    async def run(self, method, *args):
+    def mark_online(self):
+        if self.offline:
+            self.offline = False
+            self.last_warning = None
+            LOG.info("lamp=%r ip=%s status=online", self.row["name"], self.row["ip"])
+
+    async def run(self, method, *args, automatic=False):
         async with self.lock, self.limit:
+            if self.removed:
+                return False
+            replies = self.replies
             try:
                 await asyncio.to_thread(method, *args)
             except Exception as exc:
@@ -492,7 +508,16 @@ class Device:
                     message = f"Verbinding liep vast (timeout): {exc}"
                 else:
                     message = str(exc) or type(exc).__name__
-                self.error = message
+                offline = isinstance(exc, (LampConnectionError, Timeout)) or (
+                    operation == "send" and isinstance(exc, OSError) and not isinstance(exc, RequestException)
+                )
+                newly_offline = offline and not self.offline
+                if offline:
+                    self.offline = True
+                    self.mode = None
+                elif self.replies != replies or status is not None:
+                    self.mark_online()
+                self.error = "offline" if self.offline else "device_error"
                 self.failures += 1
                 delay = min(60, 5 * 2 ** min(self.failures - 1, 4))
                 self.retry = now + delay
@@ -501,11 +526,14 @@ class Device:
                     self.client.session.close()
                     self.client = self.connect()
                 warning = (operation, type(exc), status)
-                if warning != self.last_warning or now - self.last_warning_at >= 60:
-                    LOG.warning("lamp=%r ip=%s actie=%s: %s", self.row["name"], self.row["ip"], operation, message)
+                if not automatic or newly_offline or warning != self.last_warning or now - self.last_warning_at >= 60:
+                    LOG.warning("lamp=%r ip=%s actie=%s status=%s: %s",
+                                self.row["name"], self.row["ip"], operation, self.error, message)
                     self.last_warning, self.last_warning_at = warning, now
                 return False
-            self.error = None
+            if self.replies != replies:
+                self.mark_online()
+            self.error = "offline" if self.offline else None
             self.retry = 0
             self.failures = 0
             return True
@@ -591,9 +619,10 @@ class Controller:
             self.save()
         return row
 
-    def save(self):
+    def save(self, *, exclude=None):
         temp = DATA.with_suffix(".tmp")
-        temp.write_text(json.dumps([d.row for d in self.devices.values()]), encoding="utf-8")
+        temp.write_text(json.dumps([d.row for k, d in self.devices.items() if k != exclude]),
+                        encoding="utf-8")
         temp.replace(DATA)
 
     @staticmethod
@@ -625,13 +654,13 @@ class Controller:
                     else:
                         frame = live_pattern(pattern, int(now * self.fps), self.fps)
                     level = self.sequence_devices.get(key, 100)
-                    await device.run(device.send, self.dim_frame(frame, level))
+                    await device.run(device.send, self.dim_frame(frame, level), automatic=True)
                 elif active:
                     fade_started = None
                     frame = self.dim_frame(self.ddp.frame, self.show["master"] * self.sequence_devices.get(key, 100) // 100)
                     if any(frame):
                         last_output = frame
-                    await device.run(device.send, frame)
+                    await device.run(device.send, frame, automatic=True)
                 elif device.restore is not None:
                     rule = self.silence_mode(key) if armed else "restore"
                     if rule == "fade" and last_output is not None:
@@ -639,27 +668,27 @@ class Controller:
                         remaining = max(0, 100 - int((now - fade_started) * 100))
                         if remaining:
                             fading = True
-                            await device.run(device.send, self.dim_frame(last_output, remaining))
-                        elif await device.run(device.set_mode, "off"):
+                            await device.run(device.send, self.dim_frame(last_output, remaining), automatic=True)
+                        elif await device.run(device.set_mode, "off", automatic=True):
                             device.restore = None
                     elif rule == "fade":
-                        if await device.run(device.set_mode, "off"):
+                        if await device.run(device.set_mode, "off", automatic=True):
                             device.restore = None
                     elif rule == "warm":
-                        if await device.run(device.color, (255, 190, 110)):
+                        if await device.run(device.color, (255, 190, 110), automatic=True):
                             device.restore = None
                     else:
-                        await device.run(device.command, "stop", None)
+                        await device.run(device.command, "stop", None, automatic=True)
                     if not fading:
                         device.rt_check = 0
                         last_output = None
                         fade_started = None
                 elif now >= device.mode_check:
                     device.mode_check = now + 30
-                    if not await device.run(device.read_mode):
+                    if not await device.run(device.read_mode, automatic=True):
                         device.mode = None
                     elif not device.model_checked:
-                        await device.run(device.read_product_code)
+                        await device.run(device.read_product_code, automatic=True)
             await asyncio.sleep(1 / self.fps if pattern or active or fading else 0.2)
 
     async def stream(self, app):
@@ -700,15 +729,39 @@ class Controller:
     async def status(self, request):
         return web.json_response({
             "audio": self.ddp.frame is not None and time.monotonic() - self.ddp.received < 1.5,
-            "groups": self.groups,
+            "groups": {
+                key: dict(group, members=[member for member in group["members"] if member in self.devices])
+                for key, group in self.groups.items()
+            },
             "sequence": self.sequence_status,
             "sequence_error": self.sequence_error,
             "sequence_data": self.sequence_data,
             "active_music_style": self.active_style,
             "show": self.show,
-            "devices": [dict(d.row, music=k in self.music, mode=d.mode, error=d.error, product_code=d.product_code, pattern=self.patterns.get(k))
+            "devices": [dict(d.row, music=k in self.music, mode=d.mode, offline=d.offline, error=d.error, product_code=d.product_code, pattern=self.patterns.get(k))
                         for k, d in self.devices.items()],
         })
+
+    async def remove_device(self, request):
+        key = (await request.json()).get("id")
+        if not isinstance(key, str):
+            raise web.HTTPBadRequest()
+        async with self.edit:
+            device = self.devices.get(key)
+            if device is None:
+                return web.json_response({"ok": True})
+            async with device.lock:
+                if not device.offline:
+                    return web.json_response({"ok": False})
+                self.save(exclude=key)
+                device.removed = True
+                del self.devices[key]
+                self.music.discard(key)
+                self.patterns.pop(key, None)
+                self.sequence_devices.pop(key, None)
+                device.client.session.close()
+                LOG.info("lamp=%r ip=%s actie=verwijderen status=offline", device.row["name"], device.row["ip"])
+        return web.json_response({"ok": True})
 
     async def register(self, request):
         data = await request.json()
@@ -719,9 +772,16 @@ class Controller:
                     "Geen Twinkly-antwoord op UDP-poort 5555. Controleer of de lampen op hetzelfde LAN zitten of voeg hun IP-adres toe."
                 ]})
             results = await asyncio.gather(*(self.add(host) for host in hosts), return_exceptions=True)
-        return web.json_response({"added": sum(isinstance(x, dict) for x in results),
-                                  "errors": [f"{host}: {result}" for host, result in zip(hosts, results)
-                                             if isinstance(result, Exception)]})
+        errors = []
+        for host, result in zip(hosts, results):
+            if not isinstance(result, Exception):
+                continue
+            LOG.warning("ip=%s actie=registreren: %s", host, result)
+            if isinstance(result, (LampConnectionError, Timeout)):
+                errors.append(f"{host}: offline")
+            else:
+                errors.append(f"{host}: {result}")
+        return web.json_response({"added": sum(isinstance(x, dict) for x in results), "errors": errors})
 
     async def save_show(self, request):
         data = await request.json()
@@ -910,7 +970,7 @@ class Controller:
             if group_id is not None:
                 if not isinstance(group_id, str) or group_id not in self.groups or action == "effect":
                     raise web.HTTPBadRequest()
-                keys = self.groups[group_id]["members"]
+                keys = [key for key in self.groups[group_id]["members"] if key in self.devices]
             else:
                 keys = list(self.devices) if data.get("id") == "*" else [data.get("id")]
             if any(key not in self.devices for key in keys):
@@ -940,10 +1000,11 @@ class Controller:
             self.music.difference_update(keys)
             results = await asyncio.gather(*(self.devices[k].run(self.devices[k].command, action, value)
                                              for k in keys))
-            return {"failed": [
-                f"{self.devices[key].row['ip']}: {self.devices[key].error}"
-                for key, ok in zip(keys, results) if not ok
-            ]}
+            failures = [self.devices[key] for key, ok in zip(keys, results) if not ok]
+            return {
+                "failed": [device.row["name"] for device in failures if not device.offline],
+                "offline": [device.row["name"] for device in failures if device.offline],
+            }
 
     def mark_sequence_devices(self, keys, level):
         for key in keys:
@@ -1531,6 +1592,7 @@ class Controller:
         app.router.add_get("/layout", self.layout)
         app.router.add_get("/details", self.details)
         app.router.add_post("/register", self.register)
+        app.router.add_post("/remove-device", self.remove_device)
         app.router.add_post("/control", self.control)
         app.router.add_post("/sequences", self.sequences)
         app.router.add_post("/groups", self.save_group)

@@ -89,8 +89,8 @@ jobs:
           }
 
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            # Publish the app-store presentation update to both channels.
-            if [[ "$version" == 0.1.42 ]]; then
+            # Publish the offline-device update to both channels.
+            if [[ "$version" == 0.1.43 ]]; then
               publish "$version-beta.1" --prerelease --latest=false
               publish "$version" --latest
             fi

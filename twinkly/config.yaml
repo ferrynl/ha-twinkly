@@ -1,6 +1,6 @@
 name: Twinkly Control Center
 slug: twinkly_kerst
-version: "0.1.42"
+version: "0.1.43"
 description: Groepeer je Twinkly-lampen en speel lichtshows af op muziek.
 url: https://github.com/ferrynl/ha-twinkly
 arch:
