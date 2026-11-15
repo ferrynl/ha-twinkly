@@ -51,7 +51,7 @@ class PrepareReleaseTest(unittest.TestCase):
                 for filename, size in (("icon.png", (128, 128)), ("logo.png", (500, 200))):
                     data = (target / filename).read_bytes()
                     self.assertEqual(data, (artwork / filename).read_bytes())
-                    self.assertEqual(data[:8], b"\\x89PNG\\r\\n\\x1a\\n")
+                    self.assertEqual(data[:8], bytes.fromhex("89504e470d0a1a0a"))
                     self.assertEqual(struct.unpack(">II", data[16:24]), size)
                     if suffix:
                         self.assertNotEqual(data, (self.source / filename).read_bytes())
