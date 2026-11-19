@@ -1,7 +1,7 @@
 """Direct Hue CLIP v2 transport with caller-supplied verified TLS context."""
 import re
 import ssl
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout, Fingerprint
 from .common import lan_ip, rgb, brightness, RateGate
 
 def xy_color(value):
@@ -17,7 +17,7 @@ def xy_color(value):
 
 class Hue:
     def __init__(self, address, application_key, tls):
-        if not isinstance(tls, ssl.SSLContext) or tls.verify_mode != ssl.CERT_REQUIRED:
+        if not isinstance(tls, Fingerprint) and (not isinstance(tls, ssl.SSLContext) or tls.verify_mode != ssl.CERT_REQUIRED or not tls.check_hostname):
             raise ValueError("Verified TLS context required")
         self.address = lan_ip(address)
         self.key = application_key
