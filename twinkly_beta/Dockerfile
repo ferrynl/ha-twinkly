@@ -1,7 +1,7 @@
 FROM python:3.12-slim-bookworm
 WORKDIR /app
 RUN pip install --no-cache-dir aiohttp==3.13.5 zeroconf==0.148.0 xled==0.7.0 Pillow==12.2.0
-COPY app.py index.html lighting.js lighting.css twinkly.svg config.yaml ./
+COPY app.py index.html lighting.js lighting.css twinkly.svg hue-logo.svg govee-logo.png config.yaml ./
 COPY effect_previews ./effect_previews
 COPY product_photos ./product_photos
 COPY matrix_gifs ./matrix_gifs

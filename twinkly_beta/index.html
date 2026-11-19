@@ -107,7 +107,15 @@ button:hover,.mixdesk button:hover{background:#2a313c;filter:none}.mixdesk butto
 .christmas-mark{display:grid;place-items:center;color:var(--studio-gold);width:40px;height:40px;flex:none}.workspace-brand .control-wordmark{font-size:15px;line-height:1.15;letter-spacing:.02em}</style><link rel="stylesheet" href="lighting.css">
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Christmas Control Center"><span class="christmas-mark" aria-hidden="true"><svg viewBox="0 0 36 36" width="36" height="36"><path d="M18 3 7 17h6L4 28h28l-9-11h6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="18" cy="3" r="2" fill="currentColor"/><path d="M18 28v5" stroke="currentColor" stroke-width="2"/></svg></span><span class="control-wordmark" aria-hidden="true">Christmas<br>Control Center</span></h1>
-<nav class="workspace-nav"><a id="nav-home" href="#home">Home</a><a id="nav-control" href="#bediening"></a><a id="nav-network" href="#netwerk"></a><a id="nav-tests" href="#testcontrole"></a><a id="nav-settings" href="#instellingen"></a><a id="nav-hue" href="#hue">Philips Hue</a><a id="nav-govee" href="#govee">Govee</a></nav></header>
+<nav class="workspace-nav">
+<a id="nav-home" href="#home">Home</a>
+<a id="nav-control" href="#bediening"><img src="twinkly.svg" alt="">Twinkly</a>
+<a id="nav-hue" href="#hue"><img src="hue-logo.svg" alt=""><span>Philips Hue</span></a>
+<a id="nav-govee" href="#govee"><img src="govee-logo.png" alt="Govee"></a>
+<a id="nav-tests" href="#testcontrole"></a>
+<a id="nav-network" href="#security-center"></a>
+<a id="nav-settings" href="#instellingen"></a>
+</nav></header>
 <p id="message" role="status"></p>
 <p id="lighting-feedback" role="status"></p>
 <section id="lighting-panel" class="lighting-surface" hidden></section>
@@ -153,8 +161,9 @@ button:hover,.mixdesk button:hover{background:#2a313c;filter:none}.mixdesk butto
 <div id="group-cards"></div><div id="devices"></div>
 <details id="group-member-devices" hidden><summary id="group-member-summary"></summary><div id="grouped-devices"></div></details>
 </section></div>
-<section id="network-page" aria-labelledby="network-title" hidden>
-<div class="music-heading"><h2 id="network-title"></h2><button id="network-refresh" type="button"></button></div>
+<section id="network-page" aria-labelledby="security-title" hidden>
+<h2 id="security-title"></h2>
+<div class="music-heading"><h3 id="network-title"></h3><button id="network-refresh" type="button"></button></div>
 <p id="network-help"></p><p id="network-status" role="status"></p>
 <div id="network-tools" class="network-tools" hidden>
 <button id="network-zoom-out" type="button">−</button><output id="network-scale"></output><button id="network-zoom-in" type="button">+</button>
@@ -702,7 +711,7 @@ const testPageText = {
 let testPageSignature='';
 function renderTestPage(){
  const labels=testPageText[lang.value], target=byId('tests-target'), content=byId('tests-content'), groups=visibleGroups();
- byId('nav-tests').textContent=byId('tests-title').textContent=labels[0];
+ byId('tests-title').textContent=centerLabels[lang.value][0];
  byId('tests-help').textContent=labels[1];byId('tests-target-label').textContent=labels[2];
  const options=Object.entries(groups), before=target.value;
  const devices=status?.devices || [];
@@ -1354,7 +1363,7 @@ byId('network-name-form').onsubmit = async event => {
     const result = await request('network/groups/name',{id,name});
     if (networkGroups[id]) networkGroups[id].name = result.name;
     if (networkNamingId === id) byId('network-name-dialog').close();
-    if (location.hash === '#netwerk') {
+    if (isNetworkPage()) {
       renderNetwork(networkRows,networkText[lang.value]);
       refreshNetwork();
     }
@@ -1376,6 +1385,13 @@ const networkGroupStatus = {
   de:['Gruppe · Typ nicht gemeldet','Lokale Gruppe','Gruppenleiter','Gruppenmitglied'],
 };
 let networkGroups = {}, showNetworkMembers = false;
+const isNetworkPage = () => ['#netwerk', '#security-center'].includes(location.hash);
+const centerLabels = {
+  nl: ['Test Center', 'Security Center', 'Hue-inventaris niet beschikbaar'],
+  en: ['Test Center', 'Security Center', 'Hue inventory unavailable'],
+  de: ['Testzentrum', 'Sicherheitszentrum', 'Hue-Geräteliste nicht verfügbar'],
+  es: ['Centro de pruebas', 'Centro de seguridad', 'Inventario Hue no disponible']
+};
 const networkNudges = {ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
 const networkStorageKey = 'twinkly-network-positions-v1';
 let networkTimer, networkPending = false, networkLinks = [], networkNodes = new Map();
@@ -1476,6 +1492,7 @@ function positionNetworkRows(hubs, devices, groupChildren) {
   layout(devices,columns,deviceTop,stepY);
   let childTop = deviceTop + Math.ceil(devices.length/columns)*stepY;
   for (const [group, children] of groupChildren) {
+    if (!children.length) continue;
     const childColumns = Math.min(children.length,Math.max(4,columns));
     const childStep = Math.max(130,...children.map(node => node.height)) + 52;
     layout(children,childColumns,childTop,childStep,group.x);
@@ -1627,7 +1644,7 @@ function renderNetwork(rows, labels) {
     networkWorld.append(el);
     return node;
   };
-  const hubNodes = new Map(), deviceNodes = new Map();
+  const hubNodes = new Map(), bridgeNodes = new Map(), deviceNodes = new Map();
   const byDevice = new Map(rows.map(row => [row.id,row]));
   const addText = (parent, tag, content) => {
     const element = document.createElement(tag);
@@ -1672,9 +1689,22 @@ function renderNetwork(rows, labels) {
     card.className = 'network-device';
     const device = makeNode(card,'device:'+row.id,row.name);
     deviceNodes.set(row.id,device);
-    if (!parents.has(row.id)) individualNodes.push(device);
+    if (row.kind === 'hue-bridge') {
+      bridgeNodes.set(row.id, device);
+      groupChildren.set(device, []);
+    } else if (row.kind === 'hue-light') {
+      groupChildren.get(bridgeNodes.get(row.bridge))?.push(row.id);
+    } else if (!parents.has(row.id)) individualNodes.push(device);
     addText(card,'strong',row.name);
+    if (row.kind === 'hue-light') {
+      addText(card,'small','Philips Hue');
+      continue;
+    }
     addText(card,'small',row.ip);
+    if (row.kind === 'hue-bridge') {
+      if (row.offline) addText(card,'span',labels[8]);
+      continue;
+    }
     if (row.group_role) addText(card,'small',groupStatus[row.group_role === 'master' ? 2 : 3]);
     if (row.kind === 'offline' || row.kind === 'unknown') {
       addText(card,'span',labels[row.kind === 'offline' ? 8 : 9]);
@@ -1703,6 +1733,9 @@ function renderNetwork(rows, labels) {
   };
   for (const [id, parent] of parents) link(parent,deviceNodes.get(id),'member');
   for (const row of rows) {
+    if (row.kind === 'hue-light') link(bridgeNodes.get(row.bridge), deviceNodes.get(row.id), 'member');
+  }
+  for (const row of rows) {
     if (row.kind !== 'wifi') continue;
     const device = parents.get(row.id) || deviceNodes.get(row.id);
     if (row.peer) {
@@ -1726,38 +1759,51 @@ function renderNetwork(rows, labels) {
     node.height = node.el.offsetHeight || 130;
   }
   const orderedChildren = [...groupChildren].map(([group,ids]) => [group,ids.map(id => deviceNodes.get(id))]);
-  positionNetworkRows([...hubNodes.values()],[...groupNodes,...individualNodes],orderedChildren);
-  byId('network-member-key').hidden = !parents.size;
+  positionNetworkRows([...hubNodes.values()],[...groupNodes,...bridgeNodes.values(),...individualNodes],orderedChildren);
+  byId('network-member-key').hidden = !parents.size && !rows.some(row => row.kind === 'hue-light');
   if (networkFocus) networkNodes.get(networkFocus)?.el.focus({preventScroll:true});
   if (networkAutoFit) fitNetwork();
   queueNetworkDraw();
 }
 async function refreshNetwork() {
   clearTimeout(networkTimer);
-  if (networkPending || location.hash !== '#netwerk' || document.hidden) return;
+  if (networkPending || !isNetworkPage() || document.hidden) return;
   networkPending = true;
   byId('network-refresh').disabled = true;
   const message = byId('network-status');
   if (networkMap.hidden) message.textContent = networkText[lang.value][3];
   try {
-    const data = await request('network');
+    const [data, hue] = await Promise.all([
+      request('network'),
+      request('providers/hue/inventory').catch(() => null)
+    ]);
     const labels = networkText[lang.value];
     networkGroups = data.groups || {};
-    renderNetwork(data.devices,labels);
-    message.textContent = data.devices.length ? '' : labels[5];
+    const hueRows = (hue?.devices || []).flatMap(bridge => {
+      const id = JSON.stringify(['hue', bridge.id]);
+      return [{id, name: 'Philips Hue Bridge', ip: bridge.address,
+        kind: 'hue-bridge', offline: bridge.status !== 'online'},
+        ...(bridge.lights || []).map(light => ({
+          id: JSON.stringify(['hue', bridge.id, light.id]), bridge: id, name: light.name, kind: 'hue-light'
+        }))];
+    });
+    const rows = [...data.devices, ...hueRows];
+    renderNetwork(rows,labels);
+    message.textContent = hue ? (rows.length ? '' : labels[5]) : centerLabels[lang.value][2];
   } catch {
     message.textContent = networkText[lang.value][4];
   } finally {
     networkPending = false;
     byId('network-refresh').disabled = false;
-    if (location.hash === '#netwerk') networkTimer = setTimeout(refreshNetwork,30000);
+    if (isNetworkPage()) networkTimer = setTimeout(refreshNetwork,30000);
   }
 }
 byId('network-refresh').onclick = refreshNetwork;
 document.addEventListener('visibilitychange',() => { if (!document.hidden) refreshNetwork(); });
 
 function showPage() {
-  const page = {'#instellingen':'settings','#netwerk':'network','#testcontrole':'tests','#hue':'hue','#govee':'govee','#bediening':'control','#twinkly':'control'}[location.hash] || 'home';
+  const page = isNetworkPage() ? 'network' :
+    {'#instellingen':'settings','#testcontrole':'tests','#hue':'hue','#govee':'govee','#bediening':'control','#twinkly':'control'}[location.hash] || 'home';
   for (const name of ['control','settings','network','tests']) {
     byId(name + '-page').hidden = page !== name;
     byId('nav-' + name).setAttribute('aria-current',page === name ? 'page' : 'false');
@@ -1765,9 +1811,10 @@ function showPage() {
   for (const brand of ['home','hue','govee']) {
     byId('nav-' + brand).setAttribute('aria-current', page === brand ? 'page' : 'false');
   }
-  byId('nav-tests').textContent = testPageText[lang.value][0];
+  byId('nav-tests').textContent = centerLabels[lang.value][0];
   const labels = networkText[lang.value];
-  byId('nav-network').textContent = byId('network-title').textContent = labels[0];
+  byId('nav-network').textContent = byId('security-title').textContent = centerLabels[lang.value][1];
+  byId('network-title').textContent = labels[0];
   byId('network-refresh').textContent = labels[1];
   byId('network-help').textContent = labels[2];
   byId('network-wifi-key').textContent = labels[6];
@@ -2151,7 +2198,8 @@ function translate() {
     key.onclick = () => perform(key,() => run('*','color',color));
     colorRow.append(key);
   });
-  ['nav-control','nav-settings','device-title','settings-general','settings-music','settings-discover','settings-groups','settings-scenes','settings-effects'].forEach((id,index) => {
+  [null,'nav-settings','device-title','settings-general','settings-music','settings-discover','settings-groups','settings-scenes','settings-effects'].forEach((id,index) => {
+    if (!id) return;
     byId(id).textContent = pageLabels[lang.value][index];
   });
   showPage();

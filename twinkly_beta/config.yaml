@@ -1,6 +1,6 @@
 name: Christmas Control Center Beta
 slug: twinkly_kerst_beta
-version: 2.0.0-beta.3
+version: 2.0.0-beta.4
 description: Lokale kerstlichtstudio voor Twinkly, lichtshows en muziekeffecten. Experimentele directe Hue- en Govee-bediening.
 url: https://github.com/ferrynl/ha-twinkly
 arch:

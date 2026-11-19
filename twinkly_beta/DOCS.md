@@ -82,7 +82,7 @@ Het tv-scherm kan ook de afbeelding uit Home Assistant tonen. De app zoekt een a
 
 Gebruik **Tv-bron** bij het scherm om rechtstreeks een Home Assistant-mediaspeler te kiezen. **Automatisch** blijft de optie om de track op basis van LedFX te koppelen. De keuze wordt centraal bewaard. De instelling `media_player` dient als beginwaarde zolang je nog geen keuze in het mengpaneel hebt opgeslagen.
 
-Op de pagina **Twinkly** vind je het mengpaneel met licht, muziek, tv, scènepads en Twinkly-groepen. Via **Netwerk** en **Testcontrole** open je de Twinkly-diagnostiek. In **Instellingen** beheer je verbindingen, taal, Music Assistant, de tv-bron, Twinkly-groepen, scènes en effectafbeeldingen.
+Op de pagina **Twinkly** vind je het mengpaneel met licht, muziek, tv, scènepads en Twinkly-groepen. Het **Test Center** bevat de Twinkly-diagnostiek. Het **Security Center** bevat de netwerkkaart met Twinkly-apparaten, Hue Bridges en de lampen per Bridge. In **Instellingen** beheer je verbindingen, taal, Music Assistant, de tv-bron, Twinkly-groepen, scènes en effectafbeeldingen.
 
 Het Twinkly-beeldmerk is lokaal opgenomen als transparant SVG, gebaseerd op [Simple Icons](https://github.com/simple-icons/simple-icons/blob/develop/icons/twinkly.svg). Het merk is van Twinkly.
 

@@ -2337,7 +2337,7 @@ class Controller:
             raise web.HTTPFound("./#instellingen")
 
         app.router.add_get("/provider-studio", legacy_provider_page)
-        for asset in ("lighting.js", "lighting.css"):
+        for asset in ("lighting.js", "lighting.css", "hue-logo.svg", "govee-logo.png"):
             app.router.add_get("/" + asset, lambda _, filename=asset: web.FileResponse(
                 filename, headers={"Cache-Control": "no-store"}))
         app.cleanup_ctx.append(self.stream)

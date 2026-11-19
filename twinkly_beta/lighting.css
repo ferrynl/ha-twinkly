@@ -23,3 +23,7 @@
 .lighting-form { margin-top:.65rem; }
 #lighting-feedback:empty { display:none; }
 #lighting-settings { grid-column: 1 / -1; }
+.workspace-nav a { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:44px; }
+.workspace-nav img { display:block; height:1.15rem; width:auto; }
+#nav-govee img { width:3.25rem; object-fit:cover; }
+#network-title { margin:0; }

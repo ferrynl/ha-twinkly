@@ -5,10 +5,16 @@ if (process.env.TWINKLY_TEST_CHROME) {
 for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
  test('studio navigation and layout '+viewport.width,async({page})=>{
   await page.setViewportSize(viewport);
-  await page.goto('http://127.0.0.1:8765/index.html');
+  await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'domcontentloaded'});
   await expect(page).toHaveTitle('Christmas Control Center');
   await expect(page.locator('h1')).toHaveAttribute('aria-label','Christmas Control Center');
   await expect(page.locator('#lighting-panel')).toBeVisible();
+  expect(await page.locator('.workspace-nav a').evaluateAll(links => links.map(link => link.id))).toEqual([
+   'nav-home','nav-control','nav-hue','nav-govee','nav-tests','nav-network','nav-settings',
+  ]);
+  await expect.poll(() => page.locator('.workspace-nav img').evaluateAll(images =>
+   images.filter(image => image.complete && image.naturalWidth > 0).length,
+  )).toBe(3);
   await expect(page.locator('#tests-page')).toBeHidden();
   for(const id of ['settings','network','tests','control']){
    await page.locator('#nav-'+id).click();
@@ -33,10 +39,35 @@ test('spatial test shows the specific Join conflict', async ({page})=>{
   expect(route.request().postDataJSON()).toEqual({group:id,test:'rainbow'});
   await route.fulfill({status:409,json:{error}});
  });
- await page.goto('http://127.0.0.1:8765/index.html#testcontrole');
+ await page.goto('http://127.0.0.1:8765/index.html#testcontrole',{waitUntil:'domcontentloaded'});
  const rainbow=page.locator('#tests-content article').filter({hasText:'Regenboog'});
  await rainbow.getByRole('button').click();
  await expect(page.locator('#message')).toHaveText('HTTP 409 · '+error);
+});
+
+test('Security Center maps all Hue lights to their own bridge beside Twinkly', async ({page}) => {
+ await page.route('**/network', route => route.fulfill({json:{
+  devices:[{id:'tree',name:'Tree',ip:'192.168.1.10',kind:'unknown'}], groups:{},
+ }}));
+ await page.route('**/providers/hue/inventory', route => route.fulfill({json:{devices:[
+  {id:'unavailable',address:'192.168.1.21',status:'unavailable',lights:[]},
+  {id:'living',address:'192.168.1.22',status:'online',lights:[{id:'one',name:'Hue window'},{id:'two',name:'Hue table'}]},
+  {id:'hall',address:'192.168.1.23',status:'online',lights:[{id:'one',name:'Hue hall'}]},
+ ]}}));
+ await page.goto('http://127.0.0.1:8765/index.html#netwerk',{waitUntil:'domcontentloaded'});
+ await expect(page.getByRole('heading',{name:'Security Center'})).toBeVisible();
+ await expect(page.locator('#network-world article')).toHaveCount(7);
+ await expect(page.locator('#network-world').getByText('Hue window')).toBeVisible();
+ await expect(page.locator('#network-world').getByText('Hue table')).toBeVisible();
+ await expect(page.locator('#network-world').getByText('Hue hall')).toBeVisible();
+ const links = await page.evaluate(() => networkLinks.map(([source,target]) => [
+  JSON.parse(source.id.slice('device:'.length)), JSON.parse(target.id.slice('device:'.length)),
+ ]));
+ expect(links).toEqual([
+  [['hue','living'],['hue','living','one']], [['hue','living'],['hue','living','two']],
+  [['hue','hall'],['hue','hall','one']],
+ ]);
+ expect(await page.evaluate(() => [...networkNodes.values()].every(node => Number.isFinite(node.y)))).toBe(true);
 });
 
 test('Home combines providers and keeps pairing in Settings', async ({page}) => {
@@ -70,7 +101,7 @@ test('Home combines providers and keeps pairing in Settings', async ({page}) => 
   return route.fulfill({json:{ok:true}});
  });
  await page.setViewportSize({width:390,height:844});
- await page.goto('http://127.0.0.1:8765/index.html');
+ await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'domcontentloaded'});
  const home=page.locator('#lighting-panel');
  await expect(home.locator('article')).toHaveCount(3);
  await expect(home.locator('[data-provider=hue] input[type=color]')).toHaveCount(0);

@@ -1,3 +1,8 @@
+## 2.0.0-beta.4
+
+- Reorder the navigation, add local brand logos and place the network map in Security Center.
+- Show configured Hue Bridges and their lights on the network map, alongside Twinkly devices.
+
 ## 2.0.0-beta.3
 
 - Unified Home and dedicated Twinkly, Philips Hue and Govee pages, with pairing, certificate management and discovery in Settings.

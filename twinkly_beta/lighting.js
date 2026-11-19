@@ -319,7 +319,6 @@
     context = event.detail;
     if (previous !== context) feedback.textContent = "";
     el("nav-home").textContent = t(0);
-    el("nav-control").textContent = brands.twinkly;
     render();
     if (previous !== context && ["home", "hue", "govee", "control", "settings"].includes(context)) {
       refresh(false).catch(() => { feedback.textContent = t(32); });
