@@ -49,7 +49,7 @@ class PrepareReleaseTest(unittest.TestCase):
                 self.assertEqual(config["description"], description)
                 self.assertEqual(config["name"], "Christmas Control Center" + (" Beta" if suffix else ""))
                 artwork = self.source / "beta_branding" if suffix else self.source
-                for filename, size in (("icon.png", (128, 128)), ("logo.png", (500, 200))):
+                for filename, size in (("icon.png", (128, 128)), ("logo.png", (256, 128))):
                     data = (target / filename).read_bytes()
                     self.assertEqual(data, (artwork / filename).read_bytes())
                     self.assertEqual(data[:8], bytes.fromhex("89504e470d0a1a0a"))
