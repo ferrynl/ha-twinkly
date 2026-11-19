@@ -25,10 +25,10 @@ def prepare(source, target, version):
         return
 
     config.update(
-        name="Twinkly Control Center Beta",
+        name="Christmas Control Center Beta",
         slug="twinkly_kerst_beta",
         version=version,
-        description="Probeer als eerste nieuwe Twinkly-lichtshows en muziekeffecten.",
+        description="Probeer als eerste nieuwe kerstlichtshows en muziekeffecten.",
         boot="manual",
         ingress_port=18491,
     )
@@ -42,7 +42,7 @@ def prepare(source, target, version):
     ]), encoding="utf-8")
     changelog = target / "CHANGELOG.md"
     changelog.write_text(
-        f"# {version}\n\nBètaversie van Twinkly Control Center.\n\n"
+        f"# {version}\n\nBètaversie van Christmas Control Center.\n\n"
         + changelog.read_text(encoding="utf-8"),
         encoding="utf-8",
     )

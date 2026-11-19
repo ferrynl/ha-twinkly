@@ -1,4 +1,4 @@
-# Twinkly Control Center Beta
+# Christmas Control Center Beta
 
 Met de bèta krijg je vroege toegang tot nieuwe lichtshows, lampgroepen en muziekeffecten via LedFX. De bèta is een aparte installatie met eigen instellingen.
 
