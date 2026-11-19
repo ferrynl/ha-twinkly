@@ -4,6 +4,7 @@ RUN pip install --no-cache-dir aiohttp==3.13.5 xled==0.7.0 Pillow==12.2.0
 COPY app.py index.html twinkly.svg ./
 COPY matrix_gifs ./matrix_gifs
 RUN python matrix_gifs/generate.py
+COPY modules ./modules
 COPY test_*.py ./
 RUN python -m py_compile app.py test_dashboard.py && python -m unittest discover -v
 CMD ["python", "-u", "app.py"]
