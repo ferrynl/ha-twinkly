@@ -263,6 +263,7 @@ const patternCategories = {
 const categoryIds = ['classic','winter','lounge','nature','neon','sparkle'];
 let selectedCategory = 'classic';
 function patternName(id) {
+  if (id === 'rgb-test') return 'RGB Test (3 s)';
   if (id.startsWith('matrix:')) return matrixCatalog.find(item => 'matrix:' + item.id === id)?.name || id.slice(7);
   return extraPatterns[id]?.[1] || patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(id)] || id;
 }
@@ -1054,7 +1055,7 @@ function renderPatterns() {
     }
     const grid = byId('pattern-grid');
     grid.replaceChildren();
-    const presets = selectedCategory === 'classic' ? Object.entries(patternStyles) :
+    const presets = selectedCategory === 'classic' ? [...Object.entries(patternStyles), ['rgb-test','#ff0000,#00ff00,#0000ff']] :
       Object.entries(extraPatterns).filter(([,item]) => item[0] === selectedCategory).map(([id,item]) => [id,item[2]]);
     presets.forEach(([id,palette]) => {
       const tile = document.createElement('button'), swatch = document.createElement('i');
