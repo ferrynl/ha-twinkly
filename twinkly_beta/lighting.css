@@ -24,8 +24,10 @@
 #lighting-feedback:empty { display:none; }
 #lighting-settings { grid-column: 1 / -1; }
 .workspace-nav a { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:44px; }
-.workspace-nav img { display:block; height:1.15rem; width:auto; }
-#nav-control img { height:1.75rem; }
-#nav-hue img { height:1.4rem; border-radius:.3rem; }
-#nav-govee img { width:3.25rem; object-fit:cover; }
+.workspace-nav a:has(img) { padding-block:7px; }
+.workspace-nav img { display:block; height:1.25rem; width:auto; object-fit:cover; }
+#nav-control img { height:1.55rem; }
+#nav-hue img { width:3.25rem; filter:url(#hue-white-knockout); }
+#nav-govee img { width:4rem; }
+.menu-logo-filters { position:absolute; }
 #network-title { margin:0; }

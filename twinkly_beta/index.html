@@ -110,12 +110,18 @@ button:hover,.mixdesk button:hover{background:#2a313c;filter:none}.mixdesk butto
 <nav class="workspace-nav">
 <a id="nav-home" href="#home">Home</a>
 <a id="nav-control" href="#bediening"><img src="twinkly-nav-logo.svg" alt="Twinkly"></a>
-<a id="nav-hue" href="#hue"><img src="hue-app-icon.webp" alt=""><span>Philips Hue</span></a>
+<a id="nav-hue" href="#hue"><img src="hue-app-icon.webp" alt="Philips Hue"></a>
 <a id="nav-govee" href="#govee"><img src="govee-logo.png" alt="Govee"></a>
 <a id="nav-tests" href="#testcontrole"></a>
 <a id="nav-network" href="#security-center"></a>
 <a id="nav-settings" href="#instellingen"></a>
 </nav></header>
+<svg width="0" height="0" aria-hidden="true" class="menu-logo-filters">
+<filter id="hue-white-knockout" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -5 -5 -5 1 14"/>
+<feComposite in2="SourceGraphic" operator="in"/>
+</filter>
+</svg>
 <p id="message" role="status"></p>
 <p id="lighting-feedback" role="status"></p>
 <section id="lighting-panel" class="lighting-surface" hidden></section>

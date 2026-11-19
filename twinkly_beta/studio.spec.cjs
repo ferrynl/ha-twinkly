@@ -14,6 +14,11 @@ for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
   ]);
   await expect(page.getByRole('link',{name:'Twinkly',exact:true}).locator('img')).toHaveAttribute('src','twinkly-nav-logo.svg');
   await expect(page.getByRole('link',{name:'Philips Hue',exact:true}).locator('img')).toHaveAttribute('src','hue-app-icon.webp');
+  await expect(page.locator('#nav-hue')).toHaveText('');
+  await expect(page.locator('#nav-hue img')).toHaveCSS('filter','url("#hue-white-knockout")');
+  expect(await page.locator('#nav-control, #nav-hue, #nav-govee').evaluateAll(links =>
+   new Set(links.map(link => link.getBoundingClientRect().height)).size,
+  )).toBe(1);
   await expect.poll(() => page.locator('.workspace-nav img').evaluateAll(images =>
    images.filter(image => image.complete && image.naturalWidth > 0).length,
   )).toBe(3);
