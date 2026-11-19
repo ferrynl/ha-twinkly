@@ -47,10 +47,24 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 #music-demo-link[hidden]{display:none}
 #music-style-grid .matrix-tile img{width:100%;aspect-ratio:1;object-fit:contain;background:#101927;border-radius:5px}
 #music-style-grid .matrix-tile[aria-pressed="true"]{border-color:#a6e6d0;color:#b7ffe8}
+.network-map{position:relative;isolation:isolate;display:grid;gap:24px;padding:36px clamp(12px,3vw,28px) 24px;border:1px solid #3d5766;border-radius:36px;background:radial-gradient(ellipse at 50% 0%,#264452,#111e29 70%);margin-top:14px}
+.network-map[hidden],.network-hubs[hidden]{display:none}
+.network-map canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
+.network-hubs,.network-devices{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,175px),1fr))}
+.network-hubs{justify-items:center}
+.network-hub,.network-device{padding:10px 12px;min-width:0;overflow-wrap:anywhere;color:#edf9ff}
+.network-hub{border-radius:24px;border:1px solid #548799;background:#1c3543;text-align:center}
+.network-device{border:1px solid #526d7d;border-radius:14px;background:#122430}
+.network-device strong,.network-device small,.network-device span{display:block}
+.network-device small,.network-hub small{color:#c2d8e4}
+.network-device .network-signal{color:var(--signal,#c2d8e4);font-weight:bold}
+.network-key{display:flex;flex-wrap:wrap;gap:8px 20px;margin:.75rem 0;color:#c2d8e4}
+.network-key span::before{content:'';display:inline-block;width:22px;margin-right:6px;vertical-align:middle;border-top:2px solid #6ccde7}
+.network-key span+span::before{border-color:#d0a4ff;border-top-style:dashed}
 </style>
 <main>
 <header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
-<nav class="workspace-nav"><a id="nav-control" href="#bediening"></a><a id="nav-settings" href="#instellingen"></a></nav></header>
+<nav class="workspace-nav"><a id="nav-control" href="#bediening"></a><a id="nav-network" href="#netwerk"></a><a id="nav-settings" href="#instellingen"></a></nav></header>
 <p id="message" role="status"></p>
 <div id="control-page">
 <section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div>
@@ -92,6 +106,15 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <div id="gif-library-list" class="gap"></div></details></div></div></div></section>
 <section id="group-section" hidden><h2 id="group-title"></h2><div id="group-cards"></div></section>
 <section class="devices-section"><h2 id="device-title"></h2><div id="devices"></div></section></div>
+<section id="network-page" aria-labelledby="network-title" hidden>
+<div class="music-heading"><h2 id="network-title"></h2><button id="network-refresh" type="button"></button></div>
+<p id="network-help"></p><p id="network-status" role="status"></p>
+<div id="network-map" class="network-map" hidden>
+<canvas id="network-lines" aria-hidden="true"></canvas><div id="network-hubs" class="network-hubs"></div>
+<div id="network-devices" class="network-devices"></div>
+</div>
+<div class="network-key"><span id="network-wifi-key"></span><span id="network-peer-key"></span></div>
+</section>
 <div id="settings-page" hidden><div class="settings-grid">
 <section><h2 id="settings-general"></h2><select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></section>
 <section><h2 id="settings-music"></h2><div class="controls gap" id="music-setup"></div><p id="ledfx-status" role="status"></p><details><summary>LedFX installeren en starten</summary><ol><li>Open in Home Assistant Instellingen → Apps → Appwinkel → ⋮ → Repositories.</li><li>Voeg <a href="https://github.com/Switch123456789/Home-Assistant-Apps" target="_blank" rel="noopener noreferrer">de LedFX-repository met Sendspin</a> toe en installeer LedFX.</li><li>Klik op Starten en zet Starten bij opstarten aan. Controleer bij een fout het tabblad Logboek.</li><li>Ga terug naar Twinkly, controleer LedFX en klik daarna op Music Assistant koppelen. Voeg LedFx Twinkly toe aan de afspeelgroep in Music Assistant.</li></ol></details><div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
@@ -1012,13 +1035,139 @@ async function pollTrack() {
   }
   setTimeout(pollTrack,4000);
 }
+const networkText = {
+  nl: ['Netwerk','Vernieuwen','Wifi-duur sinds de eerste meting van deze verbinding. De kaart ververst automatisch zolang deze pagina open is.','Bezig met meten…','Netwerkgegevens konden niet worden opgehaald.','Geen Twinkly-apparaten geregistreerd.','Wifi-netwerk','Directe verbinding via een lamp','Offline','Verbinding onbekend','Toegangspunt','Signaal onbekend','Sterk','Goed','Zwak','Wifi gemeten','Via','Gateway','Kanaal'],
+  en: ['Network','Refresh','Wi-Fi duration starts with the first observation of this connection. The map refreshes automatically while this page is open.','Measuring…','Could not load network data.','No registered Twinkly devices.','Wi-Fi network','Direct link through a light','Offline','Connection unknown','Access point','Signal unknown','Strong','Good','Weak','Wi-Fi observed','Via','Gateway','Channel'],
+  es: ['Red','Actualizar','La duración Wi-Fi se cuenta desde la primera observación de esta conexión. El mapa se actualiza mientras esta página esté abierta.','Midiendo…','No se pudieron cargar los datos de red.','No hay dispositivos Twinkly registrados.','Red Wi-Fi','Conexión directa a través de una luz','Sin conexión','Conexión desconocida','Punto de acceso','Señal desconocida','Fuerte','Buena','Débil','Wi-Fi observado','A través de','Puerta de enlace','Canal'],
+  de: ['Netzwerk','Aktualisieren','Die WLAN-Dauer beginnt mit der ersten Beobachtung dieser Verbindung. Die Karte aktualisiert sich automatisch, solange diese Seite geöffnet ist.','Messung läuft…','Netzwerkdaten konnten nicht geladen werden.','Keine Twinkly-Geräte registriert.','WLAN','Direkte Verbindung über eine Leuchte','Offline','Verbindung unbekannt','Zugangspunkt','Signal unbekannt','Stark','Gut','Schwach','WLAN beobachtet','Über','Gateway','Kanal'],
+};
+const networkMap = byId('network-map');
+let networkTimer, networkPending = false, networkLinks = [];
+function drawNetwork() {
+  if (networkMap.hidden || byId('network-page').hidden) return;
+  const canvas = byId('network-lines'), bounds = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(bounds.width * ratio);
+  canvas.height = Math.round(bounds.height * ratio);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(ratio, ratio);
+  for (const [source, target, peer] of networkLinks) {
+    const a = source.getBoundingClientRect(), b = target.getBoundingClientRect();
+    const x1 = a.left + a.width / 2 - bounds.left;
+    const x2 = b.left + b.width / 2 - bounds.left;
+    const sameRow = Math.abs(a.top - b.top) < 4;
+    const y1 = (sameRow ? a.top + 8 : a.top + a.height / 2) - bounds.top;
+    const y2 = (sameRow ? b.top + 8 : b.top + b.height / 2) - bounds.top;
+    const curve = sameRow ? Math.min(y1,y2) - 36 : (y1 + y2) / 2;
+    ctx.beginPath();
+    ctx.strokeStyle = peer ? '#d0a4ff' : '#6ccde7';
+    ctx.lineWidth = peer ? 2.5 : 1.5;
+    ctx.setLineDash(peer ? [6,4] : []);
+    ctx.moveTo(x1,y1);
+    ctx.bezierCurveTo(x1,curve,x2,curve,x2,y2);
+    ctx.stroke();
+  }
+}
+new ResizeObserver(drawNetwork).observe(networkMap);
+function renderNetwork(rows, labels) {
+  const hubs = byId('network-hubs'), devices = byId('network-devices');
+  hubs.replaceChildren();
+  devices.replaceChildren();
+  networkLinks = [];
+  networkMap.hidden = !rows.length;
+  const hubNodes = new Map(), deviceNodes = new Map();
+  const byDevice = new Map(rows.map(row => [row.id,row]));
+  const addText = (parent, tag, content) => {
+    const element = document.createElement(tag);
+    element.textContent = content;
+    parent.append(element);
+    return element;
+  };
+  for (const row of rows) {
+    const card = document.createElement('article');
+    card.className = 'network-device';
+    deviceNodes.set(row.id, card);
+    devices.append(card);
+    addText(card,'strong',row.name);
+    addText(card,'small',row.ip);
+    if (row.kind === 'offline' || row.kind === 'unknown') {
+      addText(card,'span',labels[row.kind === 'offline' ? 8 : 9]);
+      continue;
+    }
+    addText(card,'span',row.kind === 'ap' ? labels[10] + ' · ' + row.ssid : row.ssid);
+    if (row.channel) addText(card,'small',labels[18] + ' ' + row.channel);
+    if (row.kind === 'ap') continue;
+    const quality = row.rssi == null ? 0 : row.rssi >= -60 ? 1 : row.rssi >= -72 ? 2 : 3;
+    const signal = addText(card,'span',labels[11 + quality] + (quality ? ' · ' + row.rssi + ' dBm' : ''));
+    signal.className = 'network-signal';
+    signal.style.setProperty('--signal',['#c2d8e4','#8ff1bd','#ffdb8a','#ffaaa8'][quality]);
+    const minutes = Math.floor(row.seconds / 60);
+    const duration = minutes === 0 ? '< 1 min' : minutes < 60 ? minutes + ' min' :
+      Math.floor(minutes / 60) + ' h ' + minutes % 60 + ' min';
+    addText(card,'small',labels[15] + ' · ' + duration);
+    if (row.peer) {
+      addText(card,'small',labels[16] + ' ' + byDevice.get(row.peer).name);
+      continue;
+    }
+    const key = JSON.stringify([row.ssid,row.gateway,row.bssid]);
+    if (!hubNodes.has(key)) {
+      const hub = document.createElement('div');
+      hub.className = 'network-hub';
+      addText(hub,'strong',row.ssid || labels[6]);
+      if (row.bssid || row.gateway) {
+        addText(hub,'small',row.bssid || labels[17] + ' ' + row.gateway);
+      }
+      hubs.append(hub);
+      hubNodes.set(key,hub);
+    }
+    networkLinks.push([card,hubNodes.get(key),false]);
+  }
+  for (const row of rows) {
+    if (row.peer) networkLinks.push([deviceNodes.get(row.id),deviceNodes.get(row.peer),true]);
+  }
+  hubs.hidden = !hubs.childElementCount;
+  requestAnimationFrame(drawNetwork);
+}
+async function refreshNetwork() {
+  clearTimeout(networkTimer);
+  if (networkPending || location.hash !== '#netwerk' || document.hidden) return;
+  networkPending = true;
+  byId('network-refresh').disabled = true;
+  const message = byId('network-status');
+  if (networkMap.hidden) message.textContent = networkText[lang.value][3];
+  try {
+    const data = await request('network');
+    const labels = networkText[lang.value];
+    renderNetwork(data.devices,labels);
+    message.textContent = data.devices.length ? '' : labels[5];
+  } catch {
+    renderNetwork([],networkText[lang.value]);
+    message.textContent = networkText[lang.value][4];
+  } finally {
+    networkPending = false;
+    byId('network-refresh').disabled = false;
+    if (location.hash === '#netwerk') networkTimer = setTimeout(refreshNetwork,30000);
+  }
+}
+byId('network-refresh').onclick = refreshNetwork;
+document.addEventListener('visibilitychange',() => { if (!document.hidden) refreshNetwork(); });
+
 function showPage() {
-  const settings = location.hash === '#instellingen';
-  byId('control-page').hidden = settings;
-  byId('settings-page').hidden = !settings;
-  byId('nav-control').setAttribute('aria-current',settings ? 'false' : 'page');
-  byId('nav-settings').setAttribute('aria-current',settings ? 'page' : 'false');
-  if (!settings) schedulePreview();
+  const page = {'#instellingen':'settings','#netwerk':'network'}[location.hash] || 'control';
+  for (const name of ['control','settings','network']) {
+    byId(name + '-page').hidden = page !== name;
+    byId('nav-' + name).setAttribute('aria-current',page === name ? 'page' : 'false');
+  }
+  const labels = networkText[lang.value];
+  byId('nav-network').textContent = byId('network-title').textContent = labels[0];
+  byId('network-refresh').textContent = labels[1];
+  byId('network-help').textContent = labels[2];
+  byId('network-wifi-key').textContent = labels[6];
+  byId('network-peer-key').textContent = labels[7];
+  clearTimeout(networkTimer);
+  if (page === 'network') refreshNetwork();
+  if (page === 'control') schedulePreview();
 }
 window.addEventListener('hashchange',showPage);
 const patternTarget = byId('pattern-target');

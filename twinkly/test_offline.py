@@ -86,6 +86,54 @@ class OfflineDeviceTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(device["offline"])
         self.assertEqual(device["error"], "device_error")
 
+    async def test_network_links_only_to_a_matching_active_access_point(self):
+        peer_row = dict(ROW, id="peer", name="Buiten", ip="192.168.1.1")
+        peer = app.Device(peer_row, self.controller.limit, self.controller.realtime_socket)
+        self.addCleanup(peer.client.session.close)
+        self.controller.devices["peer"] = peer
+        self.device.details = {"network_mode": 1, "ssid": "Twinkly-Buiten", "ip": ROW["ip"],
+                               "gw": peer_row["ip"], "status": 5, "rssi": "-68"}
+        peer.details = {"network_mode": 2, "ap_ssid": "Twinkly-Buiten", "ap_ip": peer_row["ip"]}
+        self.device.details_until = peer.details_until = app.time.monotonic() + 60
+
+        response = await self.client.get("/network")
+        self.assertEqual(response.status, 200)
+        station, access_point = (await response.json())["devices"]
+        self.assertEqual((station["kind"], station["peer"], station["rssi"]), ("wifi", "peer", -68))
+        self.assertEqual(access_point["kind"], "ap")
+
+        peer.details = dict(peer.details, ap_ssid="Another SSID")
+        self.controller.network_until = 0
+        response = await self.client.get("/network")
+        self.assertNotIn("peer", (await response.json())["devices"][0])
+
+    async def test_wifi_duration_resets_after_a_change_and_timeout(self):
+        self.device.details = {"network_mode": 1, "ssid": "Home", "ip": ROW["ip"],
+                               "gw": "192.168.1.1", "bssid": "00:11:22:33:44:55", "rssi": 0}
+        now = app.time.monotonic()
+        self.device.wifi_observation = (
+            ("Home", ROW["ip"], "192.168.1.1", "00:11:22:33:44:55"), now - 120, now - 60)
+        self.device.details_until = now + 60
+
+        response = await self.client.get("/network")
+        station = (await response.json())["devices"][0]
+        self.assertEqual(station["seconds"], 120)
+        self.assertIsNone(station["rssi"])
+
+        self.device.details = dict(self.device.details, bssid="00:11:22:33:44:66")
+        self.controller.network_until = 0
+        response = await self.client.get("/network")
+        self.assertEqual((await response.json())["devices"][0]["seconds"], 0)
+
+        def timed_out():
+            raise Timeout("no network response")
+
+        self.controller.network_until = 0
+        with patch.object(self.device, "load_details", timed_out), self.assertLogs("twinkly", "WARNING"):
+            response = await self.client.get("/network")
+        self.assertEqual((await response.json())["devices"][0]["kind"], "offline")
+        self.assertIsNone(self.device.wifi_observation)
+
     async def test_removal_is_saved_and_group_still_works(self):
         online = await self.client.post("/remove-device", json={"id": "wall"})
         self.assertEqual(await online.json(), {"ok": False})
