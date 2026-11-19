@@ -1,7 +1,7 @@
-name: Twinkly Control Center
+name: Christmas Control Center
 slug: twinkly_kerst
 version: "0.1.43"
-description: Groepeer je Twinkly-lampen en speel lichtshows af op muziek.
+description: Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten.
 url: https://github.com/ferrynl/ha-twinkly
 arch:
   - amd64
