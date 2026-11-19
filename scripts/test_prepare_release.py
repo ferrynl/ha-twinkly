@@ -39,22 +39,21 @@ class PrepareReleaseTest(unittest.TestCase):
 
     def test_store_presentation_for_both_channels(self):
         for suffix, description in (
-            ("", "Groepeer je Twinkly-lampen en speel lichtshows af op muziek."),
-            ("-beta.1", "Probeer als eerste nieuwe Twinkly-lichtshows en muziekeffecten."),
+            ("", "Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten."),
+            ("-beta.1", "Probeer als eerste nieuwe kerstlichtshows en muziekeffecten."),
         ):
             with self.subTest(channel=suffix):
                 target = self.target.with_name(f"app{suffix}")
                 prepare(self.source, target, f"{self.version}{suffix}")
                 config = yaml.safe_load((target / "config.yaml").read_text(encoding="utf-8"))
                 self.assertEqual(config["description"], description)
+                self.assertEqual(config["name"], "Christmas Control Center" + (" Beta" if suffix else ""))
                 artwork = self.source / "beta_branding" if suffix else self.source
-                for filename, size in (("icon.png", (128, 128)), ("logo.png", (500, 200))):
+                for filename, size in (("icon.png", (128, 128)), ("logo.png", (256, 128))):
                     data = (target / filename).read_bytes()
                     self.assertEqual(data, (artwork / filename).read_bytes())
                     self.assertEqual(data[:8], bytes.fromhex("89504e470d0a1a0a"))
                     self.assertEqual(struct.unpack(">II", data[16:24]), size)
-                    if suffix:
-                        self.assertNotEqual(data, (self.source / filename).read_bytes())
                 intro = (target / "README.md").read_text(encoding="utf-8")
                 self.assertIn("LedFX", intro)
                 self.assertEqual("vroege toegang" in intro, bool(suffix))

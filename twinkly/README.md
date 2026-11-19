@@ -1,4 +1,4 @@
-# Twinkly Control Center
+# Christmas Control Center
 
 Bedien je Twinkly-verlichting vanuit Home Assistant. Groepeer lampen per kamer, bouw een lichtshow met scènes en GIF’s of laat je lampen reageren op muziek via LedFX.
 

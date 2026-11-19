@@ -1,0 +1,2 @@
+# Direct providers (development)
+Independent Hue CLIP v2 and Govee LAN command transports. Hue requires a verified bridge TLS context and application key supplied by future pairing flow; no insecure TLS fallback. Govee UDP sends are not acknowledged. This is a foundation only: discovery, pairing, state, UI, shared engine, capability checks, gamut mapping, entertainment and real hardware tests remain. No HA light services used.
