@@ -35,6 +35,7 @@ jobs:
       - run: python -m pip install PyYAML==6.0.2
       - name: Controleer de releasevelden en test de app
         run: |
+          node scripts/test_product_models.cjs
           python -m unittest discover -s scripts -v
           version=$(python -c 'import yaml; print(yaml.safe_load(open("twinkly/config.yaml"))["version"])')
           python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly" "$version"

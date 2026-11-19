@@ -1,3 +1,8 @@
+# Nog niet uitgebracht
+
+- Herken onder meer Curtain 210 RGB+W, Matrix, Icicle, Cluster, Festoon en andere Twinkly-productreeksen aan de modelcode.
+- Toon officiële referentiefoto’s per reeks en kleurvariant, ook bij offline lampen met een opgeslagen modelcode. Toon bij onbekende codes of een mislukte fotodownload het Twinkly-icoon.
+
 # 0.1.43
 
 - Toon onbereikbare lampen als Offline en voeg een verwijderknop toe.
