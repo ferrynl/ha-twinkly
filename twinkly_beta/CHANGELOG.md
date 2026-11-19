@@ -1,3 +1,7 @@
+## 2.0.0-beta.8
+
+- Use the same local brand wordmarks in the navigation and on light cards.
+
 ## 2.0.0-beta.7
 
 - Match the visible height of the three navigation wordmarks and display the Hue artwork without the white background or duplicate label.

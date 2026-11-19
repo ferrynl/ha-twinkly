@@ -111,6 +111,9 @@ test('Home combines providers and keeps pairing in Settings', async ({page}) => 
  await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'domcontentloaded'});
  const home=page.locator('#lighting-panel');
  await expect(home.locator('article')).toHaveCount(3);
+ await expect.poll(() => home.locator('.lighting-brand-mark img').evaluateAll(images =>
+  images.filter(image => image.complete && image.naturalWidth > 0).length,
+ )).toBe(3);
  await expect(home.locator('[data-provider=hue] input[type=color]')).toHaveCount(0);
  await expect(home.locator('[data-provider=govee]')).toContainText('onbevestigd');
  await expect(home.locator('[data-provider=govee] button')).toHaveCount(0);
@@ -127,6 +130,7 @@ test('Home combines providers and keeps pairing in Settings', async ({page}) => 
  await page.locator('#nav-hue').click();
  await expect(home.locator('article')).toHaveCount(1);
  await expect(home.getByText('Living room')).toBeVisible();
+ await expect(home.locator('.lighting-brand-mark img')).toHaveAttribute('src','hue-app-icon.webp');
  await expect(home.getByText('Tree')).toHaveCount(0);
  await page.locator('#nav-govee').click();
  await expect(home.getByText('Strip')).toBeVisible();

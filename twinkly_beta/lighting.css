@@ -6,9 +6,9 @@
 .lighting-card { display:flex; flex-direction:column; align-items:stretch; min-width:0; overflow-wrap:anywhere;
   gap:.65rem; padding:1rem; margin:0; border:1px solid #ffffff22; border-radius:14px; background:#222524; }
 .lighting-card h3, .lighting-card p { margin:0; }
-.lighting-card-head { display:grid; grid-template-columns:2.6rem minmax(0,1fr); align-items:center; gap:.7rem; }
-.lighting-brand-mark { display:grid; width:2.6rem; height:2.6rem; place-items:center; border-radius:12px;
-  color:#fff; background:#ffffff12; box-shadow:inset 0 -3px var(--lamp-color,#d1ac68); font-weight:700; }
+.lighting-card-head { display:grid; grid-template-columns:4.5rem minmax(0,1fr); align-items:center; gap:.7rem; }
+.lighting-brand-mark { display:grid; min-height:2.6rem; place-items:center; border-radius:12px;
+  background:#ffffff12; box-shadow:inset 0 -3px var(--lamp-color,#d1ac68); }
 .lighting-brand, .lighting-state { font-size:.86rem; color:#c8cdc9; }
 .lighting-controls, .lighting-connection, .lighting-form, .lighting-group-form { display:flex; flex-wrap:wrap; align-items:center; gap:.55rem; }
 .lighting-controls label, .lighting-form label { display:grid; min-width:0; flex:1 1 8rem; gap:.25rem; }
@@ -25,9 +25,9 @@
 #lighting-settings { grid-column: 1 / -1; }
 .workspace-nav a { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:44px; }
 .workspace-nav a:has(img) { padding-block:7px; }
-.workspace-nav img { display:block; height:1.25rem; width:auto; object-fit:cover; }
-#nav-control img { height:1.55rem; }
-#nav-hue img { width:3.25rem; filter:url(#hue-white-knockout); }
-#nav-govee img { width:4rem; }
+.brand-wordmark { display:block; height:1.25rem; width:auto; object-fit:cover; }
+.brand-wordmark-twinkly { height:1.55rem; }
+.brand-wordmark-hue { width:3.25rem; filter:url(#hue-white-knockout); }
+.brand-wordmark-govee { width:4rem; }
 .menu-logo-filters { position:absolute; }
 #network-title { margin:0; }

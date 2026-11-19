@@ -6,6 +6,7 @@
     es: ["Inicio", "Todas las luces", "Actualizar", "Conectado", "No disponible", "Estado desconocido", "Govee · sin confirmar", "Encender", "Apagar", "Brillo", "Color", "Aún no hay luces", "Conexiones", "Buscar dispositivos", "Vincular", "Volver a vincular", "ID del dispositivo", "Dirección LAN", "Consultar certificado", "Huella SHA256", "Compara esta huella con una fuente fiable e independiente. Continúa solo si confías en el certificado.", "Pulsa el botón físico del puente Hue justo antes de vincularlo.", "Activa el control LAN en la aplicación Govee.", "Grupos mixtos", "Nombre del grupo", "Guardar", "Editar", "Eliminar", "Cancelar", "Aceptado", "Sin confirmar", "Omitido", "Error", "Gestionar conexión", "Elegir luces", "No se encontraron dispositivos", "Cargando…", "Luz no disponible", "Vinculado"],
   };
   const brands = {twinkly: "Twinkly", hue: "Philips Hue", govee: "Govee"};
+  const wordmarks = {twinkly: "twinkly-nav-logo.svg", hue: "hue-app-icon.webp", govee: "govee-logo.png"};
   const el = id => document.getElementById(id);
   const panel = el("lighting-panel");
   const settings = el("lighting-settings");
@@ -111,7 +112,11 @@
     const card = node("article", "", "lighting-card");
     card.dataset.provider = light.provider;
     const head = node("div", "", "lighting-card-head");
-    const mark = node("span", {twinkly: "T", hue: "H", govee: "G"}[light.provider], "lighting-brand-mark");
+    const mark = node("span", "", "lighting-brand-mark");
+    const logo = node("img", "", "brand-wordmark brand-wordmark-" + light.provider);
+    logo.src = wordmarks[light.provider];
+    logo.alt = "";
+    mark.append(logo);
     const color = stateColor(light.state?.color);
     if (color && light.state.on !== false) mark.style.setProperty("--lamp-color", color);
     mark.setAttribute("aria-hidden", "true");
