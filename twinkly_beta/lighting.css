@@ -1,0 +1,25 @@
+.lighting-surface { margin: 1rem 0; }
+.lighting-heading { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; margin-bottom: .8rem; }
+.lighting-heading h2 { margin:0; margin-right:auto; }
+.lighting-heading a { color:inherit; }
+.lighting-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr)); gap:.85rem; }
+.lighting-card { display:flex; flex-direction:column; align-items:stretch; min-width:0; overflow-wrap:anywhere;
+  gap:.65rem; padding:1rem; margin:0; border:1px solid #ffffff22; border-radius:14px; background:#222524; }
+.lighting-card h3, .lighting-card p { margin:0; }
+.lighting-card-head { display:grid; grid-template-columns:2.6rem minmax(0,1fr); align-items:center; gap:.7rem; }
+.lighting-brand-mark { display:grid; width:2.6rem; height:2.6rem; place-items:center; border-radius:12px;
+  color:#fff; background:#ffffff12; box-shadow:inset 0 -3px var(--lamp-color,#d1ac68); font-weight:700; }
+.lighting-brand, .lighting-state { font-size:.86rem; color:#c8cdc9; }
+.lighting-controls, .lighting-connection, .lighting-form, .lighting-group-form { display:flex; flex-wrap:wrap; align-items:center; gap:.55rem; }
+.lighting-controls label, .lighting-form label { display:grid; min-width:0; flex:1 1 8rem; gap:.25rem; }
+.lighting-surface input { max-width:100%; min-width:0; }
+.lighting-surface input[type=color] { width:100%; min-height:2rem; padding:.2rem; }
+.lighting-surface [aria-pressed=true] { border-color:#d1ac68; }
+.lighting-groups { margin-top:1rem; }
+.lighting-group-form { margin-top:.8rem; }
+.lighting-group-form fieldset { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:.6rem 1rem; min-width:0; }
+.lighting-group-form fieldset label { display:flex; gap:.4rem; align-items:center; overflow-wrap:anywhere; }
+.lighting-connections { display:grid; gap:.5rem; }
+.lighting-form { margin-top:.65rem; }
+#lighting-feedback:empty { display:none; }
+#lighting-settings { grid-column: 1 / -1; }
