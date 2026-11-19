@@ -25,5 +25,7 @@
 #lighting-settings { grid-column: 1 / -1; }
 .workspace-nav a { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:44px; }
 .workspace-nav img { display:block; height:1.15rem; width:auto; }
+#nav-control img { height:1.75rem; }
+#nav-hue img { height:1.4rem; border-radius:.3rem; }
 #nav-govee img { width:3.25rem; object-fit:cover; }
 #network-title { margin:0; }

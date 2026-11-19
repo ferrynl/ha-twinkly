@@ -1,3 +1,7 @@
+## 2.0.0-beta.5
+
+- Use the official Twinkly wordmark and the Philips Hue app icon in the navigation.
+
 ## 2.0.0-beta.4
 
 - Reorder the navigation, add local brand logos and place the network map in Security Center.

@@ -1,6 +1,6 @@
 # Christmas Control Center Beta
 
-De menulogo’s van Twinkly, [Philips Hue](https://www.philips-hue.com/content/dam/hue/masters/navigation/hue_logo_1-1_new.svg) en [Govee](https://www.govee.com/software-updates) zijn lokaal gebundeld.
+Het officiële [Twinkly-woordmerk](https://twinkly.com/cdn/shop/files/Twinkly_Logo_White.svg), het [Philips Hue-appicoon](https://play-lh.googleusercontent.com/SB82ocHba-aDaB7Wl6nrGqcXviR75zs6HWofCw1C0GoS_ivkotgAt7X8nazkYJpBBO9HwP1tXZG61UPrDN7dnw=w480-h960-rw) en het [Govee-logo](https://www.govee.com/software-updates) zijn lokaal gebundeld.
 
 Met de bèta krijg je vroege toegang tot nieuwe lichtshows, lampgroepen en muziekeffecten via LedFX. De bèta is een aparte installatie met eigen instellingen.
 
