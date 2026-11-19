@@ -1,0 +1,31 @@
+# Python runtime dependencies for the Python 3.12 container.
+# Regenerate after changing requirements.in:
+# uv pip compile --python-version 3.12 --universal requirements.in -o requirements.lock
+aiohappyeyeballs==2.7.1
+aiohttp==3.13.5
+aiosignal==1.4.0
+attrs==26.1.0
+certifi==2026.6.17
+cffi==2.1.0
+charset-normalizer==3.5.2
+click==8.4.2
+click-log==0.4.0
+colorama==0.4.6 ; platform_system == "Windows"
+cryptography==49.0.0
+frozenlist==1.8.0
+idna==3.18
+ifaddr==0.2.0
+multidict==6.9.1
+netaddr==1.3.0
+pillow==12.2.0
+propcache==0.5.4
+pycparser==3.0
+pyzmq==27.3.0
+requests==2.34.2
+requests-toolbelt==1.0.0
+tornado==6.6.1
+typing-extensions==4.15.0 ; python_version < "3.13"
+urllib3==2.8.0
+xled==0.7.0
+yarl==1.25.1
+zeroconf==0.148.0

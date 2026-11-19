@@ -1,0 +1,4 @@
+aiohttp==3.13.5
+zeroconf==0.148.0
+xled==0.7.0
+Pillow==12.2.0
