@@ -4,23 +4,39 @@ set -euo pipefail
 dir="$1"
 http_port="$2"
 name="twinkly-smoke-$http_port"
-data="$(mktemp -d)"
+data="$name-data"
 cleanup() {
   docker rm -f "$name" >/dev/null 2>&1 || true
-  rm -rf "$data"
+  docker volume rm "$data" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-cat > "$data/options.json" <<'JSON'
+docker build --tag "$name" "$dir"
+docker volume create "$data" >/dev/null
+# Seed root-owned Supervisor settings and state as on an existing installation.
+docker run --rm -i -v "$data:/data" --entrypoint /bin/sh "$name" -ec '
+  umask 077
+  cp /dev/stdin /data/options.json
+  mkdir /data/gif-library
+  printf "[]" > /data/devices.json
+' <<'JSON'
 {"ddp_source":"127.0.0.1","discovery_broadcast":"255.255.255.255","fps":20,"media_player":""}
 JSON
 
-docker build --tag "$name" "$dir"
 docker run --detach --name "$name" --network host -v "$data:/data" "$name"
 for _ in $(seq 1 30); do
   if [[ "$(curl --silent --max-time 2 --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$http_port/")" == 403 ]]; then
     # Direct requests are rejected by HA ingress middleware after the app starts.
     test "$(docker inspect --format '{{.State.Running}}' "$name")" = true
+    docker exec --user 10001:10001 "$name" /bin/sh -ec '
+      grep -Eq "^Uid:[[:space:]]+10001[[:space:]]+10001" /proc/1/status
+      grep -Eq "^NoNewPrivs:[[:space:]]+1$" /proc/1/status
+      test -r /data/options.json
+      test -w /data/devices.json
+      test -w /data/gif-library
+      temp=$(mktemp /data/smoke.XXXXXX)
+      rm "$temp"
+    '
     exit 0
   fi
   sleep 1
