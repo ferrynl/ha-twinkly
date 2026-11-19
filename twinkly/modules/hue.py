@@ -40,6 +40,10 @@ class Hue:
     async def lights(self):
         return await self.request("GET","light")
 
+    async def profiles(self):
+        from .profiles import hue_profiles
+        return hue_profiles(await self.lights(), await self.request("GET","device"))
+
     async def control(self, light_id, *, on=None, level=None, color=None):
         if not re.fullmatch(r"[0-9a-fA-F-]{36}",light_id):
             raise ValueError("Invalid resource ID")
