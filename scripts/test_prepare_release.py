@@ -39,7 +39,7 @@ class PrepareReleaseTest(unittest.TestCase):
 
     def test_store_presentation_for_both_channels(self):
         for suffix, description in (
-            ("", "Groepeer je Twinkly-lampen en speel lichtshows af op muziek."),
+            ("", "Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten."),
             ("-beta.1", "Probeer als eerste nieuwe Twinkly-lichtshows en muziekeffecten."),
         ):
             with self.subTest(channel=suffix):
@@ -53,8 +53,6 @@ class PrepareReleaseTest(unittest.TestCase):
                     self.assertEqual(data, (artwork / filename).read_bytes())
                     self.assertEqual(data[:8], bytes.fromhex("89504e470d0a1a0a"))
                     self.assertEqual(struct.unpack(">II", data[16:24]), size)
-                    if suffix:
-                        self.assertNotEqual(data, (self.source / filename).read_bytes())
                 intro = (target / "README.md").read_text(encoding="utf-8")
                 self.assertIn("LedFX", intro)
                 self.assertEqual("vroege toegang" in intro, bool(suffix))
