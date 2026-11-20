@@ -1,6 +1,6 @@
 name: Christmas Control Center
 slug: twinkly_kerst
-version: "0.1.43"
+version: "0.1.44"
 description: Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten.
 url: https://github.com/ferrynl/ha-twinkly
 arch:

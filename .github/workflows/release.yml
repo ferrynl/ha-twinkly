@@ -34,13 +34,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install PyYAML==6.0.2
       - name: Controleer de releasevelden en test de app
-        run: |
-          python -m unittest discover -s scripts -v
-          version=$(python -c 'import yaml; print(yaml.safe_load(open("twinkly/config.yaml"))["version"])')
-          python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly" "$version"
-          python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly_beta" "$version-beta.1"
-          bash scripts/smoke.sh "$RUNNER_TEMP/twinkly" 18489
-          bash scripts/smoke.sh "$RUNNER_TEMP/twinkly_beta" 18491
+        run: python scripts/check_release.py
   publish:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     needs: tests
@@ -63,39 +57,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CHANNEL: ${{ inputs.channel }}
           BETA_NUMBER: ${{ inputs.beta_number }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          version=$(python -c 'import yaml; print(yaml.safe_load(open("twinkly/config.yaml"))["version"])')
-          publish() {
-            local release_version="$1"
-            shift
-            if git ls-remote --exit-code --tags origin "refs/tags/v$release_version"; then
-              if [[ "$GITHUB_EVENT_NAME" == push ]] && gh release view "v$release_version" >/dev/null; then
-                return
-              fi
-              echo "Tag v$release_version bestaat al. Kies een nieuwe versie." >&2
-              exit 1
-            else
-              test "$?" -eq 2
-            fi
-            rm -rf "$RUNNER_TEMP/twinkly-release"
-            python scripts/prepare_release.py twinkly "$RUNNER_TEMP/twinkly-release" "$release_version"
-            awk 'NR > 1 && /^# / { exit } NR > 1 { print }' twinkly/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-            test -s "$RUNNER_TEMP/notes.md"
-            gh release create "v$release_version" --target "$GITHUB_SHA" \
-              --title "Twinkly Control Center $release_version" \
-              --notes-file "$RUNNER_TEMP/notes.md" "$@"
-          }
-
-          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            # Publish the offline-device update to both channels.
-            if [[ "$version" == 0.1.43 ]]; then
-              publish "$version-beta.1" --prerelease --latest=false
-              publish "$version" --latest
-            fi
-          elif [[ "$CHANNEL" == beta ]]; then
-            publish "$version-beta.$BETA_NUMBER" --prerelease --latest=false
-          else
-            publish "$version" --latest
-          fi
+        run: python scripts/publish_release.py

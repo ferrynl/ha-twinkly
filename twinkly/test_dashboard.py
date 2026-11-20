@@ -9,6 +9,26 @@ from app import Controller, MUSIC_STYLES
 
 
 class DashboardSmokeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_health_and_ingress(self):
+        application = Controller.__new__(Controller).app()
+        application.cleanup_ctx.clear()
+        async with TestClient(TestServer(application)) as client:
+            async with client.get("/healthz") as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(await response.text(), "OK")
+            async with client.get("/") as response:
+                self.assertEqual(response.status, 403)
+
+    async def test_bundled_wordmark(self):
+        application = Controller.__new__(Controller).app()
+        application.middlewares.clear()
+        application.cleanup_ctx.clear()
+        async with TestClient(TestServer(application)) as client:
+            async with client.get("/twinkly-wordmark.svg") as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.content_type, "image/svg+xml")
+                self.assertIn("<svg", await response.text())
+
     async def test_dashboard_and_music_gallery(self):
         # The test server uses loopback and does not start the live UDP stream.
         controller = Controller.__new__(Controller)

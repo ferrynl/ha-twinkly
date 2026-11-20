@@ -1,3 +1,9 @@
+# 0.1.44
+
+- Beperk de toegang tot bestanden met GIF's, effecten en productafbeeldingen.
+- Laad het Twinkly-logo lokaal en geef technische LedFX-foutdetails niet door aan de browser.
+- Bouw op Debian Trixie, voer de app zonder rootrechten uit en controleer lokaal of de app reageert.
+
 # 0.1.43
 
 - Toon onbereikbare lampen als Offline en voeg een verwijderknop toe.
