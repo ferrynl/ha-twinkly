@@ -93,3 +93,8 @@ Bij **Importeer URL** kun je ook een gewone GIPHY-deellink plakken. De add-on ha
 Onder **Matrix-GIF’s** staan 100 originele geanimeerde vierkanten in tien thema’s, rechts in de mengtafel. De GIF-bestanden worden tijdens het bouwen lokaal in de afzonderlijke map `matrix_gifs` gemaakt. Voor een ledstreng zet de app de 12 bij 10 pixels rij voor rij om naar de ledvolgorde.
 
 Met **Showbouwer** maak je een reeks van maximaal 30 stappen met een patroon, lampgroep, duur en helderheid per stap. Muziekstappen gebruiken de huidige LedFX-stijl. De add-on speelt de show af en herstelt de vorige lampmodus bij het einde van elke stap. **Favorieten** biedt maximaal acht snelkeuzes voor de huidige doelkeuze van de effectengalerij.
+
+## Licentie
+
+De eigen code van Christmas Control Center valt onder de [MIT-licentie](LICENSE).
+Voor externe onderdelen en merkmateriaal gelden de voorwaarden van hun rechthebbenden.
