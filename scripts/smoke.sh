@@ -11,10 +11,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-docker build --tag "$name" "$dir"
+if [[ "${3:-}" != "" ]]; then
+  image="$3"
+else
+  image="$name"
+  docker build --tag "$image" "$dir"
+fi
 docker volume create "$data" >/dev/null
 # Seed root-owned Supervisor settings and state as on an existing installation.
-docker run --rm -i -v "$data:/data" --entrypoint /bin/sh "$name" -ec '
+docker run --rm -i -v "$data:/data" --entrypoint /bin/sh "$image" -ec '
   umask 077
   cp /dev/stdin /data/options.json
   mkdir /data/gif-library
@@ -23,9 +28,10 @@ docker run --rm -i -v "$data:/data" --entrypoint /bin/sh "$name" -ec '
 {"ddp_source":"127.0.0.1","discovery_broadcast":"255.255.255.255","fps":20,"media_player":""}
 JSON
 
-docker run --detach --name "$name" --network host -v "$data:/data" "$name"
+docker run --detach --name "$name" --network host -v "$data:/data" "$image"
 for _ in $(seq 1 30); do
   if [[ "$(curl --silent --max-time 2 --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$http_port/")" == 403 ]]; then
+    test "$(curl --fail --silent --max-time 2 "http://127.0.0.1:$http_port/healthz")" = OK
     # Direct requests are rejected by HA ingress middleware after the app starts.
     test "$(docker inspect --format '{{.State.Running}}' "$name")" = true
     docker exec --user 10001:10001 "$name" /bin/sh -ec '
