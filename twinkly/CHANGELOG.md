@@ -1,3 +1,8 @@
+# 0.1.46
+
+- Zet de GitHub Actions in de releaseworkflow vast op commit-SHA’s.
+- Draai de container-healthcheck onder hetzelfde beperkte account als de app.
+
 # 0.1.45
 
 - Beperk bestandstoegang voor GIF’s, effectafbeeldingen en productfoto’s tot hun eigen mappen.
