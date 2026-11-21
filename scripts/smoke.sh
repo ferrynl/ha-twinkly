@@ -37,13 +37,21 @@ for _ in $(seq 1 30); do
     docker exec --user 10001:10001 "$name" /bin/sh -ec '
       grep -Eq "^Uid:[[:space:]]+10001[[:space:]]+10001" /proc/1/status
       grep -Eq "^NoNewPrivs:[[:space:]]+1$" /proc/1/status
+      grep -Eq "^CapEff:[[:space:]]+0+$" /proc/1/status
       test -r /data/options.json
       test -w /data/devices.json
       test -w /data/gif-library
       temp=$(mktemp /data/smoke.XXXXXX)
       rm "$temp"
     '
-    exit 0
+    for _ in $(seq 1 15); do
+      if [[ "$(docker inspect --format '{{.State.Health.Status}}' "$name")" == healthy ]]; then
+        exit 0
+      fi
+      sleep 3
+    done
+    docker inspect --format '{{json .State.Health}}' "$name"
+    exit 1
   fi
   sleep 1
 done
