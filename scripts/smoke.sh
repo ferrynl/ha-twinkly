@@ -15,7 +15,7 @@ if [[ "${3:-}" != "" ]]; then
   image="$3"
 else
   image="$name"
-  docker build --tag "$image" "$dir"
+  docker build --pull --tag "$image" "$dir"
 fi
 docker volume create "$data" >/dev/null
 # Seed root-owned Supervisor settings and state as on an existing installation.

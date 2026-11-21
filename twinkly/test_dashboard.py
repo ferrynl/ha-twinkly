@@ -1,11 +1,56 @@
 """Verify the dashboard and music GIF routes in the built add-on."""
 import io
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from PIL import Image
 
-from app import Controller, MUSIC_STYLES
+from app import Controller, MUSIC_STYLES, asset_path, delete_asset, read_asset, write_asset
+
+
+class AssetStorageTest(unittest.TestCase):
+    def test_atomic_replace_and_delete(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            asset = asset_path(root, "preview.gif")
+            write_asset(asset, b"first")
+            with patch("app.os.fsync", side_effect=OSError("sync failed")):
+                with self.assertRaises(OSError):
+                    write_asset(asset, b"second")
+            self.assertEqual(read_asset(asset, 5), b"first")
+            self.assertEqual(list(root.iterdir()), [asset])
+            write_asset(asset, b"second")
+            self.assertEqual(read_asset(asset, 6), b"second")
+            with self.assertRaises(web.HTTPNotFound):
+                read_asset(asset, 5)
+            delete_asset(asset)
+            delete_asset(asset)
+            delete_asset(root / "missing" / asset.name)
+            self.assertFalse(asset.exists())
+
+    def test_read_rejects_symlinks_at_open(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.gif"
+            source.write_bytes(b"asset")
+            previews = root / "previews"
+            previews.mkdir()
+            asset = asset_path(previews, "preview.gif")
+            asset.symlink_to(source)
+            with self.assertRaises(web.HTTPNotFound):
+                read_asset(asset, 5)
+
+            asset.unlink()
+            asset.write_bytes(b"asset")
+            moved = root / "archive"
+            previews.rename(moved)
+            previews.symlink_to(moved, target_is_directory=True)
+            with self.assertRaises(web.HTTPNotFound):
+                read_asset(asset, 5)
 
 
 class DashboardSmokeTest(unittest.IsolatedAsyncioTestCase):
