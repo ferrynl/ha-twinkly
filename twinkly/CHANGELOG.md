@@ -1,3 +1,9 @@
+# 0.1.45
+
+- Beperk bestandstoegang voor GIF’s, effectafbeeldingen en productfoto’s tot hun eigen mappen.
+- Schrijf tijdelijke bestanden volledig naar schijf voordat een afbeelding wordt vervangen.
+- Haal de actuele Python-basis op voor de containertests en neem beschikbare Debian-beveiligingsupdates mee in de build.
+
 # 0.1.44
 
 - Beperk de toegang tot bestanden met GIF's, effecten en productafbeeldingen.

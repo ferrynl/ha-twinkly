@@ -14,7 +14,7 @@ def main():
     source = Path("twinkly")
     version = yaml.safe_load((source / "config.yaml").read_text(encoding="utf-8"))["version"]
     push = os.environ["GITHUB_EVENT_NAME"] == "push"
-    if push and version != "0.1.44":
+    if push and version != "0.1.45":
         return
     beta = not push and os.environ.get("CHANNEL") == "beta"
     if beta:
