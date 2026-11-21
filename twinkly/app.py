@@ -3,7 +3,9 @@ import base64
 import bisect
 import hashlib
 import uuid
-import tempfile
+import errno
+import stat
+from contextlib import contextmanager
 import colorsys
 import math
 import os
@@ -42,12 +44,14 @@ GIF_LIBRARY = DATA.with_name("gif-library")
 MATRIX_GIFS = Path(__file__).resolve().with_name("matrix_gifs")
 MATRIX_ID = re.compile(r"(?:winter|festive|neon|ocean|gold|cosmic|tropical|retro|pastel|midnight)-(?:[1-9]|10)")
 GIF_LIMIT = 512 * 1024
+EFFECT_IMAGE_LIMIT = 160_000
+PRODUCT_PHOTO_LIMIT = 1_000_000
 GIF_ID = re.compile(r"[a-f0-9]{12}-[a-zA-Z0-9_-]{1,48}")
 PRODUCT_PHOTOS = DATA.with_name("product-photos")
 WORDMARK = Path(__file__).resolve().with_name("twinkly-wordmark.svg")
-PRODUCT_PHOTO_URLS = {
-    "strings-rgbw": "https://twinkly.com/cdn/shop/files/TWS250SPP-BEU_Out-of-the-box.jpg?v=1769612111&width=480",
-    "line": "https://twinkly.com/cdn/shop/files/TWL100STW-BEU_Out-of-the-box.jpg?v=1757667667&width=480",
+PRODUCT_PHOTOS_BY_KEY = {
+    "strings-rgbw": ("strings-rgbw.jpg", "https://twinkly.com/cdn/shop/files/TWS250SPP-BEU_Out-of-the-box.jpg?v=1769612111&width=480"),
+    "line": ("line.jpg", "https://twinkly.com/cdn/shop/files/TWL100STW-BEU_Out-of-the-box.jpg?v=1757667667&width=480"),
 }
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
@@ -58,7 +62,8 @@ LOG = logging.getLogger("twinkly")
 
 def asset_path(directory, filename):
     """Accept only a direct child of the configured asset directory."""
-    if filename in ("", ".", "..") or Path(filename).name != filename:
+    if (filename in ("", ".", "..") or "/" in filename or "\\" in filename
+            or "\x00" in filename):
         raise web.HTTPNotFound()
     path = directory / filename
     if directory.is_symlink() or path.is_symlink():
@@ -72,16 +77,72 @@ def gif_asset(directory, identifier, pattern):
     return asset_path(directory, identifier + ".gif")
 
 
-def write_asset(path, data):
-    """Replace the asset atomically without writing through a temporary symlink."""
-    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
-        temporary = Path(stream.name)
+@contextmanager
+def asset_directory(directory, *, missing_ok=False):
+    """Keep filesystem operations scoped to the opened directory."""
+    try:
+        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except FileNotFoundError as exc:
+        if missing_ok:
+            yield None
+            return
+        raise web.HTTPNotFound() from exc
+    except OSError as exc:
+        if exc.errno in (errno.ENOTDIR, errno.ELOOP):
+            raise web.HTTPNotFound() from exc
+        raise
+    try:
+        yield fd
+    finally:
+        os.close(fd)
+
+
+def read_asset(path, limit):
+    with asset_directory(path.parent) as directory:
         try:
-            stream.write(data)
-            stream.close()
-            temporary.replace(path)
+            fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                         dir_fd=directory)
+        except OSError as exc:
+            if exc.errno in (errno.ENOENT, errno.ELOOP):
+                raise web.HTTPNotFound() from exc
+            raise
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise web.HTTPNotFound()
+            data = stream.read(limit + 1)
+    if len(data) > limit:
+        raise web.HTTPNotFound()
+    return data
+
+
+def delete_asset(path):
+    with asset_directory(path.parent, missing_ok=True) as directory:
+        if directory is None:
+            return
+        try:
+            os.unlink(path.name, dir_fd=directory)
+        except FileNotFoundError:
+            pass
+
+
+def write_asset(path, data):
+    """Flush the replacement before atomically publishing it."""
+    with asset_directory(path.parent) as directory:
+        temporary = f".{uuid.uuid4().hex}.tmp"
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600,
+                     dir_fd=directory)
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, path.name, src_dir_fd=directory, dst_dir_fd=directory)
+            os.fsync(directory)
         finally:
-            temporary.unlink(missing_ok=True)
+            try:
+                os.unlink(temporary, dir_fd=directory)
+            except FileNotFoundError:
+                pass
 
 
 async def health(request):
@@ -890,10 +951,11 @@ class Controller:
 
     async def product_photo(self, request):
         key = request.match_info["key"]
-        url = PRODUCT_PHOTO_URLS.get(key)
-        if url is None:
+        photo = PRODUCT_PHOTOS_BY_KEY.get(key)
+        if photo is None:
             raise web.HTTPNotFound()
-        path = asset_path(PRODUCT_PHOTOS, key + ".jpg")
+        filename, url = photo
+        path = asset_path(PRODUCT_PHOTOS, filename)
         if not path.is_file():
             async with self.photo_lock:
                 if not path.is_file():
@@ -905,7 +967,7 @@ class Controller:
                                 raw = bytearray()
                                 async for chunk in response.content.iter_chunked(65536):
                                     raw.extend(chunk)
-                                    if len(raw) > 1_000_000:
+                                    if len(raw) > PRODUCT_PHOTO_LIMIT:
                                         raise ValueError("Product photo too large")
                                 if not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
                                     raise ValueError("Invalid JPEG product photo")
@@ -914,8 +976,9 @@ class Controller:
                     except (ClientError, TimeoutError, ValueError, OSError) as exc:
                         LOG.warning("Product photo %s: %s", key, exc)
                         raise web.HTTPBadGateway() from exc
-        return web.FileResponse(path, headers={"Cache-Control": "private, max-age=86400",
-                                               "X-Content-Type-Options": "nosniff"})
+        return web.Response(body=read_asset(path, PRODUCT_PHOTO_LIMIT), content_type="image/jpeg",
+                            headers={"Cache-Control": "private, max-age=86400",
+                                     "X-Content-Type-Options": "nosniff"})
 
     async def effect_image(self, request):
         key = request.query.get("id")
@@ -925,19 +988,18 @@ class Controller:
             raise web.HTTPNotFound()
         path = self.image_path(key, kind, int(index))
         if request.method == "GET":
-            if not path.is_file():
-                raise web.HTTPNotFound()
-            return web.FileResponse(path, headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
+            return web.Response(body=read_asset(path, EFFECT_IMAGE_LIMIT), content_type="image/jpeg",
+                                headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
         data = await request.json()
         image = data.get("image")
         if image is None:
-            path.unlink(missing_ok=True)
+            delete_asset(path)
         else:
             try:
                 raw = base64.b64decode(image, validate=True)
             except (ValueError, TypeError):
                 raise web.HTTPBadRequest()
-            if not 4 <= len(raw) <= 160_000 or not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
+            if not 4 <= len(raw) <= EFFECT_IMAGE_LIMIT or not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
                 raise web.HTTPBadRequest()
             IMAGES.mkdir(exist_ok=True)
             write_asset(path, raw)
@@ -987,8 +1049,9 @@ class Controller:
                     kind, gif_id = value.split(":", 1)
                     root, pattern = (MATRIX_GIFS, MATRIX_ID) if kind == "matrix" else (GIF_LIBRARY, GIF_ID)
                     try:
-                        self.gif_patterns[value] = await asyncio.to_thread(
-                            self.decode_gif, gif_asset(root, gif_id, pattern).read_bytes(), kind == "matrix")
+                        path = gif_asset(root, gif_id, pattern)
+                        raw = await asyncio.to_thread(read_asset, path, GIF_LIMIT)
+                        self.gif_patterns[value] = await asyncio.to_thread(self.decode_gif, raw, kind == "matrix")
                     except (OSError, ValueError, web.HTTPNotFound) as exc:
                         raise web.HTTPBadRequest(text="GIF unavailable") from exc
                 self.music.difference_update(keys)
@@ -1350,9 +1413,7 @@ class Controller:
     async def matrix_gif(self, request):
         key = request.match_info["id"]
         path = gif_asset(MATRIX_GIFS, key, MATRIX_ID)
-        return web.FileResponse(path, headers={
-            "Content-Type": "image/gif", "X-Content-Type-Options": "nosniff",
-        })
+        return self.gif_response(path)
 
     async def list_gifs(self, request):
         if GIF_LIBRARY.is_symlink():
@@ -1394,7 +1455,7 @@ class Controller:
             async with self.edit, self.gif_library_lock:
                 if "gif:" + gif_id in self.patterns.values():
                     raise web.HTTPConflict(text="Stop the GIF before deleting it")
-                gif_asset(GIF_LIBRARY, gif_id, GIF_ID).unlink(missing_ok=True)
+                delete_asset(gif_asset(GIF_LIBRARY, gif_id, GIF_ID))
                 self.gif_patterns.pop("gif:" + gif_id, None)
             return web.json_response({"ok": True})
         name = data.get("name")
@@ -1428,9 +1489,12 @@ class Controller:
     async def gif_file(self, request):
         gif_id = request.match_info["id"]
         path = gif_asset(GIF_LIBRARY, gif_id, GIF_ID)
-        if not path.is_file():
-            raise web.HTTPNotFound()
-        return web.FileResponse(path, headers={"Content-Type": "image/gif", "X-Content-Type-Options": "nosniff"})
+        return self.gif_response(path)
+
+    @staticmethod
+    def gif_response(path):
+        return web.Response(body=read_asset(path, GIF_LIMIT), content_type="image/gif",
+                            headers={"X-Content-Type-Options": "nosniff"})
 
     def music_frame(self):
         if time.monotonic() - self.ddp.received < 1.5:

@@ -1,4 +1,8 @@
 FROM python:3.12-slim-trixie
+# Pick up Debian fixes published after the base image was built.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.lock ./
 RUN pip install --no-cache-dir --no-deps -r requirements.lock && pip check
