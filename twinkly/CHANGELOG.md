@@ -1,61 +1,69 @@
-# 0.1.45
+## 2.0.0
+
+- **Eén dashboard voor je verlichting.** Bedien Twinkly, Philips Hue en Govee vanuit Home. Maak kamers, groepen en scènes voor verschillende merken en gebruik de merkpagina’s voor functies van een specifieke lamp, Bridge of controller.
+- **Mijn Huis.** Teken je plattegrond in 2D, plaats muren en lampen in 3D en koppel de ruimtes aan de kamers uit Home. Verplaats, draai en schaal lampen op de muur en bekijk hoe een lichtbeweging door de kamer loopt.
+- **Lichtshows en muziek.** Bouw in Showbouwer een tijdlijn met scènes, kamers en een duur per stap. Voeg een soundtrack toe via Music Assistant en test de muziek apart. Gebruik de Google Home-handleiding om een opgeslagen show of kerstdemo met je stem te starten.
+- **Merkfuncties en diagnose.** Gebruik Hue-zones, scènes en Entertainment, synchroniseer de Govee-cloudlijst en bedien ondersteunde Twinkly-groepen als één geheel. Test lampen in het Test Center en bekijk de netwerkkaart en releasecontroles in het Security Center.
+- **Bediening op mobiel en desktop.** De pagina’s passen zich aan de schermbreedte aan. Muziekfuncties vereisen de bijbehorende Home Assistant-integratie of LedFX, afhankelijk van de gekozen functie.
+
+## 0.1.45
 
 - Beperk bestandstoegang voor GIF’s, effectafbeeldingen en productfoto’s tot hun eigen mappen.
 - Schrijf tijdelijke bestanden volledig naar schijf voordat een afbeelding wordt vervangen.
 - Haal de actuele Python-basis op voor de containertests en neem beschikbare Debian-beveiligingsupdates mee in de build.
 
-# 0.1.44
+## 0.1.44
 
 - Beperk de toegang tot bestanden met GIF's, effecten en productafbeeldingen.
 - Laad het Twinkly-logo lokaal en geef technische LedFX-foutdetails niet door aan de browser.
 - Bouw op Debian Trixie, voer de app zonder rootrechten uit en controleer lokaal of de app reageert.
 
-# 0.1.43
+## 0.1.43
 
 - Toon onbereikbare lampen als Offline en voeg een verwijderknop toe.
 - Schrijf verbindingsfouten, herstel en verwijdering naar de Home Assistant-app-logboeken.
 
-# 0.1.42
+## 0.1.42
 
 - Geef beide Home Assistant-appkaarten een eigen icoon en een korte beschrijving.
 - Voeg een logo en introductie toe aan beide apppagina’s.
 
-# 0.1.41
+## 0.1.41
 
 - Kies in Home Assistant tussen de stabiele app en een afzonderlijke bèta zodra die beschikbaar is.
 - GitHub valideert beide installatievarianten en controleert de containerstart vóór publicatie.
 - Werk de beschrijving en installatiehandleiding bij.
 
-# 0.1.40
+## 0.1.40
 
 - Voeg tien LedFX-muziekstijlen toe, elk met een geanimeerd kerstboomvoorbeeld.
 
-# 0.1.39
+## 0.1.39
 
 - Herstel de opstartfout van 0.1.38.
 - Controleer Python-syntax, dashboard en geanimeerde muziek-GIF’s tijdens de Docker-build.
 
-# 0.1.38
+## 0.1.38
 
 - Voorkom dat de browser na een update een oude Twinkly-interface blijft gebruiken.
 
-# 0.1.37
+## 0.1.37
 
 - Kies uit zestien bewegende kerstboom-GIF’s in de muziekgalerij.
 - Pas een muziekstijl met één klik toe en herken de actieve stijl aan de groene rand.
 
-# 0.1.36
+## 0.1.36
 
 - Voeg zes LedFX-muziekstijlen toe aan de bediening en scènes.
 - Bekijk en download een geanimeerd kerstboomvoorbeeld per muziekstijl.
 - Neem live LedFX-frames op als kerstboom-GIF.
 
-# 0.1.35
+## 0.1.35
 
 - Detecteer automatisch de broadcastadressen van actieve netwerkinterfaces.
 - Controleer de lokale LedFX-API en Sendspin en toon installatie- en startinstructies.
 
-# Wijzigingslogboek
+## Wijzigingslogboek
 
 ## 0.1.34
 

@@ -35,11 +35,11 @@ class PrepareReleaseTest(unittest.TestCase):
         self.assertEqual(config["options"], self.config["options"])
         self.assertIn("TWINKLY_HTTP_PORT=18491 TWINKLY_DDP_PORT=18492",
                       (self.target / "Dockerfile").read_text(encoding="utf-8"))
-        self.assertTrue((self.target / "CHANGELOG.md").read_text(encoding="utf-8").startswith(f"# {version}\n"))
+        self.assertTrue((self.target / "CHANGELOG.md").read_text(encoding="utf-8").startswith(f"## {version}\n"))
 
     def test_store_presentation_for_both_channels(self):
         for suffix, description in (
-            ("", "Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten."),
+            ("", self.config["description"]),
             ("-beta.1", "Probeer als eerste nieuwe Twinkly-lichtshows en muziekeffecten."),
         ):
             with self.subTest(channel=suffix):

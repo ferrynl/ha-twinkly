@@ -1,11 +1,11 @@
 name: Christmas Control Center
 slug: twinkly_kerst
-version: "0.1.45"
-description: Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten.
+version: "2.0.0"
+description: Lokale bediening en lichtshows voor Twinkly, Philips Hue en Govee.
 url: https://github.com/ferrynl/ha-twinkly
 arch:
-  - amd64
-  - aarch64
+- amd64
+- aarch64
 startup: application
 boot: auto
 init: false
@@ -15,12 +15,13 @@ ingress: true
 ingress_port: 18489
 panel_icon: mdi:string-lights
 options:
-  ddp_source: "127.0.0.1"
-  discovery_broadcast: "255.255.255.255"
+  ddp_source: 127.0.0.1
+  discovery_broadcast: 255.255.255.255
   fps: 20
-  media_player: ""
+  media_player: ''
 schema:
   ddp_source: str
   discovery_broadcast: str
   fps: int(5,25)
   media_player: str
+  govee_api_key: "password?"

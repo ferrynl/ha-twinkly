@@ -1,4 +1,4 @@
-# Twinkly Control Center voor Home Assistant
+# Christmas Control Center voor Home Assistant
 
 ![Twinkly Control Center](twinkly/logo.png)
 
