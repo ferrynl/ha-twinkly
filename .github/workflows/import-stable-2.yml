@@ -1,0 +1,61 @@
+name: Prepare stable 2.0 source import
+on:
+  push:
+    branches: [automation/import-stable-2]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Import the verified stable app
+        shell: bash
+        run: |
+          set -euo pipefail
+          git switch -c release/stable-2.0.0
+          upstream="$(mktemp -d)"
+          git -C "$upstream" init -q
+          git -C "$upstream" fetch -q --depth 1 https://github.com/ferrynl/ha-apps.git 3d2d303f185712abce17889f1e6c8ba2ab5a794b
+          [[ "$(git -C "$upstream" rev-parse FETCH_HEAD)" = 3d2d303f185712abce17889f1e6c8ba2ab5a794b ]]
+          git -C "$upstream" archive FETCH_HEAD twinkly | tar -xf -
+          grep -Fx 'version: "2.0.0"' twinkly/config.yaml
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def edit(path, changes):
+              file = Path(path)
+              content = file.read_text(encoding="utf-8")
+              for old, new in changes:
+                  assert old in content, (path, old)
+                  content = content.replace(old, new)
+              file.write_text(content, encoding="utf-8")
+
+          edit("scripts/publish_release.py", [
+              ('    if push and version != "0.1.45":\n        return\n', ''),
+              ('notes = changelog.split("\\n# ", 1)[0].partition("\\n")[2].strip()', 'notes = re.split(r"\\n#{1,2} ", changelog, maxsplit=1)[0].partition("\\n")[2].strip()'),
+          ])
+          edit("scripts/prepare_release.py", [
+              ('name="Twinkly Control Center Beta"', 'name="Christmas Control Center Beta"'),
+              ('f"# {version}\\n\\n', 'f"## {version}\\n\\n'),
+          ])
+          edit("scripts/test_prepare_release.py", [
+              ('startswith(f"# {version}\\n")', 'startswith(f"## {version}\\n")'),
+              ('"Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten."', 'self.config["description"]'),
+          ])
+          edit("twinkly/README.md", [
+              ('De aparte bèta behoudt', 'Met LedFX kun je licht op live audio laten reageren. De aparte bèta behoudt'),
+          ])
+          path = Path("twinkly/test_native_group_mapping.py")
+          text = path.read_text(encoding="utf-8")
+          path.write_text(text.replace('        self.assertIn("name: Christmas Control Center", config)\n        self.assertIn("slug: twinkly_kerst", config)', '        if "slug: twinkly_kerst_beta" in config:\n            self.assertIn("name: Christmas Control Center Beta", config)\n        else:\n            self.assertIn("name: Christmas Control Center", config)\n            self.assertIn("slug: twinkly_kerst", config)'), encoding="utf-8")
+          edit("README.md", [
+              ("Twinkly Control Center voor Home Assistant", "Christmas Control Center voor Home Assistant"),
+          ])
+          PY
+          git add twinkly scripts README.md
+          git diff --cached --check
+          git -c user.name=github-actions -c user.email=41898282+github-actions[bot]@users.noreply.github.com commit -m "Release Christmas Control Center 2.0.0"
+          git push origin HEAD:refs/heads/release/stable-2.0.0
