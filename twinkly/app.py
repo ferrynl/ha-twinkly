@@ -1,11 +1,10 @@
 import asyncio
+from collections import Counter
 import base64
 import bisect
 import hashlib
 import uuid
-import errno
-import stat
-from contextlib import contextmanager
+import tempfile
 import colorsys
 import math
 import os
@@ -40,30 +39,73 @@ SEQUENCES = DATA.with_name("sequences.json")
 TV_STATE = DATA.with_name("tv-state.json")
 SILENCE_MODES = ("restore", "warm", "fade")
 IMAGES = DATA.with_name("effect-images")
+EFFECT_PREVIEWS = Path(__file__).resolve().with_name("effect_previews")
+BUNDLED_EFFECT_PREVIEWS = {
+    "24k future": "24k-future.gif",
+    "cotton candy": "cotton-candy.gif",
+    "flare": "flare.gif",
+    "paradise": "paradise.gif",
+    "peachy": "peachy.gif",
+    "rainbow": "rainbow.gif",
+    "solar sparks": "solar-sparks.gif",
+}
 GIF_LIBRARY = DATA.with_name("gif-library")
 MATRIX_GIFS = Path(__file__).resolve().with_name("matrix_gifs")
 MATRIX_ID = re.compile(r"(?:winter|festive|neon|ocean|gold|cosmic|tropical|retro|pastel|midnight)-(?:[1-9]|10)")
 GIF_LIMIT = 512 * 1024
-EFFECT_IMAGE_LIMIT = 160_000
-PRODUCT_PHOTO_LIMIT = 1_000_000
 GIF_ID = re.compile(r"[a-f0-9]{12}-[a-zA-Z0-9_-]{1,48}")
-PRODUCT_PHOTOS = DATA.with_name("product-photos")
-WORDMARK = Path(__file__).resolve().with_name("twinkly-wordmark.svg")
-PRODUCT_PHOTOS_BY_KEY = {
-    "strings-rgbw": ("strings-rgbw.jpg", "https://twinkly.com/cdn/shop/files/TWS250SPP-BEU_Out-of-the-box.jpg?v=1769612111&width=480"),
-    "line": ("line.jpg", "https://twinkly.com/cdn/shop/files/TWL100STW-BEU_Out-of-the-box.jpg?v=1757667667&width=480"),
-}
+PRODUCT_PHOTOS = Path(__file__).resolve().with_name("product_photos")
+WORDMARK = Path(__file__).resolve().with_name("twinkly-nav-logo.svg")
+PRODUCT_PHOTO_KEYS = frozenset({
+    "c9-bulbs",
+    "cluster-gold-silver",
+    "cluster-multicolor",
+    "cluster-multicolor-white",
+    "curtain",
+    "curtain-rgbw",
+    "dots",
+    "festoon-gold-silver",
+    "festoon-multicolor",
+    "flex",
+    "icicle-gold-silver",
+    "icicle-multicolor",
+    "icicle-multicolor-white",
+    "light-tree",
+    "light-tree-2d",
+    "lightwall",
+    "line",
+    "matrix",
+    "net-lights",
+    "permanent-lights",
+    "pre-lit-garland",
+    "pre-lit-tree",
+    "pre-lit-wreath",
+    "reindeers",
+    "spheres",
+    "spritzer",
+    "squares",
+    "strings-gold-silver",
+    "strings-hd",
+    "strings-multicolor",
+    "strings-rgbw",
+    "strings-usb-c-candles",
+    "strings-usb-c-hearts",
+    "strings-usb-c-pearls",
+    "strings-usb-c-stars",
+    "tree-topper",
+})
 PIXELS = 120
 FRAME_BYTES = PIXELS * 3
-MAX_DEVICES = 40
+MAX_DEVICES = 80
+MAX_SAVED_GROUPS = 40
+MAX_SAVED_SCENES = 40
 MUSIC_STYLES = frozenset(('energy', 'spectrum', 'power', 'wavelength', 'strobe', 'scroll', 'bands', 'blade_power_plus', 'magnitude', 'fire', 'rain', 'melt', 'melt_and_sparkle', 'scan', 'water', 'energy2', 'bar', 'blocks', 'equalizer', 'lava_lamp', 'pitchSpectrum', 'scan_multi', 'scan_and_flare', 'scroll_plus', 'vumeter', 'multiBar'))
 LOG = logging.getLogger("twinkly")
 
 
 def asset_path(directory, filename):
     """Accept only a direct child of the configured asset directory."""
-    if (filename in ("", ".", "..") or "/" in filename or "\\" in filename
-            or "\x00" in filename):
+    if filename in ("", ".", "..") or Path(filename).name != filename:
         raise web.HTTPNotFound()
     path = directory / filename
     if directory.is_symlink() or path.is_symlink():
@@ -77,72 +119,16 @@ def gif_asset(directory, identifier, pattern):
     return asset_path(directory, identifier + ".gif")
 
 
-@contextmanager
-def asset_directory(directory, *, missing_ok=False):
-    """Keep filesystem operations scoped to the opened directory."""
-    try:
-        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    except FileNotFoundError as exc:
-        if missing_ok:
-            yield None
-            return
-        raise web.HTTPNotFound() from exc
-    except OSError as exc:
-        if exc.errno in (errno.ENOTDIR, errno.ELOOP):
-            raise web.HTTPNotFound() from exc
-        raise
-    try:
-        yield fd
-    finally:
-        os.close(fd)
-
-
-def read_asset(path, limit):
-    with asset_directory(path.parent) as directory:
-        try:
-            fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
-                         dir_fd=directory)
-        except OSError as exc:
-            if exc.errno in (errno.ENOENT, errno.ELOOP):
-                raise web.HTTPNotFound() from exc
-            raise
-        with os.fdopen(fd, "rb") as stream:
-            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
-                raise web.HTTPNotFound()
-            data = stream.read(limit + 1)
-    if len(data) > limit:
-        raise web.HTTPNotFound()
-    return data
-
-
-def delete_asset(path):
-    with asset_directory(path.parent, missing_ok=True) as directory:
-        if directory is None:
-            return
-        try:
-            os.unlink(path.name, dir_fd=directory)
-        except FileNotFoundError:
-            pass
-
-
 def write_asset(path, data):
-    """Flush the replacement before atomically publishing it."""
-    with asset_directory(path.parent) as directory:
-        temporary = f".{uuid.uuid4().hex}.tmp"
-        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600,
-                     dir_fd=directory)
+    """Replace the asset atomically without writing through a temporary symlink."""
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+        temporary = Path(stream.name)
         try:
-            with os.fdopen(fd, "wb") as stream:
-                stream.write(data)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, path.name, src_dir_fd=directory, dst_dir_fd=directory)
-            os.fsync(directory)
+            stream.write(data)
+            stream.close()
+            temporary.replace(path)
         finally:
-            try:
-                os.unlink(temporary, dir_fd=directory)
-            except FileNotFoundError:
-                pass
+            temporary.unlink(missing_ok=True)
 
 
 async def health(request):
@@ -231,6 +217,7 @@ PATTERN_PALETTES = {
     "candy": ((222, 16, 35), (255, 238, 210)),
     "sunset": ((95, 16, 102), (234, 43, 110), (255, 168, 48)),
     "sparkle": (),
+    "rgb-test": ((255, 0, 0), (0, 255, 0), (0, 0, 255)),
 }
 
 
@@ -291,6 +278,9 @@ PATTERN_PALETTES.update({name: preset[2] for name, preset in PATTERN_PRESETS.ite
 
 @functools.lru_cache(maxsize=64)
 def live_pattern(name, tick, fps):
+    if name == "rgb-test":
+        palette = PATTERN_PALETTES[name]
+        return bytes(palette[(tick // (3 * fps)) % len(palette)]) * PIXELS
     time_seconds = tick / fps
     frame = bytearray()
     preset = PATTERN_PRESETS.get(name)
@@ -360,6 +350,8 @@ class Device:
         self.client = self.connect()
         self.restore = None
         self.last_mode = None
+        self.last_color = None
+        self.last_brightness = None
         self.mode = None
         self.mode_check = 0.0
         self.effects = []
@@ -377,6 +369,13 @@ class Device:
         self.last_warning_at = 0.0
         self.error = None
         self.offline = False
+        self.wifi_observation = None
+        self.network_details = {}
+        self.native_group = None
+        self.native_layout_id = ""
+        self.native_standalone = False
+        self.native_identity = dict(row.get("native_identity", {}))
+        self.native_group_until = 0
         self.removed = False
         self.replies = 0
         self.mapping = tuple(3 * (i * PIXELS // row["leds"]) for i in range(row["leds"]))
@@ -443,6 +442,7 @@ class Device:
 
     def read_product_code(self):
         info = self.api("gestalt")
+        self.remember_native_identity(info)
         self.product_code = info.get("product_code")
         self.model_checked = True
 
@@ -450,6 +450,7 @@ class Device:
         if time.monotonic() < self.details_until:
             return
         info = self.api("gestalt")
+        self.remember_native_identity(info)
         self.product_code = info.get("product_code") or self.product_code
         self.model_checked = True
         details = {key: info[key] for key in (
@@ -472,27 +473,96 @@ class Device:
                 details.update({key: station[key] for key in ("ssid", "ip", "gw", "mask", "status")
                                 if key in station})
                 details["network_mode"] = data.get("mode")
+                details["ap_ssid"] = access_point.get("ssid")
+                details["ap_ip"] = access_point.get("ip")
+                details["bssid"] = station.get("bssid")
                 details["rssi"] = station.get("rssi", data.get("rssi", details.get("rssi")))
                 channel = station.get("channel") or data.get("channel")
-                if channel is None and data.get("mode") == 0:
+                if channel is None and data.get("mode") in (0, 2):
                     channel = access_point.get("channel")
                 details["channel"] = channel
         self.details = {key: value for key, value in details.items()
                         if isinstance(value, (str, int, float, bool)) and value != ""}
+        self.load_native_group()
         self.details_until = time.monotonic() + 60
+
+    def remember_native_identity(self, info):
+        self.native_identity.update({field: info[field] for field in ("uuid", "mac", "hw_id")
+                                     if isinstance(info.get(field), str) and info[field].strip()})
+
+    def load_native_group(self):
+        if time.monotonic() < self.native_group_until:
+            return
+        self.native_group_until = time.monotonic() + 60
+        reported = None
+        received = False
+        for path, field in (("summary", "group"), ("led/movie/config", "sync")):
+            try:
+                payload = self.api(path)
+            except (ApplicationError, ValueError, RequestException):
+                continue
+            if path == "summary":
+                layout = payload.get("layout")
+                layout_id = layout.get("uuid") if isinstance(layout, dict) else None
+                self.native_layout_id = layout_id.strip().casefold() if isinstance(layout_id, str) else ""
+            group = payload.get(field)
+            if path == "summary":
+                self.native_standalone = isinstance(group, dict) and group.get("mode") == "none"
+            if not isinstance(group, dict):
+                continue
+            received = True
+            role = group.get("mode")
+            if role not in ("master", "slave"):
+                continue
+            uid = group.get("uid")
+            uid = uid.strip() if isinstance(uid, str) else ""
+            master = group.get("master_id")
+            master = master.strip() if isinstance(master, str) else ""
+            name = group.get("name")
+            offset, size = group.get("offset"), group.get("size")
+            entry = {
+                "id": uid or master, "uid": bool(uid), "role": role,
+                "master_id": master,
+                "name": name.strip() if isinstance(name, str) else "",
+                "offset": offset if type(offset) is int and offset >= 0 else None,
+                "size": size if type(size) is int and size > 0 else None,
+            }
+            if reported is None:
+                reported = entry
+            elif reported["role"] == entry["role"]:
+                if entry["uid"] and reported["uid"] and entry["id"] != reported["id"]:
+                    LOG.warning("lamp=%r reports conflicting native group UIDs", self.row["name"])
+                    continue
+                for field in ("offset", "size"):
+                    if entry[field] is not None:
+                        reported[field] = entry[field]
+                for field in ("id", "name", "master_id"):
+                    if not reported[field] and entry[field]:
+                        reported[field] = entry[field]
+                if entry["master_id"] and entry["master_id"].casefold() != reported["master_id"].casefold():
+                    reported["master_id"] = ""
+                if entry["uid"] and not reported["uid"]:
+                    reported["id"] = entry["id"]
+                    reported["uid"] = True
+        if received:
+            if reported and reported["role"] == "master" and reported["offset"] is None:
+                reported["offset"] = 0
+            self.native_group = reported
 
     def load_layout(self):
         if time.monotonic() < self.layout_until:
             return
         data = self.api("led/layout/full")
         points = []
-        for index, point in enumerate((data.get("coordinates") or [])[:4096]):
+        for index, point in enumerate((data.get("coordinates") or [])[:65536]):
             if not isinstance(point, dict):
                 continue
             coords = [point.get(axis, 0 if axis == "z" else None) for axis in ("x", "y", "z")]
             if all(type(value) in (int, float) and math.isfinite(value) for value in coords):
                 points.append([index, *coords])
+        layout_id = data.get("uuid")
         self.layout = {"points": points, "source": data.get("source"),
+                       "uuid": layout_id.strip().casefold() if isinstance(layout_id, str) else "",
                        "synthesized": data.get("synthesized") is True}
         self.layout_until = time.monotonic() + 120
 
@@ -510,11 +580,18 @@ class Device:
             except ApplicationError:
                 continue
             if kind == "movie":
-                catalog.extend({"kind": kind, "id": item["id"], "name": item.get("name", "")}
+                catalog.extend({"kind": kind, "id": item["id"], "name": item.get("name", ""),
+                                "unique_id": item.get("unique_id")}
                                for item in data.get("movies", []) if type(item.get("id")) is int)
             else:
                 catalog.extend({"kind": kind, "id": index, "name": ""}
                                for index in range(min(256, int(data.get("effects_number", 0)))))
+        identities = Counter(entry["unique_id"] for entry in catalog if isinstance(entry.get("unique_id"), str))
+        for entry in catalog:
+            unique_id = entry.get("unique_id")
+            if (not isinstance(unique_id, str) or identities[unique_id] != 1
+                    or unique_id in ("00000000-0000-0000-0000-000000000000", "00000000-0000-0000-8000-000000000000")):
+                entry.pop("unique_id", None)
         self.effects = catalog
         self.effects_until = time.monotonic() + 120
 
@@ -539,6 +616,7 @@ class Device:
             self.set_mode("off")
         elif action == "color":
             self.color(value)
+            self.last_color = list(value)
             self.last_mode = "color"
         elif action == "effect":
             kind, index = value
@@ -557,8 +635,9 @@ class Device:
             response = self.client.set_brightness(value)
             self.replies += 1
             response.raise_for_status()
+            self.last_brightness = value
 
-    def send(self, frame):
+    def send(self, frame, mapping=None):
         now = time.monotonic()
         if now >= self.rt_check:
             mode = self.read_mode()
@@ -569,7 +648,7 @@ class Device:
             self.rt_check = now + 2
         # RGBW controllers use white first on the realtime wire.
         white = b"\0" if self.row["profile"] == "RGBW" else b""
-        payload = b"".join(white + frame[i:i + 3] for i in self.mapping)
+        payload = b"".join(white + frame[i:i + 3] for i in (self.mapping if mapping is None else mapping))
         token = base64.b64decode(self.client.session.access_token)
         packets = realtime_packets(payload, token, self.row["protocol"], self.row["leds"])
         for packet in packets:
@@ -583,7 +662,7 @@ class Device:
 
     async def run(self, method, *args, automatic=False):
         async with self.lock, self.limit:
-            if self.removed:
+            if self.removed or (automatic and self.offline and time.monotonic() < self.retry):
                 return False
             replies = self.replies
             try:
@@ -605,6 +684,9 @@ class Device:
                 )
                 newly_offline = offline and not self.offline
                 if offline:
+                    self.wifi_observation = None
+                    self.network_details = {}
+                    self.details_until = 0
                     self.offline = True
                     self.mode = None
                 elif self.replies != replies or status is not None:
@@ -618,7 +700,9 @@ class Device:
                     self.client.session.close()
                     self.client = self.connect()
                 warning = (operation, type(exc), status)
-                if not automatic or newly_offline or warning != self.last_warning or now - self.last_warning_at >= 60:
+                background_warning = (newly_offline or (not offline and (
+                    warning != self.last_warning or now - self.last_warning_at >= 60)))
+                if not automatic or background_warning:
                     LOG.warning("lamp=%r ip=%s actie=%s status=%s: %s",
                                 self.row["name"], self.row["ip"], operation, self.error, message)
                     self.last_warning, self.last_warning_at = warning, now
@@ -636,6 +720,7 @@ class Controller:
         self.source = local_ip(options["ddp_source"])
         self.ddp = DDP(self.source)
         self.fps = options["fps"]
+        self.govee_api_key = options.get("govee_api_key")
         self.broadcast = local_ip(options.get("discovery_broadcast", "255.255.255.255"))
         self.limit = asyncio.Semaphore(8)
         self.realtime_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -643,8 +728,15 @@ class Controller:
         self.show = (json.loads(SHOW_STATE.read_text(encoding="utf-8")) if SHOW_STATE.exists()
                      else {"master": 100, "scenes": {}})
         self.groups = json.loads(GROUPS.read_text(encoding='utf-8')) if GROUPS.exists() else {}
+        self.native_group_names_path = DATA.with_name("native_group_names.json")
+        self.native_group_names = (json.loads(self.native_group_names_path.read_text(encoding="utf-8"))
+                                   if self.native_group_names_path.exists() else {})
         self.music = set()
+        self.mixed_music_levels = {}
         self.patterns = {}
+        self.group_routes = {}
+        self.physical_tests = {}
+        self.group_frames = {}
         self.sequence_data = (json.loads(SEQUENCES.read_text(encoding="utf-8"))
                               if SEQUENCES.exists() else {"shows": {}, "favorites": []})
         self.sequence_task = None
@@ -660,7 +752,6 @@ class Controller:
         self.active_style = (json.loads(MUSIC_STATE.read_text(encoding='utf-8')).get('style')
                              if MUSIC_STATE.is_file() else None)
         self.gif_capture = asyncio.Lock()
-        self.photo_lock = asyncio.Lock()
         self.track_lock = asyncio.Lock()
         self.media_player = (json.loads(TV_STATE.read_text(encoding='utf-8')).get('player', '')
                              if TV_STATE.exists() else options.get('media_player', '').strip())
@@ -688,6 +779,8 @@ class Controller:
             if not 1 <= leds <= 4096 or profile not in ("RGB", "RGBW"):
                 raise ValueError("Onbekend ledprofiel of aantal leds")
             return {"id": str(info.get("mac") or info.get("hw_id") or host),
+                    "native_identity": {field: info[field] for field in ("uuid", "mac", "hw_id")
+                                        if isinstance(info.get(field), str) and info[field].strip()},
                     "name": str(info.get("device_name") or host), "ip": host,
                     "leds": leds, "profile": profile, "product_code": info.get("product_code"),
                     "protocol": 1 if str(info.get("product_version")) == "1" and leds <= 255 else 3}
@@ -698,6 +791,8 @@ class Controller:
         async with self.edit:
             key = row["id"]
             old = self.devices.get(key)
+            if old and "native_master_for" in old.row:
+                row["native_master_for"] = old.row["native_master_for"]
             if old and old.row == row:
                 return row
             if not old and len(self.devices) >= MAX_DEVICES:
@@ -726,6 +821,217 @@ class Controller:
         return next((group["silence"] for group in self.groups.values()
                      if key in group["members"] and group.get("silence", "restore") != "restore"), "restore")
 
+    @staticmethod
+    def mapped_points(device, count):
+        layout = device.layout or {}
+        points = {p[0]: p[1:] for p in layout.get("points", [])}
+        if layout.get("synthesized") or set(points) != set(range(count)):
+            raise ValueError("Complete physical LED mapping required")
+        return points
+
+    @staticmethod
+    def transform_xy(x, y, settings):
+        if settings.get("mirror_x"): x = 1-x
+        if settings.get("mirror_y"): y = 1-y
+        for _ in range(settings.get("rotation", 0)//90):
+            x, y = 1-y, x
+        return x, y
+
+    def group_coordinates(self, key, members, mode, *, apply_reverse=True):
+        device = self.devices[key]
+        count = device.row["leds"]
+        if mode == "join":
+            entries = self.join_entries(members)
+            leader, total = self.validate_join(entries)
+            offset = entries[key]["offset"]
+            points = self.join_points(entries, leader, total)
+            selected = [points[offset+i] for i in range(count)]
+        else:
+            points = self.mapped_points(device, count)
+            selected = [points[i] for i in range(count)]
+        xs = [p[0] for p in points.values()]
+        ys = [p[1] for p in points.values()]
+        xmin, xmax, ymin, ymax = min(xs), max(xs), min(ys), max(ys)
+        def normal(v, lo, hi):
+            return (v-lo)/(hi-lo) if hi > lo else .5
+        settings = device.row.get("mapping_override", {})
+        if apply_reverse and settings.get("reverse"):
+            selected.reverse()
+        result = []
+        for x, y, *_ in selected:
+            x, y = normal(x, xmin, xmax), normal(y, ymin, ymax)
+            x, y = self.transform_xy(x, y, settings)
+            if mode == "area":
+                x = (members.index(key) + x) / len(members)
+            result.append((x, y, _[0] if _ else 0))
+        return tuple(result)
+
+    def join_points(self, entries, leader, total):
+        try:
+            return self.mapped_points(self.devices[leader], total)
+        except ValueError:
+            pass
+        layout_ids = {(self.devices[key].layout or {}).get("uuid") for key in entries}
+        if len(layout_ids) != 1 or not next(iter(layout_ids)):
+            raise ValueError(f"Join needs a complete map of all {total} LEDs or matching physical mapping IDs on every controller. Refresh the group mapping in Twinkly.")
+        points = {}
+        for key, info in entries.items():
+            device = self.devices[key]
+            try:
+                segment = self.mapped_points(device, device.row["leds"])
+            except ValueError as exc:
+                raise ValueError(f"{device.row.get('name', key)} returned an incomplete Join mapping. Refresh the group mapping in Twinkly.") from exc
+            points.update((info["offset"] + index, point) for index, point in segment.items())
+        return points
+
+    def join_entries(self, members):
+        for entries in self.native_memberships().values():
+            if entries.keys() == set(members):
+                return entries
+        return {key: self.devices[key].native_group or {} for key in members}
+
+    def validate_join(self, entries):
+        masters = [key for key, info in entries.items() if info.get("role") == "master"]
+        if not masters:
+            raise ValueError("Join needs exactly one native master. Bring the master online, refresh discovery, or explicitly associate it on the Test page.")
+        if len(masters) > 1:
+            names = ", ".join(self.devices[key].row.get("name", key) for key in masters)
+            raise ValueError(f"Multiple controllers report they are Join master ({names}). Check group membership in Twinkly.")
+        sizes = {info.get("size") for info in entries.values()} - {None}
+        if len(sizes) > 1:
+            raise ValueError("Controllers report different Join LED totals. Check group membership in Twinkly.")
+        missing = [self.devices[key].row.get("name", key) for key, info in entries.items() if info.get("offset") is None]
+        if missing:
+            raise ValueError(f"Join offset is missing for {', '.join(missing)}. Refresh discovery and check the group mapping in Twinkly.")
+        if entries[masters[0]]["offset"] != 0:
+            raise ValueError("The Join master must start at offset 0. Check member order in Twinkly.")
+        expected = 0
+        for key, info in sorted(entries.items(), key=lambda item: item[1].get("offset") or 0):
+            offset = info.get("offset")
+            if offset != expected:
+                name = self.devices[key].row.get("name", key)
+                raise ValueError(f"Join offset for {name} is {offset} (expected {expected}). Check member order and mapping in Twinkly.")
+            expected += self.devices[key].row["leds"]
+        if sizes and expected != next(iter(sizes)):
+            raise ValueError(f"Join reports {next(iter(sizes))} LEDs but its members account for {expected}. Bring the missing controllers online and refresh discovery.")
+        return masters[0], expected
+
+    async def load_group_layouts(self, keys, mode):
+        if mode == "join":
+            master, total = self.validate_join(self.join_entries(keys))
+            device = self.devices[master]
+            if not await device.run(device.load_layout):
+                raise ValueError(f"Could not read the physical mapping from {device.row['name']}. Check the controller connection and retry.")
+            try:
+                self.mapped_points(device, total)
+            except ValueError:
+                keys = [key for key in keys if key != master]
+            else:
+                return
+        results = await asyncio.gather(*(self.devices[key].run(self.devices[key].load_layout) for key in keys))
+        failed = [self.devices[key].row["name"] for key, ok in zip(keys, results) if not ok]
+        if failed:
+            raise ValueError(f"Could not read the physical mapping from {', '.join(failed)}. Check the controller connection and retry.")
+
+    @staticmethod
+    def group_conflict(group, operation, reason):
+        LOG.warning("group=%s operation=%s rejected: %s", group, operation, reason)
+        return web.json_response({"error": str(reason)}, status=409)
+
+    def group_mapping(self, key, members, mode, matrix=False):
+        result = []
+        for x, y, z in self.group_coordinates(key, members, mode):
+            pixel = min(11, int(x*12)) + 12*min(9, int(y*10)) if matrix else min(PIXELS-1, int(x*PIXELS))
+            result.append(3*pixel)
+        return tuple(result)
+
+    @staticmethod
+    def led_test_order(points):
+        indices = range(len(points))
+        return indices[::-1] if points and points[0][1] > points[-1][1] else indices
+
+    @staticmethod
+    def physical_frame(kind, index, coords, elapsed):
+        if kind == "led":
+            offset = 3 * coords[int(elapsed * 8) % len(coords)]
+            frame = bytearray(3 * len(coords))
+            frame[offset:offset+3] = bytes((90, 90, 90))
+            return bytes(frame)
+        palette = ((90,0,0),(0,90,0),(0,0,90),(90,90,0))
+        def color(i, x, y):
+            if kind == "identify": return palette[index % len(palette)]
+            if kind == "rgb": return palette[int(elapsed / 2) % 3]
+            if kind == "rainbow": return tuple(round(v*90) for v in colorsys.hsv_to_rgb((x-elapsed/6)%1,1,1))
+            position = x if kind == "horizontal" else y
+            return (90,90,90) if abs(position-(elapsed/4)%1)<.08 else (0,0,0)
+        return bytes(v for i,(x,y,z) in enumerate(coords) for v in color(i,x,y))
+
+    async def physical_test(self, request):
+        data = await request.json()
+        if not isinstance(data, dict) or not isinstance(data.get("group"), str):
+            raise web.HTTPBadRequest()
+        kind = data.get("test")
+        if kind not in ("identify","rgb","led","rainbow","horizontal","vertical","stop"):
+            raise web.HTTPBadRequest()
+        async with self.edit:
+            group = self.display_groups().get(data["group"])
+            if not group:
+                raise web.HTTPNotFound()
+            keys = [k for k in group["members"] if k in self.devices]
+            if kind == "stop":
+                for k in keys:
+                    self.physical_tests.pop(k,None)
+                return web.json_response({"ok":True})
+            if any(k in self.patterns or k in self.music or k in self.sequence_devices or self.devices[k].restore is not None for k in keys):
+                return self.group_conflict(data["group"], kind, "Stop active music, effects and sequences first.")
+            mode = group.get("mode","sync")
+            if kind in ("identify","rgb"):
+                coordinates = {k: [(0,0,0)]*self.devices[k].row["leds"] for k in keys}
+            else:
+                try:
+                    await self.load_group_layouts(keys, mode)
+                    if kind == "led":
+                        coordinates = {k: self.led_test_order(self.group_coordinates(k, keys, mode, apply_reverse=False))
+                                       for k in keys}
+                    else:
+                        coordinates = {k:self.group_coordinates(k,keys,mode) for k in keys}
+                except ValueError as exc:
+                    if kind != "led":
+                        return self.group_conflict(data["group"], kind, exc)
+                    LOG.warning("group=%s operation=led using controller order: %s", data["group"], exc)
+                    coordinates = {k: range(self.devices[k].row["leds"]) for k in keys}
+            start = time.monotonic()
+            for index,k in enumerate(keys):
+                self.physical_tests[k] = (kind,index,coordinates[k],start)
+            LOG.info("physical test group=%s type=%s members=%s duration=15s",data["group"],kind,keys)
+            return web.json_response({"ok":True,"duration":15})
+
+    async def group_layout(self, request):
+        group = self.display_groups().get(request.query.get("id"))
+        if not group:
+            raise web.HTTPNotFound()
+        keys = [k for k in group["members"] if k in self.devices]
+        mode = group.get("mode", "sync")
+        try:
+            await self.load_group_layouts(keys, mode)
+            members = [{"id":k, "name":self.devices[k].row["name"],
+                        "points":self.group_coordinates(k,keys,mode)} for k in keys]
+        except ValueError as exc:
+            return self.group_conflict(request.query.get("id"), "layout", exc)
+        return web.json_response({"mode":mode,"members":members,"leds":sum(len(m["points"]) for m in members)})
+
+    def shared_pattern(self, pattern, tick):
+        cached = self.group_frames.get(pattern)
+        if cached is not None and cached[0] == tick:
+            return cached[1]
+        if pattern.startswith(("gif:", "matrix:")):
+            timing, frames = self.gif_patterns[pattern]
+            frame = frames[bisect.bisect_right(timing, (tick * 1000 // self.fps) % timing[-1])]
+        else:
+            frame = live_pattern(pattern, tick, self.fps)
+        self.group_frames[pattern] = (tick, frame)
+        return frame
+
     async def output(self, device):
         key = device.row["id"]
         last_output = None
@@ -737,22 +1043,27 @@ class Controller:
             active = (armed and self.ddp.frame is not None and now - self.ddp.received < 1.5
                       and now - self.ddp.lit_at < 3)
             fading = False
+            test = self.physical_tests.get(key)
+            if test and now-test[3] >= 15:
+                self.physical_tests.pop(key,None)
+                test = None
             if now >= device.retry:
-                if pattern:
-                    if pattern.startswith(("gif:", "matrix:")):
-                        timing, frames = self.gif_patterns[pattern]
-                        index = bisect.bisect_right(timing, int(now * 1000) % timing[-1])
-                        frame = frames[index]
-                    else:
-                        frame = live_pattern(pattern, int(now * self.fps), self.fps)
+                if test:
+                    kind,index,coords,start = test
+                    frame = self.physical_frame(kind,index,coords,now-start)
+                    await device.run(device.send,frame,range(0,len(frame),3),automatic=True)
+                elif pattern:
+                    frame = self.shared_pattern(pattern, int(now * self.fps))
                     level = self.sequence_devices.get(key, 100)
-                    await device.run(device.send, self.dim_frame(frame, level), automatic=True)
+                    await device.run(device.send, self.dim_frame(frame, level), self.group_routes.get(key), automatic=True)
                 elif active:
                     fade_started = None
-                    frame = self.dim_frame(self.ddp.frame, self.show["master"] * self.sequence_devices.get(key, 100) // 100)
+                    level = (self.show["master"] * self.sequence_devices.get(key, 100)
+                             * self.mixed_music_levels.get(key, 100) // 10000)
+                    frame = self.dim_frame(self.ddp.frame, level)
                     if any(frame):
                         last_output = frame
-                    await device.run(device.send, frame, automatic=True)
+                    await device.run(device.send, frame, self.group_routes.get(key), automatic=True)
                 elif device.restore is not None:
                     rule = self.silence_mode(key) if armed else "restore"
                     if rule == "fade" and last_output is not None:
@@ -760,7 +1071,7 @@ class Controller:
                         remaining = max(0, 100 - int((now - fade_started) * 100))
                         if remaining:
                             fading = True
-                            await device.run(device.send, self.dim_frame(last_output, remaining), automatic=True)
+                            await device.run(device.send, self.dim_frame(last_output, remaining), self.group_routes.get(key), automatic=True)
                         elif await device.run(device.set_mode, "off", automatic=True):
                             device.restore = None
                     elif rule == "fade":
@@ -779,8 +1090,11 @@ class Controller:
                     device.mode_check = now + 30
                     if not await device.run(device.read_mode, automatic=True):
                         device.mode = None
-                    elif not device.model_checked:
-                        await device.run(device.read_product_code, automatic=True)
+                    else:
+                        if not device.model_checked:
+                            await device.run(device.read_product_code, automatic=True)
+                        if now >= device.native_group_until:
+                            await device.run(device.load_native_group, automatic=True)
             await asyncio.sleep(1 / self.fps if pattern or active or fading else 0.2)
 
     async def stream(self, app):
@@ -812,6 +1126,8 @@ class Controller:
         # Let outstanding device operations finish before restoring modes.
         self.music.clear()
         self.patterns.clear()
+        self.group_routes.clear()
+        self.group_frames.clear()
         await asyncio.gather(*(d.run(d.command, "stop", None) for d in self.devices.values()))
         for _, task in workers.values():
             task.cancel()
@@ -825,6 +1141,7 @@ class Controller:
                 key: dict(group, members=[member for member in group["members"] if member in self.devices])
                 for key, group in self.groups.items()
             },
+            "display_groups": self.display_groups(),
             "sequence": self.sequence_status,
             "sequence_error": self.sequence_error,
             "sequence_data": self.sequence_data,
@@ -833,6 +1150,289 @@ class Controller:
             "devices": [dict(d.row, music=k in self.music, mode=d.mode, offline=d.offline, error=d.error, product_code=d.product_code, pattern=self.patterns.get(k))
                         for k, d in self.devices.items()],
         })
+
+    async def network(self, request):
+        async with self.network_lock:
+            devices = list(self.devices.values())
+            if time.monotonic() >= self.network_until or devices != self.network_devices:
+                await asyncio.gather(*(self.observe_wifi(device) for device in devices))
+                self.network_devices = devices
+                self.network_until = time.monotonic() + 30
+            rows = [self.network_row(device) for device in self.devices.values()]
+
+        for row in rows:
+            if row["kind"] != "wifi":
+                continue
+            peers = [peer for peer in rows if peer["id"] != row["id"] and peer["kind"] == "ap"
+                     and peer["ssid"] == row["ssid"] and peer["ap_ip"] == row["gateway"]]
+            if len(peers) == 1:
+                row["peer"] = peers[0]["id"]
+        return web.json_response({"devices": rows, "groups": self.display_groups()}, headers={"Cache-Control": "no-store"})
+
+    def display_groups(self):
+        groups = {
+            key: dict(group, members=[member for member in group["members"] if member in self.devices])
+            for key, group in self.groups.items()
+        }
+        for key, group in self.native_groups().items():
+            local = next((local for local in groups.values()
+                          if set(group["members"]) == set(local["members"])), None)
+            if local is None:
+                groups[key] = group
+            else:
+                local["native"] = True
+                if group["mode"] == "join":
+                    local["members"] = group["members"]
+                    local.setdefault("mode", group["mode"])
+                    for field in ("layout_size", "missing_master", "manual_master"):
+                        if field in group:
+                            local[field] = group[field]
+        return groups
+
+    def native_memberships(self):
+        by_id = {}
+        for key, device in self.devices.items():
+            info = device.native_group
+            if info and info.get("id"):
+                by_id.setdefault(info["id"], {})[key] = info
+
+        recoveries = {}
+        for group_id, entries in by_id.items():
+            if any(info["role"] == "master" for info in entries.values()):
+                continue
+            references = {info["master_id"].casefold() for info in entries.values() if info.get("master_id")}
+            if len(references) != 1:
+                continue
+            reference = next(iter(references))
+            candidates = []
+            for key, device in self.devices.items():
+                info = device.native_group or {}
+                if key in entries or info.get("role") == "slave" or info.get("uid"):
+                    continue
+                identities = {value.strip().casefold() for value in getattr(device, "native_identity", {}).values()}
+                if info.get("id"):
+                    identities.add(info["id"].casefold())
+                if reference in identities:
+                    candidates.append(key)
+            if len(candidates) == 1:
+                recoveries.setdefault(candidates[0], []).append(group_id)
+
+        for key, group_ids in recoveries.items():
+            if len(group_ids) == 1:
+                group_id = group_ids[0]
+                info = self.devices[key].native_group or {}
+                previous = by_id.get(info.get("id"), {})
+                if len(previous) <= 1:
+                    previous.pop(key, None)
+                    by_id[group_id][key] = dict(info, role="master", offset=0 if info.get("offset") is None else info["offset"])
+
+        layout_recoveries = {}
+        for group_id, entries in by_id.items():
+            if not entries or any(info["role"] != "slave" for info in entries.values()):
+                continue
+            layout_ids = {self.devices[key].native_layout_id for key in entries}
+            if len(layout_ids) != 1 or not next(iter(layout_ids)):
+                continue
+            layout_id = next(iter(layout_ids))
+            if not any(info.get("size") for info in entries.values()):
+                continue
+            candidates = []
+            for key, device in self.devices.items():
+                if (device.offline or device.native_layout_id != layout_id or not device.native_standalone
+                        or device.native_group is not None or device.row.get("native_master_for") not in (None, group_id)):
+                    continue
+                proposed = dict(entries, **{key: {"role": "master", "offset": 0}})
+                try:
+                    self.validate_join(proposed)
+                except ValueError:
+                    continue
+                candidates.append(key)
+            if len(candidates) == 1:
+                layout_recoveries.setdefault(candidates[0], []).append(group_id)
+        for key, group_ids in layout_recoveries.items():
+            if len(group_ids) == 1:
+                by_id[group_ids[0]][key] = {"role": "master", "offset": 0}
+
+        for group_id, entries in by_id.items():
+            manual = [key for key, device in self.devices.items()
+                      if device.row.get("native_master_for") == group_id
+                      and self.manual_master_candidate(key, entries)]
+            if len(manual) == 1:
+                proposed = dict(entries, **{manual[0]: {"role": "master", "offset": 0, "manual": True}})
+                try:
+                    self.validate_join(proposed)
+                except ValueError:
+                    continue
+                by_id[group_id] = proposed
+        return by_id
+
+    def manual_master_candidate(self, key, entries):
+        info = self.devices[key].native_group or {}
+        return (info.get("role") in (None, "master") and not info.get("id")
+                and all(entry["role"] != "master" for entry in entries.values()))
+
+    def native_groups(self):
+        groups = {}
+        for group_id, membership in self.native_memberships().items():
+            entries = list(membership.items())
+            leaders = [key for key, info in entries if info["role"] == "master"]
+            has_uid = any(info.get("uid") for _, info in entries)
+            if not entries or (len(entries) < 2 and not has_uid) or (not leaders and not has_uid):
+                continue
+            entries.sort(key=lambda entry: (
+                entry[1].get("offset") is None, entry[1].get("offset") or 0))
+            members = [key for key, _ in entries]
+            names = {info["name"] for _, info in entries if info.get("name")}
+            numbered = [re.fullmatch(r"(.+?)\s+\d+", self.devices[key].row["name"].strip())
+                        for key in members]
+            prefixes = {match[1] for match in numbered if match}
+            name = self.devices[(leaders or members)[0]].row["name"]
+            if len(names) == 1:
+                name = next(iter(names))
+            elif all(numbered) and len(prefixes) == 1:
+                name = next(iter(prefixes))
+            group = {"name": name, "members": members, "mode": "sync"}
+            sizes = {info["size"] for _, info in entries if info.get("size") is not None}
+            joined = any((info.get("offset") or 0) > 0 for _, info in entries)
+            joined |= bool(has_uid and sizes and max(sizes) > max(self.devices[k].row["leds"] for k in members))
+            if joined:
+                if len(sizes) == 1:
+                    group["layout_size"] = next(iter(sizes))
+                group["mode"] = "join"
+                if not leaders:
+                    group["missing_master"] = "native:" + group_id
+                if len(leaders) == 1 and membership[leaders[0]].get("manual"):
+                    group["manual_master"] = {"group": "native:" + group_id, "device": leaders[0]}
+            elif len(entries) < 2:
+                continue
+            key = "native:" + group_id
+            group["name"] = self.native_group_names.get(key, group["name"])
+            groups[key] = group
+        return groups
+
+    async def associate_native_master(self, request):
+        data = await request.json()
+        group = data.get("group") if isinstance(data, dict) else None
+        key = data.get("device") if isinstance(data, dict) else None
+        if not isinstance(group, str) or not group.startswith("native:") or not isinstance(key, str):
+            raise web.HTTPBadRequest()
+        group_id = group.removeprefix("native:")
+        async with self.edit:
+            device = self.devices.get(key)
+            if device is None:
+                raise web.HTTPNotFound()
+            field = "native_master_for"
+            if data.get("remove") is True:
+                if device.row.get("native_master_for") != group_id:
+                    raise web.HTTPNotFound()
+                value = None
+            else:
+                entries = self.native_memberships().get(group_id)
+                try:
+                    group_info = self.native_groups().get(group, {})
+                    if not group_info.get("missing_master") or not entries or not self.manual_master_candidate(key, entries) or device.row.get(field):
+                        raise ValueError("Choose an unassociated controller for a Join group with a missing master.")
+                    if not any(info.get("size") for info in entries.values()):
+                        raise ValueError("Twinkly must report the full Join LED total before a master can be associated.")
+                    _, total = self.validate_join(dict(entries, **{key: {"role": "master", "offset": 0}}))
+                    device.layout_until = 0
+                    if not await device.run(device.load_layout):
+                        raise ValueError(f"Could not read {device.row['name']}'s mapping. Check its connection and retry.")
+                    try:
+                        self.mapped_points(device, total)
+                    except ValueError as exc:
+                        raise ValueError(f"{device.row['name']} needs a complete physical map for all {total} LEDs.") from exc
+                    current = self.native_memberships().get(group_id)
+                    if current != entries or not self.manual_master_candidate(key, current):
+                        raise ValueError("Native group membership changed during validation. Refresh and retry.")
+                except ValueError as exc:
+                    return self.group_conflict(group, "associate master", exc)
+                value = group_id
+            previous = device.row.get(field)
+            if value is None:
+                device.row.pop(field)
+            else:
+                device.row[field] = value
+            try:
+                self.save()
+            except OSError:
+                if previous is None:
+                    device.row.pop(field, None)
+                else:
+                    device.row[field] = previous
+                raise
+            LOG.info("group=%s explicit master device=%s removed=%s", group, key, value is None)
+        return web.json_response({"ok": True})
+
+    async def rename_network_group(self, request):
+        data = await request.json()
+        if not isinstance(data, dict):
+            raise web.HTTPBadRequest()
+        key, name = data.get("id"), data.get("name")
+        if not isinstance(key, str) or not isinstance(name, str) or not 1 <= len(name.strip()) <= 60:
+            raise web.HTTPBadRequest()
+        name = name.strip()
+        async with self.edit:
+            if key in self.groups:
+                updated = dict(self.groups, **{key: dict(self.groups[key], name=name)})
+                temp = GROUPS.with_suffix(".tmp")
+                temp.write_text(json.dumps(updated), encoding="utf-8")
+                temp.replace(GROUPS)
+                self.groups = updated
+            else:
+                if key not in self.native_groups():
+                    raise web.HTTPNotFound()
+                updated = dict(self.native_group_names, **{key: name})
+                temp = self.native_group_names_path.with_suffix(".tmp")
+                temp.write_text(json.dumps(updated), encoding="utf-8")
+                temp.replace(self.native_group_names_path)
+                self.native_group_names = updated
+        return web.json_response({"name": name})
+
+    async def observe_wifi(self, device):
+        ok = await device.run(device.load_details, automatic=True)
+        details = (device.details or {}) if ok and not device.offline else {}
+        ssid = details.get("ssid")
+        station_ip = details.get("ip")
+        if (details.get("network_mode") != 1 or details.get("status") not in (None, 5, "5")
+                or not isinstance(ssid, str) or not station_ip or station_ip == "0.0.0.0"):
+            device.wifi_observation = None
+            device.network_details = details
+            return
+        measured_at = device.details_until - 60
+        identity = (ssid, station_ip, details.get("gw"), details.get("bssid"))
+        previous = device.wifi_observation
+        since = measured_at
+        if previous and previous[0] == identity and measured_at - previous[2] <= 100:
+            since = previous[1]
+        device.wifi_observation = (identity, since, measured_at)
+        device.network_details = details
+
+    @staticmethod
+    def network_row(device):
+        row = {key: device.row[key] for key in ("id", "name", "ip")}
+        details = device.network_details
+        if device.native_group and not device.offline:
+            row["group_role"] = device.native_group["role"]
+        row["kind"] = "unknown"
+        if device.offline:
+            row["kind"] = "offline"
+        elif device.wifi_observation:
+            (ssid, _, gateway, bssid), since, measured_at = device.wifi_observation
+            rssi = details.get("rssi")
+            try:
+                rssi = float(rssi)
+            except (TypeError, ValueError):
+                rssi = None
+            row.update(kind="wifi", ssid=ssid, gateway=gateway, bssid=bssid,
+                       rssi=rssi if rssi is not None and -120 <= rssi < 0 else None,
+                       channel=details.get("channel"), seconds=max(0, int(measured_at - since)))
+        elif details.get("network_mode") == 2 and details.get("ap_ssid"):
+            ap_ip = details.get("ap_ip")
+            row.update(kind="ap", ssid=details["ap_ssid"],
+                       ap_ip=ap_ip if ap_ip and ap_ip != "0.0.0.0" else row["ip"],
+                       channel=details.get("channel"))
+        return row
 
     async def remove_device(self, request):
         key = (await request.json()).get("id")
@@ -897,7 +1497,7 @@ class Controller:
                         or not isinstance(group, str) or (group != "*" and group not in self.groups)
                         or not isinstance(style, str) or style not in MUSIC_STYLES
                         or type(level) is not int or not 0 <= level <= 100
-                        or mode not in ("music", "off") or len(scenes) >= MAX_DEVICES):
+                        or mode not in ("music", "off") or len(scenes) >= MAX_SAVED_SCENES):
                     raise web.HTTPBadRequest()
                 scenes[uuid.uuid4().hex] = {"name": name.strip(), "group": group, "style": style,
                                            "level": level, "mode": mode}
@@ -922,13 +1522,16 @@ class Controller:
                         or not isinstance(members, list) or not 1 <= len(members) <= MAX_DEVICES
                         or any(not isinstance(key, str) or key not in self.devices for key in members)):
                     raise web.HTTPBadRequest()
-                if group_id is None and len(groups) >= MAX_DEVICES:
+                if group_id is None and len(groups) >= MAX_SAVED_GROUPS:
                     raise web.HTTPBadRequest()
                 silence = data.get("silence", "restore")
                 if silence not in SILENCE_MODES:
                     raise web.HTTPBadRequest()
+                mode = data.get("mode", "sync")
+                if mode not in ("join", "sync", "area"):
+                    raise web.HTTPBadRequest()
                 groups[group_id or uuid.uuid4().hex] = {
-                    "name": name.strip(), "members": list(dict.fromkeys(members)), "silence": silence
+                    "name": name.strip(), "members": list(dict.fromkeys(members)), "silence": silence, "mode": mode
                 }
             temp = GROUPS.with_suffix(".tmp")
             temp.write_text(json.dumps(groups), encoding="utf-8")
@@ -941,6 +1544,23 @@ class Controller:
         fingerprint = hashlib.sha256(f"{key}/{kind}/{index}".encode()).hexdigest()
         return asset_path(IMAGES, fingerprint + ".jpg")
 
+    @staticmethod
+    def effect_gif_path(key, entry):
+        identity = entry.get("unique_id") or (entry["id"], entry["name"])
+        fingerprint = hashlib.sha256(json.dumps([key, entry["kind"], identity]).encode()).hexdigest()
+        return asset_path(IMAGES, fingerprint + ".gif")
+
+    @staticmethod
+    def bundled_effect_image(entry):
+        name = entry.get("name")
+        if entry["kind"] != "movie" or not isinstance(name, str):
+            return None
+        filename = BUNDLED_EFFECT_PREVIEWS.get(" ".join(name.casefold().split()))
+        if filename is None:
+            return None
+        path = asset_path(EFFECT_PREVIEWS, filename)
+        return path if path.is_file() else None
+
     async def twinkly_wordmark(self, request):
         return web.FileResponse(WORDMARK, headers={
             "Content-Type": "image/svg+xml",
@@ -951,58 +1571,58 @@ class Controller:
 
     async def product_photo(self, request):
         key = request.match_info["key"]
-        photo = PRODUCT_PHOTOS_BY_KEY.get(key)
-        if photo is None:
+        if key not in PRODUCT_PHOTO_KEYS:
             raise web.HTTPNotFound()
-        filename, url = photo
-        path = asset_path(PRODUCT_PHOTOS, filename)
+        path = asset_path(PRODUCT_PHOTOS, key + ".png")
         if not path.is_file():
-            async with self.photo_lock:
-                if not path.is_file():
-                    try:
-                        async with ClientSession(timeout=ClientTimeout(total=8)) as session:
-                            async with session.get(url, allow_redirects=False) as response:
-                                if response.status != 200 or response.content_type != "image/jpeg":
-                                    raise ValueError("Unexpected product photo response")
-                                raw = bytearray()
-                                async for chunk in response.content.iter_chunked(65536):
-                                    raw.extend(chunk)
-                                    if len(raw) > PRODUCT_PHOTO_LIMIT:
-                                        raise ValueError("Product photo too large")
-                                if not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
-                                    raise ValueError("Invalid JPEG product photo")
-                        PRODUCT_PHOTOS.mkdir(exist_ok=True)
-                        write_asset(path, raw)
-                    except (ClientError, TimeoutError, ValueError, OSError) as exc:
-                        LOG.warning("Product photo %s: %s", key, exc)
-                        raise web.HTTPBadGateway() from exc
-        return web.Response(body=read_asset(path, PRODUCT_PHOTO_LIMIT), content_type="image/jpeg",
-                            headers={"Cache-Control": "private, max-age=86400",
-                                     "X-Content-Type-Options": "nosniff"})
+            raise web.HTTPNotFound()
+        return web.FileResponse(path, headers={"Cache-Control": "private, max-age=86400",
+                                               "X-Content-Type-Options": "nosniff"})
 
     async def effect_image(self, request):
         key = request.query.get("id")
         kind = request.query.get("kind")
         index = request.query.get("index", "")
-        if key not in self.devices or kind not in ("movie", "effect") or not re.fullmatch(r"[0-9]{1,3}", index):
+        device = self.devices.get(key)
+        if device is None or kind not in ("movie", "effect") or not re.fullmatch(r"[0-9]{1,3}", index):
             raise web.HTTPNotFound()
-        path = self.image_path(key, kind, int(index))
+        index = int(index)
+        entry = next((item for item in device.effects if item["kind"] == kind and item["id"] == index), None)
+        if entry is None:
+            raise web.HTTPNotFound()
+        gif = self.effect_gif_path(key, entry)
+        still = self.image_path(key, kind, index)
+        if request.query.get("ref", gif.stem) != gif.stem:
+            raise web.HTTPNotFound()
         if request.method == "GET":
-            return web.Response(body=read_asset(path, EFFECT_IMAGE_LIMIT), content_type="image/jpeg",
-                                headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
+            path = gif if gif.is_file() else still
+            if not path.is_file():
+                path = self.bundled_effect_image(entry)
+            if path is None:
+                raise web.HTTPNotFound()
+            return web.FileResponse(path, headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"})
         data = await request.json()
-        image = data.get("image")
+        if not isinstance(data, dict) or "image" not in data:
+            raise web.HTTPBadRequest()
+        image = data["image"]
         if image is None:
-            delete_asset(path)
-        else:
-            try:
-                raw = base64.b64decode(image, validate=True)
-            except (ValueError, TypeError):
-                raise web.HTTPBadRequest()
-            if not 4 <= len(raw) <= EFFECT_IMAGE_LIMIT or not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
-                raise web.HTTPBadRequest()
-            IMAGES.mkdir(exist_ok=True)
-            write_asset(path, raw)
+            gif.unlink(missing_ok=True)
+            still.unlink(missing_ok=True)
+            return web.json_response({"ok": True})
+        try:
+            raw = base64.b64decode(image, validate=True)
+            if raw.startswith((b"GIF87a", b"GIF89a")):
+                await asyncio.to_thread(self.decode_gif, raw)
+                path, previous = gif, still
+            elif (4 <= len(raw) <= 160_000 and raw.startswith(b"\xff\xd8\xff") and raw.endswith(b"\xff\xd9")):
+                path, previous = still, gif
+            else:
+                raise ValueError("Unsupported preview format")
+        except (ValueError, TypeError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
+            raise web.HTTPBadRequest() from exc
+        IMAGES.mkdir(exist_ok=True)
+        write_asset(path, raw)
+        previous.unlink(missing_ok=True)
         return web.json_response({"ok": True})
 
     @staticmethod
@@ -1036,26 +1656,48 @@ class Controller:
                 raise web.HTTPBadRequest()
         async with self.edit:
             group_id = data.get("group")
+            group = None
             if group_id is not None:
-                if not isinstance(group_id, str) or group_id not in self.groups or action == "effect":
+                if not isinstance(group_id, str) or action == "effect":
                     raise web.HTTPBadRequest()
-                keys = [key for key in self.groups[group_id]["members"] if key in self.devices]
+                group = self.display_groups().get(group_id)
+                if not group:
+                    raise web.HTTPBadRequest()
+                keys = [key for key in group["members"] if key in self.devices]
             else:
                 keys = list(self.devices) if data.get("id") == "*" else [data.get("id")]
             if any(key not in self.devices for key in keys):
                 raise web.HTTPNotFound()
+            for k in keys:
+                self.physical_tests.pop(k,None)
+            routes = {}
+            if group and action in ("pattern", "music"):
+                mode = group.get("mode", "sync")
+                try:
+                    await self.load_group_layouts(keys, mode)
+                    routes = {k: self.group_mapping(k, keys, mode, matrix=action == "pattern" and value.startswith("matrix:")) for k in keys}
+                    for k in keys:
+                        d = self.devices[k]
+                        meta = d.native_group or {}
+                        route = routes[k]
+                        LOG.info("mapping lamp=%r mode=%s role=%s offset=%s size=%s leds=%s points=%s route_first=%s route_last=%s",
+                                 d.row["name"], mode, meta.get("role"), meta.get("offset"), meta.get("size"), d.row["leds"],
+                                 len((d.layout or {}).get("points", [])), route[:8] if route else None, route[-8:] if route else None)
+                except ValueError as exc:
+                    raise web.HTTPBadRequest(text=str(exc)) from exc
             if action == "pattern":
                 if value.startswith(("gif:", "matrix:")) and value not in self.gif_patterns:
                     kind, gif_id = value.split(":", 1)
                     root, pattern = (MATRIX_GIFS, MATRIX_ID) if kind == "matrix" else (GIF_LIBRARY, GIF_ID)
                     try:
-                        path = gif_asset(root, gif_id, pattern)
-                        raw = await asyncio.to_thread(read_asset, path, GIF_LIMIT)
-                        self.gif_patterns[value] = await asyncio.to_thread(self.decode_gif, raw, kind == "matrix")
+                        self.gif_patterns[value] = await asyncio.to_thread(
+                            self.decode_gif, gif_asset(root, gif_id, pattern).read_bytes(), kind == "matrix")
                     except (OSError, ValueError, web.HTTPNotFound) as exc:
                         raise web.HTTPBadRequest(text="GIF unavailable") from exc
                 self.music.difference_update(keys)
                 self.patterns.update(dict.fromkeys(keys, value))
+                for k in keys:
+                    self.group_routes[k] = routes.get(k)
                 self.mark_sequence_devices(keys, sequence_level)
                 return {"failed": []}
             if action == "stop-pattern":
@@ -1065,9 +1707,13 @@ class Controller:
                 self.patterns.pop(key, None)
             self.mark_sequence_devices(keys, sequence_level if action == "music" else None)
             if action == "music":
+                for k in keys:
+                    self.group_routes[k] = routes.get(k)
                 self.music.update(keys)
                 return {"failed": []}
             self.music.difference_update(keys)
+            for k in keys:
+                self.group_routes.pop(k, None)
             results = await asyncio.gather(*(self.devices[k].run(self.devices[k].command, action, value)
                                              for k in keys))
             failures = [self.devices[key] for key, ok in zip(keys, results) if not ok]
@@ -1193,15 +1839,58 @@ class Controller:
             raise web.HTTPNotFound()
         ok = await device.run(device.load_layout)
         return web.json_response({"layout": device.layout if ok else None,
+                                  "settings": device.row.get("mapping_override", {}),
                                   "error": None if ok else device.error})
+
+    @staticmethod
+    def mapping_device_info(d, fresh):
+        details = d.details or {}
+        fields = ("product_name", "product_code", "product_version", "hardware_version",
+                  "firmware_version", "fw_family", "led_profile", "bytes_per_led", "led_type",
+                  "number_of_led", "rssi")
+        info = {key: details.get(key) for key in fields}
+        info["product_code"] = info["product_code"] or d.product_code
+        info.update(name=d.row["name"], leds=d.row["leds"],
+                    metadata_status="available" if fresh else ("cached" if details else "unavailable"))
+        return info
+
+    async def mapping_settings(self, request):
+        d = self.devices.get(request.query.get("id"))
+        if d is None:
+            raise web.HTTPNotFound()
+        if request.method == "POST":
+            data = await request.json()
+            if not isinstance(data, dict) or type(data.get("rotation")) is not int or data["rotation"] not in (0,90,180,270) or any(type(data.get(k)) is not bool for k in ("mirror_x","mirror_y","reverse")):
+                raise web.HTTPBadRequest(text="Invalid mapping settings")
+            updated = {k:data[k] for k in ("rotation","mirror_x","mirror_y","reverse")}
+            async with self.edit:
+                old = d.row.get("mapping_override", {})
+                d.row["mapping_override"] = updated
+                try:
+                    self.save()
+                except OSError:
+                    d.row["mapping_override"] = old
+                    raise
+                LOG.info("mapping settings lamp=%r old=%s new=%s", d.row["name"], old, updated)
+        fresh = await d.run(d.load_details) if request.method == "GET" else False
+        return web.json_response({"settings":d.row.get("mapping_override", {}), "group":d.native_group,
+                                  "layout":d.layout, "device":self.mapping_device_info(d, fresh)})
 
     async def effects(self, request):
         device = self.devices.get(request.query.get("id"))
         if device is None:
             raise web.HTTPNotFound()
         ok = await device.run(device.load_effects)
-        catalog = [dict(entry, has_image=self.image_path(device.row["id"], entry["kind"], entry["id"]).is_file())
-                   for entry in device.effects] if ok else []
+        catalog = []
+        if ok:
+            key = device.row["id"]
+            for entry in device.effects:
+                gif = self.effect_gif_path(key, entry)
+                still = self.image_path(key, entry["kind"], entry["id"])
+                custom = gif.is_file() or still.is_file()
+                bundled = self.bundled_effect_image(entry) is not None
+                catalog.append(dict(entry, preview_ref=gif.stem, has_image=custom or bundled,
+                                    has_custom_image=custom, has_default_image=bundled))
         return web.json_response({"effects": catalog, "error": None if ok else device.error})
 
     @staticmethod
@@ -1413,7 +2102,9 @@ class Controller:
     async def matrix_gif(self, request):
         key = request.match_info["id"]
         path = gif_asset(MATRIX_GIFS, key, MATRIX_ID)
-        return self.gif_response(path)
+        return web.FileResponse(path, headers={
+            "Content-Type": "image/gif", "X-Content-Type-Options": "nosniff",
+        })
 
     async def list_gifs(self, request):
         if GIF_LIBRARY.is_symlink():
@@ -1455,7 +2146,7 @@ class Controller:
             async with self.edit, self.gif_library_lock:
                 if "gif:" + gif_id in self.patterns.values():
                     raise web.HTTPConflict(text="Stop the GIF before deleting it")
-                delete_asset(gif_asset(GIF_LIBRARY, gif_id, GIF_ID))
+                gif_asset(GIF_LIBRARY, gif_id, GIF_ID).unlink(missing_ok=True)
                 self.gif_patterns.pop("gif:" + gif_id, None)
             return web.json_response({"ok": True})
         name = data.get("name")
@@ -1489,12 +2180,9 @@ class Controller:
     async def gif_file(self, request):
         gif_id = request.match_info["id"]
         path = gif_asset(GIF_LIBRARY, gif_id, GIF_ID)
-        return self.gif_response(path)
-
-    @staticmethod
-    def gif_response(path):
-        return web.Response(body=read_asset(path, GIF_LIMIT), content_type="image/gif",
-                            headers={"X-Content-Type-Options": "nosniff"})
+        if not path.is_file():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path, headers={"Content-Type": "image/gif", "X-Content-Type-Options": "nosniff"})
 
     def music_frame(self):
         if time.monotonic() - self.ddp.received < 1.5:
@@ -1650,16 +2338,42 @@ class Controller:
 
     def app(self):
         self.edit_scan = asyncio.Lock()
+        self.network_lock = asyncio.Lock()
+        self.network_until = 0
+        self.network_devices = []
         app = web.Application(middlewares=[ingress_only], client_max_size=720_000)
+        from modules.security_center import install as install_security_center
+        install_security_center(app, Path(__file__).resolve().parent, DATA.parent, ingress_only)
+        from modules.provider_routes import install
         app.cleanup_ctx.append(self.stream)
+        install(app, controller=self, govee_key=getattr(self, "govee_api_key", None))
+        async def legacy_provider_page(request):
+            raise web.HTTPFound("./#instellingen")
+
+        app.router.add_get("/provider-studio", legacy_provider_page)
+        for asset in (
+            "lighting.js", "lighting-tools.js", "govee-cloud.js", "lighting.css", "twinkly-nav-logo.svg", "hue-app-icon.webp", "govee-logo.png",
+            "project.html", "project.css", "project.js", "security-center.js", "CHANGELOG.md", "ROADMAP.md",
+            "google-home.js", "google-home-demo.jpg", "google-home-show.jpg",
+            "govee-guide-config.webp", "govee-guide-yaml.webp", "govee-guide-cloud.webp",
+        ):
+            app.router.add_get("/" + asset, lambda _, filename=asset: web.FileResponse(
+                filename, headers={"Cache-Control": "no-store"}))
         app.router.add_get("/", lambda _: web.FileResponse(
             "index.html", headers={"Cache-Control": "no-store"}))
         app.router.add_get("/twinkly.svg", lambda _: web.FileResponse("twinkly.svg"))
         app.router.add_get("/twinkly-wordmark.svg", self.twinkly_wordmark)
         app.router.add_get("/healthz", health)
         app.router.add_get("/status", self.status)
+        app.router.add_get("/network", self.network)
+        app.router.add_post("/network/groups/name", self.rename_network_group)
         app.router.add_get("/effects", self.effects)
         app.router.add_get("/layout", self.layout)
+        app.router.add_post("/physical-test", self.physical_test)
+        app.router.add_get("/group-layout", self.group_layout)
+        app.router.add_post("/network/groups/master", self.associate_native_master)
+        app.router.add_get("/mapping-settings", self.mapping_settings)
+        app.router.add_post("/mapping-settings", self.mapping_settings)
         app.router.add_get("/details", self.details)
         app.router.add_post("/register", self.register)
         app.router.add_post("/remove-device", self.remove_device)

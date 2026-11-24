@@ -1,5 +1,7 @@
-# Twinkly Control Center
+# Christmas Control Center
 
-Bedien je Twinkly-verlichting vanuit Home Assistant. Groepeer lampen per kamer, bouw een lichtshow met scènes en GIF’s of laat je lampen reageren op muziek via LedFX.
+Het officiële [Twinkly-woordmerk](https://twinkly.com/cdn/shop/files/Twinkly_Logo_White.svg), het [Philips Hue-appicoon](https://play-lh.googleusercontent.com/SB82ocHba-aDaB7Wl6nrGqcXviR75zs6HWofCw1C0GoS_ivkotgAt7X8nazkYJpBBO9HwP1tXZG61UPrDN7dnw=w480-h960-rw) en het [Govee-logo](https://www.govee.com/software-updates) zijn lokaal gebundeld.
 
-Start de app, open het dashboard en kies **Zoeken op netwerk**. Op het tabblad **Documentatie** lees je hoe je LedFX en Music Assistant koppelt.
+Versie 2.0 brengt Twinkly, Philips Hue en Govee samen. Bouw lichtshows met Showbouwer, gebruik Music Assistant voor een soundtrack of laat je verlichting via LedFX reageren op live audio. De afzonderlijke bèta heeft eigen instellingen.
+
+Open **Home** voor Twinkly, Philips Hue, Govee en gemengde groepen. Gebruik de merkpagina’s voor afzonderlijke lampen. De Twinkly-pagina bevat ook de bestaande lichtstudio, effecten en muziekbediening. Open **Instellingen → Verbindingen** om een Hue Bridge of Govee-apparaat te zoeken, te koppelen of opnieuw te koppelen.

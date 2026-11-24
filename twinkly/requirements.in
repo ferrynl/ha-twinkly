@@ -1,6 +1,9 @@
 aiohttp==3.14.5
+zeroconf==0.148.0
 xled==0.7.0
 Pillow==13.0.0
+packaging==26.3
+hue-entertainment==0.6.0
 
 # Keep the transitive TLS dependencies at the patched versions.
 certifi==2026.10.23

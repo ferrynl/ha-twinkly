@@ -1,56 +1,11 @@
 """Verify the dashboard and music GIF routes in the built add-on."""
 import io
 import unittest
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
-from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 from PIL import Image
 
-from app import Controller, MUSIC_STYLES, asset_path, delete_asset, read_asset, write_asset
-
-
-class AssetStorageTest(unittest.TestCase):
-    def test_atomic_replace_and_delete(self):
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            asset = asset_path(root, "preview.gif")
-            write_asset(asset, b"first")
-            with patch("app.os.fsync", side_effect=OSError("sync failed")):
-                with self.assertRaises(OSError):
-                    write_asset(asset, b"second")
-            self.assertEqual(read_asset(asset, 5), b"first")
-            self.assertEqual(list(root.iterdir()), [asset])
-            write_asset(asset, b"second")
-            self.assertEqual(read_asset(asset, 6), b"second")
-            with self.assertRaises(web.HTTPNotFound):
-                read_asset(asset, 5)
-            delete_asset(asset)
-            delete_asset(asset)
-            delete_asset(root / "missing" / asset.name)
-            self.assertFalse(asset.exists())
-
-    def test_read_rejects_symlinks_at_open(self):
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            source = root / "source.gif"
-            source.write_bytes(b"asset")
-            previews = root / "previews"
-            previews.mkdir()
-            asset = asset_path(previews, "preview.gif")
-            asset.symlink_to(source)
-            with self.assertRaises(web.HTTPNotFound):
-                read_asset(asset, 5)
-
-            asset.unlink()
-            asset.write_bytes(b"asset")
-            moved = root / "archive"
-            previews.rename(moved)
-            previews.symlink_to(moved, target_is_directory=True)
-            with self.assertRaises(web.HTTPNotFound):
-                read_asset(asset, 5)
+from app import Controller, MUSIC_STYLES
 
 
 class DashboardSmokeTest(unittest.IsolatedAsyncioTestCase):
@@ -73,6 +28,23 @@ class DashboardSmokeTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response.status, 200)
                 self.assertEqual(response.content_type, "image/svg+xml")
                 self.assertIn("<svg", await response.text())
+
+    async def test_google_home_assets_are_served_by_the_add_on(self):
+        application = Controller.__new__(Controller).app()
+        application.middlewares.clear()
+        application.cleanup_ctx.clear()
+        async with TestClient(TestServer(application)) as client:
+            async with client.get("/") as response:
+                self.assertIn('src="google-home.js"', await response.text())
+            async with client.get("/google-home.js") as response:
+                self.assertEqual(response.status, 200)
+                self.assertIn("christmas_control_center_demo", await response.text())
+            for image in ("google-home-demo.jpg", "google-home-show.jpg"):
+                with self.subTest(image=image):
+                    async with client.get("/" + image) as response:
+                        self.assertEqual(response.status, 200)
+                        self.assertEqual(response.content_type, "image/jpeg")
+                        self.assertTrue((await response.read()).startswith(b"\xff\xd8"))
 
     async def test_dashboard_and_music_gallery(self):
         # The test server uses loopback and does not start the live UDP stream.
@@ -102,3 +74,15 @@ class DashboardSmokeTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RealtimeRGBTest(unittest.TestCase):
+    def test_primary_colors_and_cycle(self):
+        from app import PIXELS, live_pattern
+
+        for fps in (5, 20, 25):
+            for second, color in ((0, (255, 0, 0)), (3, (0, 255, 0)),
+                                  (6, (0, 0, 255)), (9, (255, 0, 0))):
+                with self.subTest(fps=fps, second=second):
+                    self.assertEqual(live_pattern('rgb-test', second * fps, fps),
+                                     bytes(color) * PIXELS)

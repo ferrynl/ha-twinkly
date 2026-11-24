@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Twinkly Control Center</title>
+<title>Christmas Control Center</title>
 <link rel="icon" href="./twinkly.svg" type="image/svg+xml">
 <style>
 *{box-sizing:border-box}body{margin:0;color:#fff7e9;background:radial-gradient(ellipse at 85% 0,#304e43 0,transparent 42%),#0b1616;font:16px system-ui}main{max-width:1140px;margin:auto;padding:clamp(16px,4vw,44px)}header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}h1{font:700 clamp(2.6rem,7vw,5rem) Georgia;margin:0;color:#ffe2a5}h2,h3,p{margin:0 0 12px}p{color:#c5d8d2}section,article{padding:20px;border:1px solid #3b5951;border-radius:22px;background:linear-gradient(145deg,#1c3430,#122422);box-shadow:0 12px 26px #0005}section{margin-top:18px}.eyebrow{letter-spacing:.16em;font-size:.78rem;color:#facb7e;text-transform:uppercase}.status{display:inline-block;border-radius:100px;background:#213e34;padding:8px 14px;margin:12px 0 0}#devices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:18px}.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button,select,input{font:inherit;border:1px solid #66877b;background:#213c34;color:#fff7e9;border-radius:10px;padding:8px 11px;max-width:100%}button{cursor:pointer}button:hover{background:#38584a}.primary{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.primary:hover{background:#ffdfa6}button:disabled{opacity:.55}input[type=color]{width:48px;height:40px;padding:4px}input[type=number]{width:76px}.gap{margin-top:14px}#message{margin:12px 0 0;overflow-wrap:anywhere}.effects{margin-top:12px;width:100%}.error{color:#ffb5a0;overflow-wrap:anywhere}
 .power-active{background:#f6ce88;color:#132721;border-color:#f6ce88;font-weight:700}.effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin-top:10px}.effect-card{display:grid;gap:7px;min-width:0;padding:10px;background:#142925;border:1px solid #48665d;border-radius:12px;text-align:left;overflow-wrap:anywhere;font-size:.9rem}.effect-card input,.effect-card button{width:100%}.preview-note{font-size:.82rem;margin-top:10px}
 .led-map{margin-top:12px}.led-map [hidden]{display:none}.led-map canvas{display:block;width:100%;height:auto;background:#0b1616;border:1px solid #48665d;border-radius:12px}.led-map input{width:100%;margin-top:8px}
-#group-cards{display:grid;gap:12px;margin-top:14px}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
+#group-cards,#grouped-devices{display:grid;gap:12px;margin-top:14px}#group-member-devices{margin-top:14px}#group-member-devices summary{cursor:pointer}#group-members label{display:inline-flex;align-items:center;gap:5px}.effect-image{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.effect-card input[type=file]{padding:5px}
 #music-preview,#music-gif{display:block;width:min(100%,480px);height:auto;border:1px solid #48665d;border-radius:10px}#music-gif{max-width:300px}#music-gif-link,#music-demo-link{display:inline-block;margin-top:8px;color:#ffe2a5}
 
 main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
-#devices{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}
+#devices,#grouped-devices,#group-cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr))}
 .mixdesk{color:#f4f6fa;border:1px solid #586271;background:linear-gradient(155deg,#363d47,#161b23 32%,#0d1118 79%);box-shadow:0 10px 0 #080b10,0 17px 0 #38404a,0 28px 38px #0008,inset 0 1px 1px #ffffff50;padding:clamp(12px,2vw,24px);margin-bottom:34px}
 .desk-brand{display:flex;align-items:center;gap:10px;font-size:.8rem;letter-spacing:.18em;margin-bottom:14px}
 .desk-lamp{width:8px;height:8px;background:#55e2ad;border-radius:100%;box-shadow:0 0 13px #55e2ad}
@@ -28,7 +28,7 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 .device-info{margin-top:12px}.device-info dl[hidden]{display:none}.device-info dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:10px 0 0;gap:1px;background:#3a5851;border:1px solid #3a5851;border-radius:10px;overflow:hidden}
 .device-info dt,.device-info dd{margin:0;padding:7px;background:#122422;overflow-wrap:anywhere;font-size:.86rem}.device-info dt{color:#d1e6df}.device-info dd{color:#ffe4a8}
 @media(max-width:760px){.desk-grid{grid-template-columns:1fr}.desk-controls button{flex:1 1 auto}.mixdesk{border-radius:16px}}
-.product-card{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #45645a;border-radius:12px;background:#101f1c}.product-card[hidden],.product-card img[hidden]{display:none}.product-card img{width:clamp(106px,32%,148px);height:105px;object-fit:contain;background:#fff;border-radius:7px}.product-card small{display:block;margin-top:3px;overflow-wrap:anywhere}
+.product-card{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:8px 10px;border:1px solid #45645a;border-radius:12px;background:#101f1c}.product-card[hidden],.product-card img[hidden]{display:none}.product-card img{width:clamp(106px,32%,148px);height:105px;object-fit:contain}.product-card small{display:block;margin-top:3px;overflow-wrap:anywhere}
 .scene-pad{display:inline-flex;gap:4px;padding:5px;border:1px solid #617587;border-radius:11px;background:#121922}.mixdesk .scene-pad button:first-child{background:linear-gradient(#673f82,#382549);border-color:#ab82c0}
 .track-screen{display:flex;align-items:center;gap:12px;min-height:88px;padding:12px;margin-bottom:12px;border:1px solid #3b5e58;border-radius:12px;background:radial-gradient(ellipse at top right,#1c4038,#080f13 72%);box-shadow:inset 0 2px 7px #0009}.track-screen img{width:66px;height:66px;object-fit:cover;border-radius:6px}.track-screen p{margin:3px 0;color:#a5c4be;font-size:.83rem;overflow-wrap:anywhere}.track-screen strong{display:block;color:#b7ffe5;overflow-wrap:anywhere}.track-screen #track-label{letter-spacing:.12em;text-transform:uppercase}
 .track-tv{max-width:590px;margin-bottom:14px;padding:9px;border:1px solid #59677a;border-radius:16px;background:linear-gradient(155deg,#46515e,#181e27 45%);box-shadow:0 5px 0 #080b10,0 10px 18px #0008}.track-display{position:relative;display:grid;place-items:center;aspect-ratio:16/9;max-height:275px;background:radial-gradient(ellipse,#183830,#05090c 72%);overflow:hidden;border:1px solid #080b10;border-radius:10px}.track-display img,.track-display video{position:absolute;width:100%;height:100%;object-fit:contain}.track-display [hidden]{display:none}.track-tv .track-screen{border:0;box-shadow:none;margin:0;background:none;padding:8px 4px 2px;min-height:0}#track-idle{font-size:clamp(2rem,6vw,4rem);color:#82dabb}
@@ -47,13 +47,95 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 #music-demo-link[hidden]{display:none}
 #music-style-grid .matrix-tile img{width:100%;aspect-ratio:1;object-fit:contain;background:#101927;border-radius:5px}
 #music-style-grid .matrix-tile[aria-pressed="true"]{border-color:#a6e6d0;color:#b7ffe8}
-</style>
+.network-map{position:relative;isolation:isolate;height:clamp(420px,78vh,1600px);height:clamp(420px,78dvh,1600px);overflow:hidden;border:1px solid #3d5766;border-radius:22px;background:radial-gradient(ellipse at 50% 0%,#264452,#111e29 70%);margin-top:12px;touch-action:none;cursor:grab}
+.network-map[hidden],.network-tools[hidden]{display:none}
+.network-map.is-dragging,.network-map.is-dragging *{cursor:grabbing}
+.network-map canvas,.network-world{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.network-world{transform-origin:top left}
+.network-hub,.network-device{position:absolute;pointer-events:auto;cursor:grab;user-select:none;box-sizing:border-box;width:190px;padding:9px 12px;overflow-wrap:anywhere;color:#edf9ff;font-size:14px;line-height:1.25}
+.network-hub{border-radius:24px;border:1px solid #548799;background:#1c3543;text-align:center}
+.network-group{border-color:#7bc8a7}
+#network-name-dialog{color:#edf9ff;background:#122430;border:1px solid #526d7d;border-radius:14px;width:min(420px,calc(100% - 32px))}
+#network-name-dialog::backdrop{background:#091216b3}
+#network-name-dialog label,#network-name-dialog input{display:block;width:100%;margin-bottom:8px}
+.network-group .controls{margin-top:7px;gap:5px}
+.network-group .controls button{padding:3px 8px;cursor:pointer}
+.network-device{border:1px solid #526d7d;border-radius:14px;background:#122430}
+.network-device strong,.network-device small,.network-device span,.network-hub strong,.network-hub small{display:block}
+.network-device small,.network-hub small{color:#c2d8e4}
+.network-device .network-signal{color:var(--signal,#c2d8e4);font-weight:bold}
+.network-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.network-tools output{min-width:4ch;text-align:center;font-variant-numeric:tabular-nums}
+#network-page.is-expanded{position:fixed;inset:0;z-index:10;overflow:auto;border-radius:0;margin:0;padding:12px;background:#101e24}
+#network-page.is-expanded .network-map{height:calc(100dvh - 155px);min-height:220px;max-height:none}
+.network-key{display:flex;flex-wrap:wrap;gap:8px 20px;margin:.75rem 0;color:#c2d8e4}
+.network-key span::before{content:'';display:inline-block;width:22px;margin-right:6px;vertical-align:middle;border-top:2px solid #6ccde7}
+.network-key #network-member-key::before{border-color:#91e8b5;border-top-style:solid}
+.network-key span+span::before{border-color:#d0a4ff;border-top-style:dashed}
+.test-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px}.test-grid article{display:flex;flex-direction:column;gap:10px}.test-grid article button{margin-top:auto;min-height:44px}.test-sample{height:72px;border-radius:10px;background:#101a19;border:1px solid #48665d}.sample-identify{background:linear-gradient(90deg,#c33 25%,#193 25% 50%,#36c 50% 75%,#db3 75%)}.sample-rgb{background:linear-gradient(90deg,#c33,#193,#36c)}.sample-led{background:radial-gradient(circle at 25% 50%,#fff 0 4px,transparent 6px),#101a19}.sample-rainbow{background:linear-gradient(90deg,red,yellow,lime,cyan,blue,magenta)}.sample-horizontal{background:linear-gradient(90deg,transparent 35%,white 45% 55%,transparent 65%),#101a19}.sample-vertical{background:linear-gradient(transparent 35%,white 45% 55%,transparent 65%),#101a19}.sample-stop{height:12px}#tests-content canvas{max-width:900px;margin:auto}#tests-content .led-map input{max-width:440px;display:block}#tests-content .led-map input[hidden]{display:none}.device-tile{padding:clamp(12px,2vw,20px);border-radius:16px;background:linear-gradient(150deg,#203a35,#122421)}.device-tile h3{font-size:1.15rem;margin-bottom:10px}.device-tile .product-card{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;padding:10px;margin-bottom:10px;align-items:center}.device-tile .product-card img{width:76px;height:76px;object-fit:contain}.device-tile .product-card strong{font-size:.93rem}.device-tile .product-card small,.device-tile>p{font-size:.8rem}.device-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.device-actions button{font-size:.83rem;padding:8px 5px;min-height:40px;overflow-wrap:anywhere}.device-actions input{width:100%;min-width:0}.device-actions input[type=color]{height:40px}.device-operating details{margin-top:12px;border-top:1px solid #48665d;padding-top:10px}.device-operating summary{font-size:.86rem;cursor:pointer}.individual-test-panel{margin-top:12px}.individual-test-panel .controls label{display:flex;align-items:center;gap:6px}.individual-test-panel .controls input[type=checkbox]{width:auto;margin:0}.individual-test-panel[hidden]{display:none}@media(max-width:420px){.device-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* STUDIO design system: deliberately flat, local and hardware-neutral */
+:root{color-scheme:dark;--studio-bg:#101216;--studio-panel:#191d24;--studio-inset:#13171d;--studio-line:#343b46;--studio-text:#f1f3f6;--studio-muted:#aab4c2;--studio-gold:#e8c477;--studio-live:#77d9b0}
+body{background:var(--studio-bg);color:var(--studio-text);font:14px/1.5 system-ui,sans-serif}
+main{padding:clamp(10px,2vw,28px);max-width:none}
+.workspace-header{position:sticky;top:0;z-index:5;background:var(--studio-bg);padding:10px 0;border-bottom:1px solid var(--studio-line);align-items:center}
+.workspace-header .workspace-brand{flex-direction:row;gap:12px;align-items:center}
+.workspace-brand .twinkly-logo{width:110px;height:38px;background:var(--studio-gold)}
+.control-wordmark{font:600 13px/1.2 system-ui;letter-spacing:.04em;background:none;-webkit-text-fill-color:var(--studio-text);color:var(--studio-text)}
+.workspace-nav{gap:4px;align-items:center}.workspace-nav a{border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px;color:var(--studio-muted)}
+.workspace-nav a[aria-current=page]{background:transparent;color:var(--studio-gold);border-color:var(--studio-gold)}
+section,article,.device-tile,.desk-channel,.mixdesk{background:var(--studio-panel);border:1px solid var(--studio-line);border-radius:8px;box-shadow:none}
+section,article{padding:16px}section{margin-top:14px}h2{font-size:17px}h3{font-size:14px}p{color:var(--studio-muted)}
+.mixdesk{padding:0;margin-bottom:16px;background:transparent;border:0}.desk-brand{padding:8px 0;border-bottom:1px solid var(--studio-line);letter-spacing:.09em;color:var(--studio-muted)}
+.desk-lamp{background:var(--studio-gold);box-shadow:none}.desk-grid,.desk-stack{gap:12px}.desk-channel{padding:16px}.desk-channel h2{color:var(--studio-text);letter-spacing:.035em;font-size:13px}
+button,select,input,.mixdesk button{background:var(--studio-inset);border:1px solid var(--studio-line);color:var(--studio-text);border-radius:5px;box-shadow:none;font-size:13px;min-height:36px}
+button:hover,.mixdesk button:hover{background:#2a313c;filter:none}.mixdesk button:active{transform:none;box-shadow:none}
+.primary,.mixdesk button.primary,.power-active{background:var(--studio-gold);color:#17130b;border-color:var(--studio-gold)}
+:where(button,a,input,select,summary):focus-visible{outline:2px solid var(--studio-gold);outline-offset:3px}
+.status{border-radius:4px;background:var(--studio-inset);padding:4px 8px;color:var(--studio-muted);font-variant-numeric:tabular-nums}
+.desk-fader,.track-tv,.track-screen,.track-display,.product-card,.effect-card,.settings-item,.gif-item,.scene-pad{background:var(--studio-inset);border-color:var(--studio-line);border-radius:6px;box-shadow:none}
+.track-tv .track-screen{background:none}.track-display{background:#090b0e}.desk-fader input,.monitor-meter meter{accent-color:var(--studio-gold)}.desk-fader output{color:var(--studio-gold)}
+.desk-controls input[type=color]{width:46px;height:46px;padding:4px;background:var(--studio-inset);border:1px solid var(--studio-line);box-shadow:none}
+.mixdesk .scene-pad button:first-child{background:var(--studio-inset);border-color:var(--studio-line)}
+.matrix-tile img,.effect-image{border-radius:3px}.mixdesk .matrix-tile[aria-pressed=true],#music-style-grid .matrix-tile[aria-pressed=true],.pattern-tile[aria-pressed=true]{border-color:var(--studio-gold);box-shadow:inset 0 0 0 1px var(--studio-gold);color:var(--studio-gold)}
+#matrix-grid,#music-style-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,104px),1fr));gap:6px}
+.devices-section{background:none;border:0;padding:0}#devices{gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.device-tile .product-card{padding:6px}.device-tile h3{font-size:15px}.device-info dt,.device-info dd{background:var(--studio-inset)}.device-info dl,.device-operating details{border-color:var(--studio-line)}
+.network-map{background-color:var(--studio-inset);background-image:radial-gradient(#35404c 1px,transparent 1px);background-size:20px 20px;border-radius:8px;border-color:var(--studio-line)}
+.network-device,.network-hub{background:var(--studio-panel);border-radius:6px}.test-grid{gap:10px}.test-sample{border-radius:4px}
+@media(max-width:760px){.workspace-header{position:static;gap:6px}.workspace-nav{width:100%;flex-wrap:wrap}.workspace-nav a{flex:1 1 auto;text-align:center;padding:8px 4px}.desk-channel{padding:12px}.desk-grid{grid-template-columns:minmax(0,1fr)}button,select,input,.mixdesk button{min-height:44px}.device-actions button{min-height:44px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.christmas-mark{display:grid;place-items:center;color:var(--studio-gold);width:40px;height:40px;flex:none}.workspace-brand .control-wordmark{font-size:15px;line-height:1.15;letter-spacing:.02em}</style><link rel="stylesheet" href="lighting.css">
+<link rel="stylesheet" href="project.css">
+<script src="project.js" defer></script>
 <main>
-<header class="workspace-header"><h1 class="workspace-brand" aria-label="Twinkly Control Center"><span class="twinkly-logo" aria-hidden="true"></span><span class="control-wordmark" aria-hidden="true">Control Center</span></h1>
-<nav class="workspace-nav"><a id="nav-control" href="#bediening"></a><a id="nav-settings" href="#instellingen"></a></nav></header>
+<header class="workspace-header"><h1 class="workspace-brand" aria-label="Christmas Control Center"><span class="christmas-mark" aria-hidden="true"><svg viewBox="0 0 36 36" width="36" height="36"><path d="M18 3 7 17h6L4 28h28l-9-11h6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="18" cy="3" r="2" fill="currentColor"/><path d="M18 28v5" stroke="currentColor" stroke-width="2"/></svg></span><span class="control-wordmark" aria-hidden="true">Christmas<br>Control Center</span></h1>
+<nav class="workspace-nav">
+<a id="nav-home" href="#home">Home</a>
+<a id="nav-house" href="#mijn-huis">Mijn Huis</a>
+<a id="nav-control" href="#bediening"><img class="brand-wordmark brand-wordmark-twinkly" src="twinkly-nav-logo.svg" alt="Twinkly"></a>
+<a id="nav-hue" href="#hue"><img class="brand-wordmark brand-wordmark-hue" src="hue-app-icon.webp" alt="Philips Hue"></a>
+<a id="nav-govee" href="#govee"><img class="brand-wordmark brand-wordmark-govee" src="govee-logo.png" alt="Govee"></a>
+<a id="nav-tests" href="#testcontrole"></a>
+<a id="nav-network" href="#security-center"></a>
+<a id="nav-shows" href="#showbouwer">Showbouwer</a>
+<a id="nav-google" href="#google-home">Google Home</a>
+<a id="nav-settings" href="#instellingen"></a>
+</nav></header>
+<svg width="0" height="0" aria-hidden="true" class="menu-logo-filters">
+<filter id="hue-white-knockout" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+<feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -5 -5 -5 1 14"/>
+<feComposite in2="SourceGraphic" operator="in"/>
+</filter>
+</svg>
 <p id="message" role="status"></p>
-<div id="control-page">
-<section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>TWINKLY / MIX</strong><span class="desk-model">LX · 01</span></div>
+<p id="lighting-feedback" role="status"></p>
+<section id="lighting-panel" class="lighting-surface" hidden></section>
+<div id="lighting-tools" class="lighting-surface" hidden></div>
+<section id="house-page" class="lighting-surface" aria-labelledby="house-title" hidden></section>
+<section id="govee-cloud" class="lighting-surface" hidden></section>
+<section id="hue-collections" class="lighting-surface" aria-labelledby="hue-collections-title" hidden></section>
+<div id="control-page"><section id="twinkly-lighting" class="lighting-surface"></section>
+<section class="mixdesk"><div class="desk-brand"><span class="desk-lamp"></span><strong>CHRISTMAS / STUDIO</strong><span class="desk-model">LX · 01</span></div>
 <div class="desk-grid">
 <div class="desk-stack"><div class="desk-channel"><h2 data-text="all"></h2><div class="controls desk-controls" id="all"></div><div class="quick-colors"><span id="quick-color-label"></span><div class="controls" id="quick-colors"></div></div></div>
 <div class="desk-channel"><h2 id="show-title"></h2>
@@ -90,22 +172,70 @@ main{width:100%;max-width:none;padding:clamp(12px,2vw,32px)}
 <details class="gap gif-library"><summary id="gif-library-title"></summary>
 <form id="gif-form" class="controls gap"><input id="gif-name" maxlength="80" required><input id="gif-upload" type="file" accept="image/gif"><button id="gif-upload-button" type="button"></button><input id="gif-url" type="url" placeholder="https://giphy.com/gifs/…"><button id="gif-import-button" type="button"></button><select id="gif-pattern"></select><button id="gif-create-button" type="button"></button></form>
 <div id="gif-library-list" class="gap"></div></details></div></div></div></section>
-<section id="group-section" hidden><h2 id="group-title"></h2><div id="group-cards"></div></section>
-<section class="devices-section"><h2 id="device-title"></h2><div id="devices"></div></section></div>
+<section class="devices-section"><h2 id="device-title"></h2>
+<div id="group-cards"></div><div id="devices"></div>
+<details id="group-member-devices" hidden><summary id="group-member-summary"></summary><div id="grouped-devices"></div></details>
+</section></div>
+<section id="network-page" aria-labelledby="security-title" hidden>
+<h2 id="security-title"></h2>
+<div id="security-modules"></div>
+<div class="music-heading"><h3 id="network-title"></h3><button id="network-refresh" type="button"></button></div>
+<p id="network-help"></p><p id="network-status" role="status"></p>
+<div id="network-tools" class="network-tools" hidden>
+<button id="network-zoom-out" type="button">−</button><output id="network-scale"></output><button id="network-zoom-in" type="button">+</button>
+<button id="network-members" type="button" aria-pressed="false"></button>
+<button id="network-fit" type="button"></button><button id="network-reset" type="button"></button><button id="network-expand" type="button" aria-pressed="false"></button>
+</div>
+<div id="network-map" class="network-map" aria-labelledby="network-title" tabindex="0" hidden>
+<canvas id="network-lines" aria-hidden="true"></canvas><div id="network-world" class="network-world"></div>
+</div>
+
+<div class="network-key"><span id="network-wifi-key"></span><span id="network-peer-key"></span><span id="network-member-key"></span></div>
+</section>
+<dialog id="network-name-dialog" aria-labelledby="network-name-label">
+<form id="network-name-form">
+<label id="network-name-label" for="network-name"></label>
+<input id="network-name" required maxlength="60" autocomplete="off">
+<p id="network-name-error" role="status"></p>
+<div class="controls"><button id="network-name-save" type="submit"></button><button id="network-name-cancel" type="button"></button></div>
+</form>
+</dialog>
+<section id="tests-page" hidden><h2 id="tests-title"></h2><p id="tests-help"></p><label id="tests-target-label" for="tests-target"></label> <select id="tests-target"></select><div id="tests-content"></div><div class="gap"><h2 id="individual-tests-title"></h2><select id="individual-tests-target"></select><div id="individual-tests-list"></div></div></section>
+<section id="google-page" hidden><h2>Google Home</h2><p>De Google Home-handleiding wordt geladen. Vernieuw de pagina als dit bericht blijft staan.</p></section>
 <div id="settings-page" hidden><div class="settings-grid">
+<section id="lighting-settings" class="lighting-surface"></section>
 <section><h2 id="settings-general"></h2><select id="language" aria-label="Language"><option value="nl">Nederlands</option><option value="en">English</option><option value="es">Español</option><option value="de">Deutsch</option></select></section>
 <section><h2 id="settings-music"></h2><div class="controls gap" id="music-setup"></div><p id="ledfx-status" role="status"></p><details><summary>LedFX installeren en starten</summary><ol><li>Open in Home Assistant Instellingen → Apps → Appwinkel → ⋮ → Repositories.</li><li>Voeg <a href="https://github.com/Switch123456789/Home-Assistant-Apps" target="_blank" rel="noopener noreferrer">de LedFX-repository met Sendspin</a> toe en installeer LedFX.</li><li>Klik op Starten en zet Starten bij opstarten aan. Controleer bij een fout het tabblad Logboek.</li><li>Ga terug naar Twinkly, controleer LedFX en klik daarna op Music Assistant koppelen. Voeg LedFx Twinkly toe aan de afspeelgroep in Music Assistant.</li></ol></details><div class="controls gap tv-source"><label id="tv-source-label" for="tv-source"></label><select id="tv-source"></select><button id="tv-refresh"></button></div>
 </section>
 <section><h2 id="settings-discover"></h2><div class="controls gap" id="scan"><input id="ip" placeholder="192.168.1.50" inputmode="decimal"></div>
 </section>
 <section><h2 id="settings-groups"></h2><form id="group-form">
-<div class="controls"><input id="group-name" maxlength="60" required><label id="silence-label" for="group-silence"></label><select id="group-silence"></select><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
+<div class="controls"><input id="group-name" maxlength="60" required><label id="silence-label" for="group-silence"></label><select id="group-silence"></select><label for="group-mode">Join / Sync / Area</label><select id="group-mode" aria-label="Join / Sync / Area"><option value="join">Join</option><option value="sync">Sync</option><option value="area">Area</option></select><button id="group-save" type="submit"></button><button id="group-cancel" type="button" hidden></button></div>
 <div class="controls gap" id="group-members"></div></form><div class="settings-list" id="group-management"></div></section>
 <section><h2 id="settings-scenes"></h2>
 <form class="controls gap" id="scene-form"><input id="scene-name" maxlength="60" required><select id="scene-group"></select><select id="scene-mode"></select><select id="scene-style"></select><input id="scene-level" type="number" min="0" max="100" value="100" required><button id="scene-save" type="submit"></button></form>
 <div class="settings-list" id="scene-management"></div></section>
-<section><h2 id="settings-effects"></h2><div class="settings-list" id="effect-management"></div></section></div></div>
+<section><h2 id="device-settings-title"></h2><div id="device-settings-list" class="settings-list"></div></section><section><h2 id="settings-effects"></h2><div class="settings-list" id="effect-management"></div></section></div></div>
+<section id="project-page" class="project-content" aria-labelledby="project-title" hidden>
+  <nav class="project-nav" aria-label="Project">
+    <a href="#changelog" data-project-view="changelog" data-project-label="changelog">Changelog</a>
+    <a href="#roadmap" data-project-view="roadmap" data-project-label="roadmap">Roadmap</a>
+  </nav>
+  <h2 id="project-title"></h2>
+  <p class="project-intro" id="project-intro"></p>
+  <label class="project-search" id="project-search" hidden>
+    <span data-project-label="search">Zoek op versie of wijziging</span>
+    <input id="project-query" type="search">
+  </label>
+  <p id="project-status" role="status"></p>
+  <div id="project-entries"></div>
+</section>
 </main>
+<footer class="project-footer" id="project-footer">
+  <a href="#changelog" data-project-version>Changelog</a>
+  <a href="#roadmap" data-project-label="roadmap">Roadmap</a>
+  <p class="project-disclaimer" lang="nl">Merknamen en logo’s, waaronder Twinkly, Philips Hue, Govee en Google Home, zijn eigendom van hun respectieve rechthebbenden. Christmas Control Center is een onafhankelijk project. Sommige functies kunnen beperkt werken of uitvallen, afhankelijk van je apparaten, firmware, netwerk en gekoppelde diensten.</p>
+</footer>
 <script>
 const strings = {
  nl:['Lichtbediening','Alle lampen','Aan','Uit','Kleur','Helderheid %','Muziek','Stop muziek','Music Assistant koppelen','IP toevoegen','Zoeken op netwerk','Bezig…','Opdracht verwerkt.','LedFx-frames worden ontvangen','Wacht op LedFx-muziekeffect','Verbinding met de add-on ontbreekt','Effecten laden','Kies een effect','Effect','Film','Geen lokale effecten gevonden','Apparaten gevonden','Muziek aan','Twinkly IPv4-adres','LedFX ingesteld. Voeg LedFx Twinkly toe aan je Music Assistant-afspeelgroep.','Koppeling mislukt'],
@@ -114,10 +244,10 @@ const strings = {
  de:['Lichtsteuerung','Alle Lichter','Ein','Aus','Farbe','Helligkeit %','Musik','Musik stoppen','Music Assistant verbinden','IP hinzufügen','Netzwerk durchsuchen','Wird ausgeführt…','Befehl verarbeitet.','LedFx-Frames werden empfangen','Warte auf einen LedFx-Musikeffekt','Verbindung zur App fehlt','Effekte laden','Effekt auswählen','Effekt','Film','Keine lokalen Effekte gefunden','Geräte gefunden','Musik aktiviert','Twinkly-IPv4-Adresse','LedFX eingerichtet. Füge LedFx Twinkly zur Wiedergabegruppe in Music Assistant hinzu.','Einrichtung fehlgeschlagen']
 };
 const deviceLabels = {
- nl:['Offline','Lamp verwijderen','Wil je deze lamp uit Twinkly Control Center verwijderen?','Lamp verwijderd.','De lamp is weer online.','Opdracht mislukt. Bekijk de app-logboeken in Home Assistant.'],
- en:['Offline','Remove light','Remove this light from Twinkly Control Center?','Light removed.','The light is back online.','Command failed. Check the app logs in Home Assistant.'],
- es:['Sin conexión','Quitar luz','¿Quitar esta luz de Twinkly Control Center?','Luz eliminada.','La luz vuelve a estar en línea.','La orden falló. Consulta los registros de la app en Home Assistant.'],
- de:['Offline','Lampe entfernen','Diese Lampe aus Twinkly Control Center entfernen?','Lampe entfernt.','Die Lampe ist wieder online.','Befehl fehlgeschlagen. Prüfe das App-Protokoll in Home Assistant.']
+ nl:['Offline','Lamp verwijderen','Wil je deze lamp uit Christmas Control Center verwijderen?','Lamp verwijderd.','De lamp is weer online.','Opdracht mislukt. Bekijk de app-logboeken in Home Assistant.'],
+ en:['Offline','Remove light','Remove this light from Christmas Control Center?','Light removed.','The light is back online.','Command failed. Check the app logs in Home Assistant.'],
+ es:['Sin conexión','Quitar luz','¿Quitar esta luz de Christmas Control Center?','Luz eliminada.','La luz vuelve a estar en línea.','La orden falló. Consulta los registros de la app en Home Assistant.'],
+ de:['Offline','Lampe entfernen','Diese Lampe aus Christmas Control Center entfernen?','Lampe entfernt.','Die Lampe ist wieder online.','Befehl fehlgeschlagen. Prüfe das App-Protokoll in Home Assistant.']
 };
 const deviceLabel = index => deviceLabels[lang.value][index];
 const deviceError = error => deviceLabel(error === 'offline' ? 0 : 5);
@@ -153,10 +283,10 @@ const layoutLabels = {
  de:['LED-Karte laden','Keine LED-Positionen empfangen','LED-Positionen','Berechnetes Layout','LED-Karte drehen']
 };
 const extraLabels = {
- nl:['Groepen','Groepsnaam','Groep opslaan','Annuleren','Bewerken','Verwijderen','Selecteer minstens één lamp.','Afbeelding uploaden','Afbeelding verwijderen','Kies een JPG, PNG of WebP van maximaal 10 MB.'],
- en:['Groups','Group name','Save group','Cancel','Edit','Delete','Select at least one light.','Upload image','Remove image','Choose a JPG, PNG or WebP up to 10 MB.'],
- es:['Grupos','Nombre del grupo','Guardar grupo','Cancelar','Editar','Eliminar','Selecciona al menos una luz.','Subir imagen','Quitar imagen','Elige un JPG, PNG o WebP de hasta 10 MB.'],
- de:['Gruppen','Gruppenname','Gruppe speichern','Abbrechen','Bearbeiten','Löschen','Wähle mindestens ein Licht aus.','Bild hochladen','Bild entfernen','Wähle ein JPG, PNG oder WebP bis 10 MB.']
+ nl:['Groepen','Groepsnaam','Groep opslaan','Annuleren','Bewerken','Verwijderen','Selecteer minstens één lamp.','Afbeelding of GIF uploaden','Afbeelding verwijderen','Kies een JPG, PNG of WebP van maximaal 10 MB.'],
+ en:['Groups','Group name','Save group','Cancel','Edit','Delete','Select at least one light.','Upload image or GIF','Remove image','Choose a JPG, PNG or WebP up to 10 MB.'],
+ es:['Grupos','Nombre del grupo','Guardar grupo','Cancelar','Editar','Eliminar','Selecciona al menos una luz.','Subir imagen o GIF','Quitar imagen','Elige un JPG, PNG o WebP de hasta 10 MB.'],
+ de:['Gruppen','Gruppenname','Gruppe speichern','Abbrechen','Bearbeiten','Löschen','Wähle mindestens ein Licht aus.','Bild oder GIF hochladen','Bild entfernen','Wähle ein JPG, PNG oder WebP bis 10 MB.']
 };
 const extra = index => extraLabels[lang.value][index];
 const detailsText = {
@@ -169,16 +299,46 @@ const detailKeys = ['firmware_version','rssi','ssid','channel','product_code','h
 const productLabels = {
  nl:'Model',en:'Model',es:'Modelo',de:'Modell'
 };
+const productModels = [
+  [/^TWW(?:480|500)STP[A-Z0-9]*$/, "Twinkly Matrix", "matrix"],
+  [/^TWS\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Strings", "strings-multicolor", {SPP: "strings-rgbw", GOP: "strings-gold-silver"}],
+  [/^TW3RD\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Reindeer", "reindeers"],
+  [/^TWTT\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Tree Topper", "tree-topper"],
+  [/^TWSHD\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Strings HD", "strings-hd"],
+  [/^TWKP\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Pearls", "strings-usb-c-pearls"],
+  [/^TG50P4425P00$/, "Twinkly Pre-lit Tree", "pre-lit-tree"],
+  [/^TWW\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Curtain", "curtain", {SPP: "curtain-rgbw"}],
+  [/^TWQ\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Squares", "squares"],
+  [/^TWPL\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Permanent Lights", "permanent-lights"],
+  [/^TWI\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Icicle", "icicle-multicolor", {SPP: "icicle-multicolor-white", GOP: "icicle-gold-silver"}],
+  [/^TWKC\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Candles", "strings-usb-c-candles"],
+  [/^TWD\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Dots", "dots"],
+  [/^TWL\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Line", "line"],
+  [/^GD20P4425P0X$/, "Twinkly Pre-lit Wreath", "pre-lit-wreath"],
+  [/^TWC9\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly C9 Bulbs", "c9-bulbs"],
+  [/^TWKS\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Stars", "strings-usb-c-stars"],
+  [/^TWP\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Light Tree 3D", "light-tree"],
+  [/^TWN\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Net Lights", "net-lights"],
+  [/^TWFL\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Flex", "flex"],
+  [/^TWKH\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Candies Hearts", "strings-usb-c-hearts"],
+  [/^TWB\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Spritzer", "spritzer"],
+  [/^TWF\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Festoon", "festoon-multicolor", {GOP: "festoon-gold-silver"}],
+  [/^GT90P4425P0X$/, "Twinkly Pre-lit Garland", "pre-lit-garland"],
+  [/^TWC\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Cluster", "cluster-multicolor", {SPP: "cluster-multicolor-white", GOP: "cluster-gold-silver"}],
+  [/^TW3DB\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Spheres", "spheres"],
+  [/^TWWT\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Light Tree 2D", "light-tree-2d"],
+  [/^TWDJ\d{2,4}(SPP|STP|GOP|STW|RGB)?[A-Z0-9]*$/, "Twinkly Lightwall", "lightwall"],
+];
 function modelInfo(code, device) {
-  const strings = /^TWS(\d{2,4})(SPP|STP|GOP)[A-Z0-9-]*$/i.exec(code);
-  if (strings) {
-    const rgbw = strings[2].toUpperCase() === 'SPP';
-    const suffix = {SPP:'RGB+W',STP:'RGB',GOP:'AWW'}[strings[2].toUpperCase()];
-    return {name:'Twinkly Strings · ' + device.leds + ' LEDs · ' + suffix,
-      photo:rgbw ? 'strings-rgbw' : ''};
-  }
-  if (/^TWL\d{2,4}STW[A-Z0-9-]*$/i.test(code)) {
-    return {name:'Twinkly Line · ' + device.leds + ' LEDs',photo:'line'};
+  const sku = code.trim().toUpperCase().split('-')[0];
+  for (const [pattern, name, photo, variants] of productModels) {
+    const match = pattern.exec(sku);
+    if (match) {
+      return {
+        name: [name, device.leds && device.leds + ' LEDs', device.profile].filter(Boolean).join(' · '),
+        photo: variants?.[match[1]] || photo,
+      };
+    }
   }
   return {name:productLabels[lang.value] + ' · ' + code};
 }
@@ -186,7 +346,7 @@ function drawProduct(card, device) {
   const code = typeof device.product_code === 'string' ? device.product_code.trim() : '';
   card.product.hidden = !code;
   if (!code) return;
-  const signature = code + '/' + device.leds + '/' + lang.value;
+  const signature = code + '/' + device.leds + '/' + device.profile + '/' + lang.value;
   if (card.productSignature === signature) return;
   card.productSignature = signature;
   const model = modelInfo(code,device);
@@ -199,14 +359,16 @@ function drawProduct(card, device) {
     body.append(subtitle);
   }
   card.product.replaceChildren();
-  if (model.photo) {
-    const photo = document.createElement('img');
-    photo.loading = 'lazy'; photo.referrerPolicy = 'no-referrer';
-    photo.alt = model.name;
-    photo.onerror = () => { photo.hidden = true; };
-    photo.src = './product-photo/' + model.photo;
-    card.product.append(photo);
-  }
+  const photo = document.createElement('img');
+  photo.loading = 'lazy';
+  photo.alt = model.photo ? model.name : '';
+  photo.onerror = () => {
+    photo.onerror = null;
+    photo.alt = '';
+    photo.src = './twinkly.svg';
+  };
+  photo.src = model.photo ? './product-photo/' + model.photo + '?v=2' : './twinkly.svg';
+  card.product.append(photo);
   card.product.append(body);
 }
 const showText = {
@@ -234,7 +396,7 @@ const monitorLabels = {
  es:['Monitor de luz en directo','Colores rápidos','Nivel de luz','con música','Blanco cálido','Rojo navideño','Azul hielo','Verde','Morado'],
  de:['Live-Lichtmonitor','Schnellfarben','Lichtpegel','mit Musik','Warmweiß','Weihnachtsrot','Eisblau','Grün','Violett']
 };
-const quickColors = ['#ffbe6e','#ff243d','#4dd7ff','#2ee581','#a66bff'];
+const quickColors = ['#ffbe6e','#ff0000','#4dd7ff','#00ff00','#8000ff'];
 const patternLabels = {
  nl:['Live effectengalerij','Afspelen op','Stop live-effect','Regenboog','Noorderlicht','Vuur','IJslicht','Oceaangolf','Kerststrepen','Zonsondergang','Gouden twinkels'],
  en:['Live effect gallery','Play on','Stop live effect','Rainbow','Aurora','Fire','Ice lights','Ocean wave','Christmas stripes','Sunset','Golden sparkles'],
@@ -263,6 +425,7 @@ const patternCategories = {
 const categoryIds = ['classic','winter','lounge','nature','neon','sparkle'];
 let selectedCategory = 'classic';
 function patternName(id) {
+  if (id === 'rgb-test') return 'RGB Test (3 s)';
   if (id.startsWith('matrix:')) return matrixCatalog.find(item => 'matrix:' + item.id === id)?.name || id.slice(7);
   return extraPatterns[id]?.[1] || patternLabels[lang.value][3+Object.keys(patternStyles).indexOf(id)] || id;
 }
@@ -298,7 +461,16 @@ async function request(path, data) {
   const response = await fetch('./' + path, data === undefined ? {cache:'no-store'} : {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
   });
-  if (!response.ok) throw Error('HTTP ' + response.status);
+  if (!response.ok) {
+    const body = await response.text();
+    let reason = body;
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      try { reason = JSON.parse(body).error; } catch {}
+    } else if (!response.headers.get('content-type')?.startsWith('text/plain')) {
+      reason = '';
+    }
+    throw Error('HTTP ' + response.status + (reason ? ' · ' + reason : ''));
+  }
   return response.json();
 }
 function translated(el, key) { el.dataset.text = key; el.textContent = t(key); }
@@ -367,6 +539,12 @@ async function encodeImage(file) {
     return canvas.toDataURL('image/jpeg',.82).split(',')[1];
   } finally { bitmap.close(); }
 }
+const effectGifLimit = {
+ nl:'Kies een GIF van maximaal 512 KiB.',
+ en:'Choose a GIF up to 512 KiB.',
+ es:'Elige un GIF de hasta 512 KiB.',
+ de:'Wähle ein GIF mit maximal 512 KiB.'
+};
 function renderEffects(card) {
   card.grid.replaceChildren();
   card.manageGrid.replaceChildren();
@@ -397,34 +575,42 @@ function renderEffects(card) {
       manageTitle.textContent = title.textContent;
       byId('message').textContent = t('done');
     };
-    const imagePath = 'effect-image?' + new URLSearchParams({id:card.id,kind:entry.kind,index:entry.id});
+    const imagePath = 'effect-image?' + new URLSearchParams({id:card.id,kind:entry.kind,index:entry.id,ref:entry.preview_ref});
     const image = document.createElement('img');
     image.className = 'effect-image'; image.alt = title.textContent; image.hidden = true;
     const remove = document.createElement('button');
-    remove.textContent = extra(8); remove.hidden = !entry.has_image;
-    image.onload = () => { image.hidden = false; remove.hidden = false; };
+    remove.textContent = extra(8); remove.hidden = !entry.has_custom_image;
+    image.onload = () => { image.hidden = false; remove.hidden = !entry.has_custom_image; };
     image.onerror = () => { image.hidden = true; remove.hidden = true; };
     const upload = document.createElement('input');
-    upload.type = 'file'; upload.accept = 'image/jpeg,image/png,image/webp';
+    upload.type = 'file'; upload.accept = 'image/gif,.gif,image/jpeg,image/png,image/webp';
     upload.setAttribute('aria-label',extra(7));
     const uploadLabel = document.createElement('label');
     uploadLabel.textContent = extra(7); uploadLabel.append(upload);
     upload.onchange = () => {
       if (!upload.files.length) return;
       perform(upload, async () => {
-        const encoded = await encodeImage(upload.files[0]);
+        const file = upload.files[0];
+        const isGif = file.type === 'image/gif' || /\.gif$/i.test(file.name);
+        if (isGif && file.size > 512 * 1024) throw Error(effectGifLimit[lang.value]);
+        const encoded = isGif
+          ? encodeGifBytes(new Uint8Array(await file.arrayBuffer()))
+          : await encodeImage(file);
         await request(imagePath,{image:encoded});
         upload.value = '';
         entry.has_image = true;
+        entry.has_custom_image = true;
         image.src = './' + imagePath + '&v=' + Date.now();
         return t('done');
       });
     };
     remove.onclick = () => perform(remove, async () => {
       await request(imagePath,{image:null});
-      entry.has_image = false;
-      image.hidden = true; remove.hidden = true;
-      image.removeAttribute('src');
+      entry.has_custom_image = false;
+      entry.has_image = entry.has_default_image;
+      remove.hidden = true;
+      if (entry.has_image) image.src = './' + imagePath + '&v=' + Date.now();
+      else { image.hidden = true; image.removeAttribute('src'); }
       return t('done');
     });
     if (entry.has_image) image.src = './' + imagePath;
@@ -453,7 +639,13 @@ function drawLayout(card, frame = liveFrame) {
   const {width, height} = card.canvas;
   ctx.clearRect(0,0,width,height);
   const angle = source === '3d' ? Number(card.rotation.value) * Math.PI / 180 : 0;
-  const projected = points.map(([id,x,y,z]) => [id,x*Math.cos(angle)+z*Math.sin(angle),y]);
+  const settings = card.mappingOverride || {};
+  const turn = (settings.rotation || 0)*Math.PI/180;
+  const projected = points.map(([id,x,y,z], i) => {
+    x=x*Math.cos(angle)+z*Math.sin(angle);
+    if(settings.mirror_x)x=-x; if(settings.mirror_y)y=-y;
+    return [settings.reverse?points[points.length-1-i][0]:id,x*Math.cos(turn)-y*Math.sin(turn),x*Math.sin(turn)+y*Math.cos(turn)];
+  });
   const xs = projected.map(p => p[1]), ys = projected.map(p => p[2]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
@@ -475,14 +667,25 @@ function editGroup(id, group) {
   editingGroup = id;
   byId('group-name').value = group?.name || '';
   byId('group-silence').value = group?.silence || 'restore';
+  byId('group-mode').value = group?.mode || 'sync';
   byId('group-cancel').hidden = !id;
   for (const input of byId('group-members').querySelectorAll('input')) {
     input.checked = group?.members.includes(input.value) || false;
   }
 }
+const groupCards = new Map();
+const groupViewLabels = {
+  nl:['Bestaat uit','Individuele lampen in groepen','Twinkly-groep'],
+  en:['Contains','Individual lights in groups','Twinkly group'],
+  es:['Incluye','Luces individuales de los grupos','Grupo Twinkly'],
+  de:['Besteht aus','Einzelne Leuchten in Gruppen','Twinkly-Gruppe'],
+};
+function visibleGroups() {
+  return status?.display_groups || status?.groups || {};
+}
 function renderGroups() {
   const devices = status?.devices || [];
-  const groups = status?.groups || {};
+  const groups = visibleGroups();
   const members = JSON.stringify(devices.map(({id,name}) => [id,name]));
   const signature = JSON.stringify([lang.value,members,groups]);
   if (members !== memberSignature) {
@@ -501,17 +704,23 @@ function renderGroups() {
   groupSignature = signature;
   const parent = byId('group-cards'), manage = byId('group-management');
   parent.replaceChildren(); manage.replaceChildren();
-  byId('group-section').hidden = !Object.keys(groups).length;
+  groupCards.clear();
   for (const [id,group] of Object.entries(groups)) {
     const card = document.createElement('article'), title = document.createElement('h3');
     const info = document.createElement('p'), actions = document.createElement('div');
     title.textContent = group.name;
-    info.textContent = devices.filter(d => group.members.includes(d.id)).map(d => d.name).join(' · ');
+    card.tabIndex = -1;
+    groupCards.set(id,card);
+    const members = group.members.map(key => devices.find(device => device.id === key)?.name).filter(Boolean);
+    const composition = groupViewLabels[lang.value][0] + ' · ' + members.join(' · ');
+    info.textContent = (group.mode || 'sync').replace(/^./, c => c.toUpperCase()) + (members.length ? ' · ' + composition : '');
     actions.className = 'controls';
     controls(actions,undefined,id);
     const edit = document.createElement('button'), remove = document.createElement('button');
-    edit.textContent = extra(4); remove.textContent = extra(5);
-    edit.onclick = () => editGroup(id,group);
+    const native = id.startsWith('native:');
+    edit.textContent = native ? networkNameLabels[lang.value][0] : extra(4);
+    remove.textContent = extra(5);
+    edit.onclick = () => native ? editNetworkGroupName(id,group.name) : editGroup(id,status.groups[id]);
     remove.onclick = () => perform(remove, async () => {
       await request('groups',{id,delete:true});
       if (editingGroup === id) editGroup(null);
@@ -519,18 +728,100 @@ function renderGroups() {
     });
     const entry = document.createElement('div'), name = document.createElement('strong');
     entry.className = 'settings-item'; name.textContent = group.name;
-    entry.append(name,edit,remove); manage.append(entry);
+    const description = document.createElement('small');
+    description.textContent = (native || group.native ? groupViewLabels[lang.value][2] + ' · ' : '') + info.textContent;
+    entry.append(name,description,edit);
+    if (!native) entry.append(remove);
+    manage.append(entry);
     card.append(title,info,actions);
     parent.append(card);
   }
 }
+
+const testPageText = {
+ nl:['Testcontrole','Kies een groep. Stop actieve muziek en effecten. Start een test, vergelijk de lampen met het verwachte resultaat. Na 15 seconden stopt de test automatisch.','Groep','Verwacht resultaat','Start test','Rood, groen, blauw en geel per controller.','Alle lampen wisselen elke twee seconden tussen rood, groen en blauw.','Eén led per controller loopt door de fysieke LED-volgorde.','Een doorlopende regenboog beweegt over de mapping.','Een witte band beweegt van links naar rechts.','Een witte band beweegt van boven naar beneden.','Stop de test en herstel de eerdere modus.','Geen groepen beschikbaar.'],
+ en:['Test control','Select a group. Stop active music and effects. Start a test and compare the lights with the expected result. Tests stop after 15 seconds.','Group','Expected result','Start test','Red, green, blue and yellow per controller.','All lights cycle red, green and blue every two seconds.','One LED per controller moves through physical LED order.','A continuous rainbow moves across the mapping.','A white band moves left to right.','A white band moves top to bottom.','Stop the test and restore the previous mode.','No groups available.'],
+ de:['Testkontrolle','Gruppe wählen. Musik und Effekte stoppen. Test starten und mit dem erwarteten Ergebnis vergleichen. Tests enden nach 15 Sekunden.','Gruppe','Erwartetes Ergebnis','Test starten','Rot, Grün, Blau und Gelb je Controller.','Alle Lampen wechseln alle zwei Sekunden Rot, Grün und Blau.','Eine LED je Controller folgt der LED-Reihenfolge.','Ein Regenbogen bewegt sich über die Karte.','Ein weißer Streifen läuft von links nach rechts.','Ein weißer Streifen läuft von oben nach unten.','Test stoppen und vorherigen Modus wiederherstellen.','Keine Gruppen verfügbar.'],
+ es:['Control de pruebas','Elige un grupo. Detén la música y los efectos. Inicia una prueba y compara las luces con el resultado esperado. Dura 15 segundos.','Grupo','Resultado esperado','Iniciar prueba','Rojo, verde, azul y amarillo por controlador.','Todas las luces alternan rojo, verde y azul cada dos segundos.','Un LED por controlador sigue el orden físico.','Un arcoíris continuo recorre el mapa.','Una banda blanca va de izquierda a derecha.','Una banda blanca va de arriba abajo.','Detén la prueba y restaura el modo anterior.','No hay grupos disponibles.']
+};
+let testPageSignature='';
+function renderTestPage(){
+ const labels=testPageText[lang.value], target=byId('tests-target'), content=byId('tests-content'), groups=visibleGroups();
+ byId('tests-title').textContent=centerLabels[lang.value][0];
+ byId('tests-help').textContent=labels[1];byId('tests-target-label').textContent=labels[2];
+ const options=Object.entries(groups), before=target.value;
+ const devices=status?.devices || [];
+ const signature=JSON.stringify([lang.value,options,devices.map(({id,name})=>[id,name])]);
+ if(target.dataset.signature!==signature){target.replaceChildren(...options.map(([id,g])=>new Option(g.name,id)));if(groups[before])target.value=before;target.dataset.signature=signature;}
+ const id=target.value, group=groups[id], key=JSON.stringify([signature,id]);
+ if(key===testPageSignature)return;testPageSignature=key;content.replaceChildren();
+ if(!group){content.textContent=labels[12];return;}
+ const masterLabels=({
+   nl:['Join-master ontbreekt','Kies de master','Master koppelen','Masterkoppeling verwijderen'],
+   en:['Join master missing','Select the master','Associate master','Remove master association'],
+   de:['Join-Master fehlt','Master auswählen','Master zuordnen','Master-Zuordnung entfernen'],
+   es:['Falta el maestro de Join','Selecciona el maestro','Asociar maestro','Quitar asociación del maestro']
+ })[lang.value];
+ if(group.missing_master || group.manual_master){
+   const controls=document.createElement('div');controls.className='controls';
+   const select=document.createElement('select'), action=document.createElement('button');
+   const manual=group.manual_master;
+   action.textContent=masterLabels[manual ? 3 : 2];
+   if(!manual){
+     const warning=document.createElement('p');warning.textContent=masterLabels[0];content.append(warning);
+     select.setAttribute('aria-label',masterLabels[1]);
+     select.append(new Option(masterLabels[1],''));
+     for(const device of devices.filter(d=>!group.members.includes(d.id))) select.append(new Option(device.name,device.id));
+     action.disabled=true;select.onchange=()=>{action.disabled=!select.value;};
+     controls.append(select);
+   }
+   action.onclick=()=>perform(action,async()=>{
+     await request('network/groups/master',manual ? {...manual,remove:true} : {group:group.missing_master,device:select.value});
+     return t('done');
+   });
+   controls.append(action);content.append(controls);
+ }
+     const map = document.createElement('div'); map.className='led-map';
+    const openMap = document.createElement('button');
+    openMap.textContent=({nl:'Groepsmapping',en:'Group mapping',de:'Gruppenmapping',es:'Mapa del grupo'})[lang.value];
+    const canvas=document.createElement('canvas'); canvas.width=640; canvas.height=400; canvas.hidden=true;
+    const legend=document.createElement('p'), zoom=document.createElement('input'), angle=document.createElement('input');
+    zoom.type='range'; zoom.min=1; zoom.max=4; zoom.step=.1; zoom.value=1; zoom.hidden=true; zoom.setAttribute('aria-label','Zoom');
+    angle.type='range'; angle.min=-180; angle.max=180; angle.value=0; angle.hidden=true; angle.setAttribute('aria-label','3D rotation');
+    let layout;
+    const paint=()=>{if(!layout)return;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,640,400);
+      const a=Number(angle.value)*Math.PI/180, scale=Number(zoom.value)*340;
+      layout.members.forEach((m,i)=>{ctx.fillStyle='hsl('+(i*137.508%360)+' 85% 65%)';
+        for(const [x,y,z] of m.points){const px=(x-.5)*Math.cos(a)+(z||0)*Math.sin(a);ctx.beginPath();ctx.arc(320+px*scale,200+(y-.5)*scale,2.4,0,2*Math.PI);ctx.fill();}
+      });
+    };
+    zoom.oninput=angle.oninput=paint;
+    openMap.onclick=()=>perform(openMap,async()=>{layout=await request('group-layout?id='+encodeURIComponent(id));if(layout.error)throw Error(layout.error);
+      canvas.hidden=zoom.hidden=angle.hidden=false;legend.replaceChildren(document.createTextNode(layout.leds+' LED · '));
+      layout.members.forEach((m,i)=>{const label=document.createElement('span');label.style.color='hsl('+(i*137.508%360)+' 85% 65%)';label.textContent=m.name+' ('+m.points.length+')  ';legend.append(label);});paint();return t('done');});
+    const testControls=document.createElement('div');testControls.className='test-grid gap';
+    const testLabels=({nl:['Testcentrum (15 sec)','Eigen kleur','RGB-test','LED-volgorde','Regenboog','Links → rechts','Boven → beneden','Stop'],
+      en:['Test center (15 sec)','Identify','RGB test','LED order','Rainbow','Left → right','Top → bottom','Stop'],
+      de:['Testzentrum (15 Sek.)','Erkennen','RGB-Test','LED-Reihenfolge','Regenbogen','Links → rechts','Oben → unten','Stopp'],
+      es:['Centro de pruebas (15 s)','Identificar','Prueba RGB','Orden LED','Arcoíris','Izquierda → derecha','Arriba → abajo','Parar']})[lang.value];
+    const testTitle=document.createElement('h3');testTitle.textContent=testLabels[0];
+    ['identify','rgb','led','rainbow','horizontal','vertical','stop'].forEach((test,i)=>{
+      const tile=document.createElement('article'), heading=document.createElement('h3'), sample=document.createElement('div'), expected=document.createElement('p');heading.textContent=testLabels[i+1];sample.className='test-sample sample-'+test;expected.textContent=labels[3]+': '+labels[i+5];const b=document.createElement('button');b.textContent=test==='stop'?testLabels[i+1]:labels[4];
+      b.onclick=()=>perform(b,async()=>{await request('physical-test',{group:id,test});return t('done');});tile.append(heading,sample,expected,b);testControls.append(tile);
+    });
+    map.append(openMap,legend,canvas,zoom,angle,testTitle,testControls);
+
+ content.append(map);
+}
+byId('tests-target').onchange=renderTestPage;
+
 byId('group-cancel').onclick = () => editGroup(null);
 byId('group-form').onsubmit = event => {
   event.preventDefault();
   perform(byId('group-save'), async () => {
     const members = [...byId('group-members').querySelectorAll('input:checked')].map(el => el.value);
     if (!members.length) return extra(6);
-    await request('groups',{id:editingGroup,name:byId('group-name').value,members,silence:byId('group-silence').value});
+    await request('groups',{id:editingGroup,name:byId('group-name').value,members,silence:byId('group-silence').value,mode:byId('group-mode').value});
     editGroup(null);
     return t('done');
   });
@@ -551,6 +842,9 @@ function drawDetails(card) {
   }
   card.detailList.hidden = false;
 }
+const devicePanelText={nl:['Apparaatbeheer','Individuele ledmapping','Draaien','Horizontaal spiegelen','Verticaal spiegelen','Ledvolgorde omkeren','Mapping opslaan','Mapping resetten','Diagnostiek exporteren','Mapping aangepast. Pas het effect opnieuw toe.','Apparaat offline','Kies een apparaat'],en:['Device management','Individual LED mapping','Rotation','Mirror horizontally','Mirror vertically','Reverse LED order','Save mapping','Reset mapping','Export diagnostics','Mapping updated. Reapply the effect.','Device offline','Select a device'],de:['Geräteverwaltung','Einzelne LED-Karte','Drehung','Horizontal spiegeln','Vertikal spiegeln','LED-Reihenfolge umkehren','Mapping speichern','Mapping zurücksetzen','Diagnose exportieren','Mapping geändert. Effekt erneut anwenden.','Gerät offline','Gerät wählen'],es:['Gestión de dispositivos','Mapa LED individual','Rotación','Reflejar horizontalmente','Reflejar verticalmente','Invertir orden LED','Guardar mapa','Restablecer mapa','Exportar diagnóstico','Mapa actualizado. Vuelve a aplicar el efecto.','Dispositivo sin conexión','Elige un dispositivo']};
+function renderIndividualTests(){const target=byId('individual-tests-target');const devices=status?.devices||[];const signature=JSON.stringify(devices.map(d=>[d.id,d.name]));if(target.dataset.signature!==signature){const previous=target.value;target.replaceChildren(...devices.map(d=>new Option(d.name,d.id)));if(devices.some(d=>d.id===previous))target.value=previous;target.dataset.signature=signature;}for(const card of cards.values())card.testPanel.hidden=card.id!==target.value;}
+byId('individual-tests-target').onchange=renderIndividualTests;
 function render() {
   renderBuilder();
   renderPatterns();
@@ -559,6 +853,7 @@ function render() {
   schedulePreview();
   renderActiveStyle();
   renderGroups();
+  renderTestPage();
   renderShow();
   byId('audio').textContent = t(status ? (status.audio ? 'receiving' : 'waiting') : 'disconnected');
   if (status) {
@@ -567,10 +862,13 @@ function render() {
       if (!registered.has(id)) {
         card.article.remove();
         card.manage.remove();
+        card.testPanel.remove(); card.settingsPanel.remove();
         cards.delete(id);
       }
     }
   }
+  const groupedIds = new Set(Object.values(visibleGroups()).flatMap(group => group.members));
+  byId('group-member-devices').hidden = groupedIds.size === 0;
   for (const d of status?.devices || []) {
     if (!cards.has(d.id)) {
       const article = document.createElement('article');
@@ -586,7 +884,7 @@ function render() {
       manageGrid.className = 'effect-grid';
       manageTitle.textContent = d.name;
       const card = {id:d.id, article, title, info, error, grid, manageGrid, manageTitle, effects:[]};
-      article.tabIndex = -1;
+      article.tabIndex = -1; article.className='device-tile';
       const loadEffects = async () => {
         const result = await request('effects?id=' + encodeURIComponent(d.id));
         if (result.error) return deviceError(result.error);
@@ -619,7 +917,28 @@ function render() {
         return t('done');
       });
       rotation.oninput = () => drawLayout(card);
-      map.append(mapButton,mapInfo,canvas,rotation);
+      const mappingForm = document.createElement('div');
+      mappingForm.className = 'controls';
+      const turn = document.createElement('select');
+      for (const a of [0,90,180,270]) turn.add(new Option(a+'°',a));
+      turn.setAttribute('aria-label','Rotation');
+      const flags = {}, flagLabels = {};
+      for (const [key,label] of [['mirror_x','↔ Mirror X'],['mirror_y','↕ Mirror Y'],['reverse','Reverse LEDs']]) {
+        const wrap = document.createElement('label'), input = document.createElement('input');
+        input.type='checkbox'; flags[key]=input; const caption=document.createElement('span');caption.textContent=label;flagLabels[key]=caption;wrap.append(input,caption); mappingForm.append(wrap);
+      }
+      const saveMap = document.createElement('button'), resetMap = document.createElement('button'), exportMap = document.createElement('button');
+      saveMap.textContent='Save mapping'; resetMap.textContent='Reset mapping'; exportMap.textContent='Export diagnostics';
+      const settingsPath='mapping-settings?id='+encodeURIComponent(d.id);
+      const readSettings = () => ({rotation:Number(turn.value), ...Object.fromEntries(Object.entries(flags).map(([k,v])=>[k,v.checked]))});
+      const showSettings = settings => {turn.value=String(settings.rotation||0); for (const k in flags) flags[k].checked=!!settings[k]; card.mappingOverride=readSettings(); drawLayout(card);};
+      const originalLoad = mapButton.onclick;
+      mapButton.onclick = async () => {await originalLoad(); try {showSettings((await request(settingsPath)).settings);} catch(e){console.warn(e);}};
+      saveMap.onclick=()=>perform(saveMap,async()=>{showSettings((await request(settingsPath,readSettings())).settings);return devicePanelText[lang.value][9];});
+      resetMap.onclick=()=>perform(resetMap,async()=>{showSettings((await request(settingsPath,{rotation:0,mirror_x:false,mirror_y:false,reverse:false})).settings);return devicePanelText[lang.value][9];});
+      exportMap.onclick=()=>perform(exportMap,async()=>{const data=await request(settingsPath);const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='twinkly-mapping.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return t('done');});
+      mappingForm.prepend(turn); mappingForm.append(saveMap,resetMap,exportMap);
+      map.append(mapButton,mapInfo,canvas,rotation,mappingForm);
       drawLayout(card);
       const details = document.createElement('div');
       details.className = 'device-info';
@@ -649,20 +968,29 @@ function render() {
       };
       removeRow.append(remove);
       const deviceControls = document.createElement('div');
-      deviceControls.append(actions, details, effects, map);
+      deviceControls.className='device-operating'; actions.classList.add('device-actions');
+      const effectsFold=document.createElement('details'), effectsSummary=document.createElement('summary');effectsSummary.textContent=t('load');effectsFold.append(effectsSummary,effects);deviceControls.append(actions,effectsFold);
+      const testPanel=document.createElement('article'), testName=document.createElement('h3'), settingsPanel=document.createElement('article'), settingsName=document.createElement('h3');
+      testPanel.className='individual-test-panel';testPanel.append(testName,map);settingsPanel.append(settingsName,details,removeRow);
+      byId('individual-tests-list').append(testPanel);byId('device-settings-list').append(settingsPanel);
+      Object.assign(card,{testPanel,testName,settingsPanel,settingsName,turn,flagLabels,saveMap,resetMap,exportMap,effectsSummary});
       Object.assign(card, {deviceControls, manage, remove, removeRow});
-      article.append(title, card.product, info, error, deviceControls, removeRow);
+      article.append(title, card.product, info, error, deviceControls);
       byId('devices').append(article);
       card.power = controls(actions, d.id);
       cards.set(d.id, card);
     }
     const card = cards.get(d.id);
+    const parent = byId(groupedIds.has(d.id) ? 'grouped-devices' : 'devices');
+    if (card.article.parentNode !== parent) parent.append(card.article);
     drawProduct(card,d);
     const {title, info, error, power} = card;
     power.on.classList.toggle("power-active", Boolean(d.mode && d.mode !== "off"));
     power.off.classList.toggle("power-active", d.mode === "off");
     title.textContent = d.name;
     card.manageTitle.textContent = d.name;
+    card.testName.textContent=card.settingsName.textContent=d.name;
+    const labels=devicePanelText[lang.value];card.turn.setAttribute('aria-label',labels[2]);['mirror_x','mirror_y','reverse'].forEach((k,i)=>card.flagLabels[k].textContent=labels[i+3]);[card.saveMap,card.resetMap,card.exportMap].forEach((b,i)=>b.textContent=labels[i+6]);card.effectsSummary.textContent=t('load');
     info.textContent = [d.ip, d.leds + ' LEDs', d.profile, d.music ? t('enabled') : '', d.pattern ? (d.pattern.startsWith('gif:') ? d.pattern.split('-').slice(1).join('-').replaceAll('_',' ') : patternName(d.pattern)) : ''].filter(Boolean).join(' · ');
     error.textContent = d.offline ? deviceLabel(0) : d.error ? deviceError(d.error) : '';
     error.className = d.offline ? 'status' : 'error';
@@ -672,6 +1000,7 @@ function render() {
     card.remove.textContent = deviceLabel(1);
     card.removeRow.hidden = d.offline !== true;
   }
+  byId('device-settings-title').textContent=devicePanelText[lang.value][0];byId('individual-tests-title').textContent=devicePanelText[lang.value][1];byId('individual-tests-target').setAttribute('aria-label',devicePanelText[lang.value][11]);renderIndividualTests();
 }
 async function refresh() {
   const sequence = ++statusRequest;
@@ -768,7 +1097,16 @@ let liveFrame = [];
 let previewRunning = false;
 let monitorSignature = '';
 function renderMonitor() {
-  const labels = monitorLabels[lang.value], devices = status?.devices || [];
+  const labels = monitorLabels[lang.value], physical = status?.devices || [];
+  const grouped = new Set(Object.values(visibleGroups()).flatMap(group => group.members));
+  const physicalById = new Map(physical.map(device => [device.id,device]));
+  const devices = physical.filter(device => !grouped.has(device.id));
+  for (const [id,group] of Object.entries(visibleGroups())) {
+    const members = group.members.map(key => physicalById.get(key)).filter(Boolean);
+    if (!members.length) continue;
+    devices.push({id,name:group.name,music:members.some(device => device.music),
+      mode:members.find(device => device.mode && device.mode !== 'off')?.mode});
+  }
   byId('monitor-count').textContent = devices.filter(d => d.music).length + ' / ' + devices.length + ' ' + labels[3];
   const signature = JSON.stringify([lang.value,devices.map(d => [d.id,d.name,d.mode,d.music])]);
   if (signature === monitorSignature) return;
@@ -781,7 +1119,7 @@ function renderMonitor() {
     lamp.setAttribute('aria-hidden','true');
     tile.append(lamp,device.name);
     tile.onclick = () => {
-      const card = cards.get(device.id)?.article;
+      const card = groupCards.get(device.id) || cards.get(device.id)?.article;
       if (!card) return;
       card.scrollIntoView({block:'center'});
       card.focus({preventScroll:true});
@@ -920,6 +1258,7 @@ function renderShow() {
     }
     pads.append(pad);
   }
+  window.dispatchEvent(new Event("twinkly-studio-update"));
 }
 byId('scene-form').onsubmit = event => {
   event.preventDefault();
@@ -1012,13 +1351,532 @@ async function pollTrack() {
   }
   setTimeout(pollTrack,4000);
 }
+const networkText = {
+  nl: ['Netwerk','Vernieuwen','Wifi-duur sinds de eerste meting van deze verbinding. De kaart ververst automatisch zolang deze pagina open is.','Bezig met meten…','Netwerkgegevens konden niet worden opgehaald.','Geen Twinkly-apparaten geregistreerd.','Wifi-netwerk','Directe verbinding via een lamp','Offline','Verbinding onbekend','Toegangspunt','Signaal onbekend','Sterk','Goed','Zwak','Wifi gemeten','Via','Gateway','Kanaal'],
+  en: ['Network','Refresh','Wi-Fi duration starts with the first observation of this connection. The map refreshes automatically while this page is open.','Measuring…','Could not load network data.','No registered Twinkly devices.','Wi-Fi network','Direct link through a light','Offline','Connection unknown','Access point','Signal unknown','Strong','Good','Weak','Wi-Fi observed','Via','Gateway','Channel'],
+  es: ['Red','Actualizar','La duración Wi-Fi se cuenta desde la primera observación de esta conexión. El mapa se actualiza mientras esta página esté abierta.','Midiendo…','No se pudieron cargar los datos de red.','No hay dispositivos Twinkly registrados.','Red Wi-Fi','Conexión directa a través de una luz','Sin conexión','Conexión desconocida','Punto de acceso','Señal desconocida','Fuerte','Buena','Débil','Wi-Fi observado','A través de','Puerta de enlace','Canal'],
+  de: ['Netzwerk','Aktualisieren','Die WLAN-Dauer beginnt mit der ersten Beobachtung dieser Verbindung. Die Karte aktualisiert sich automatisch, solange diese Seite geöffnet ist.','Messung läuft…','Netzwerkdaten konnten nicht geladen werden.','Keine Twinkly-Geräte registriert.','WLAN','Direkte Verbindung über eine Leuchte','Offline','Verbindung unbekannt','Zugangspunkt','Signal unbekannt','Stark','Gut','Schwach','WLAN beobachtet','Über','Gateway','Kanal'],
+};
+const networkMap = byId('network-map'), networkWorld = byId('network-world');
+const networkControls = {
+  nl: ['Uitzoomen','Inzoomen','Alles in beeld','Indeling herstellen','Schermvullend','Verkleinen','Sleep lampen of verschuif de kaart. Zoom met het muiswiel, twee vingers of de knoppen.'],
+  en: ['Zoom out','Zoom in','Fit all','Reset layout','Full screen','Exit full screen','Drag lights or pan the map. Zoom with the wheel, two fingers or the buttons.'],
+  es: ['Alejar','Acercar','Ver todo','Restablecer disposición','Pantalla completa','Salir de pantalla completa','Arrastra las luces o desplaza el mapa. Usa la rueda, dos dedos o los botones para ampliar.'],
+  de: ['Verkleinern','Vergrößern','Alles anzeigen','Anordnung zurücksetzen','Vollbild','Vollbild verlassen','Ziehe Leuchten oder verschiebe die Karte. Zoome mit dem Mausrad, zwei Fingern oder den Schaltflächen.'],
+};
+const networkGroupText = {
+  nl:['Toon losse lampen','lampen','offline'],
+  en:['Show individual lights','lights','offline'],
+  es:['Mostrar luces individuales','luces','sin conexión'],
+  de:['Einzelne Leuchten anzeigen','Leuchten','offline'],
+};
+const networkNameLabels = {
+  nl:['Naam wijzigen','Groepsnaam','Opslaan','Annuleren','De naam kon niet worden opgeslagen.'],
+  en:['Rename','Group name','Save','Cancel','Could not save the name.'],
+  es:['Cambiar nombre','Nombre del grupo','Guardar','Cancelar','No se pudo guardar el nombre.'],
+  de:['Umbenennen','Gruppenname','Speichern','Abbrechen','Der Name konnte nicht gespeichert werden.'],
+};
+let networkNamingId;
+function editNetworkGroupName(id,name) {
+  networkNamingId = id;
+  const labels = networkNameLabels[lang.value];
+  byId('network-name-label').textContent = labels[1];
+  byId('network-name-save').textContent = labels[2];
+  byId('network-name-cancel').textContent = labels[3];
+  byId('network-name-error').textContent = '';
+  const input = byId('network-name');
+  input.value = name;
+  byId('network-name-dialog').showModal();
+  input.select();
+}
+byId('network-name-cancel').onclick = () => byId('network-name-dialog').close();
+byId('network-name-form').onsubmit = async event => {
+  event.preventDefault();
+  const input = byId('network-name'), save = byId('network-name-save');
+  const id = networkNamingId, name = input.value.trim();
+  if (!name || save.disabled) return;
+  save.disabled = true;
+  try {
+    const result = await request('network/groups/name',{id,name});
+    if (networkGroups[id]) networkGroups[id].name = result.name;
+    if (networkNamingId === id) byId('network-name-dialog').close();
+    if (isNetworkPage()) {
+      renderNetwork(networkRows,networkText[lang.value]);
+      refreshNetwork();
+    }
+    await refresh();
+  } catch {
+    byId('network-name-error').textContent = networkNameLabels[lang.value][4];
+  } finally {
+    save.disabled = false;
+  }
+};
+const networkMembership = {
+  nl:['Lid van groep','Koppelen (afgeleid)'], en:['Group membership','Join (inferred)'],
+  es:['Pertenencia al grupo','Unión (inferida)'], de:['Gruppenmitgliedschaft','Verbinden (abgeleitet)'],
+};
+const networkGroupStatus = {
+  nl:['Groep · Type niet gemeld','Lokale groep','Groepsleider','Groepslid'],
+  en:['Group · Type not reported','Local group','Group leader','Group member'],
+  es:['Grupo · Tipo no indicado','Grupo local','Controlador principal','Miembro del grupo'],
+  de:['Gruppe · Typ nicht gemeldet','Lokale Gruppe','Gruppenleiter','Gruppenmitglied'],
+};
+let networkGroups = {}, showNetworkMembers = false;
+const isNetworkPage = () => ['#netwerk', '#security-center'].includes(location.hash);
+const centerLabels = {
+  nl: ['Test Center', 'Security Center', 'Hue-inventaris niet beschikbaar'],
+  en: ['Test Center', 'Security Center', 'Hue inventory unavailable'],
+  de: ['Testzentrum', 'Sicherheitszentrum', 'Hue-Geräteliste nicht verfügbar'],
+  es: ['Centro de pruebas', 'Centro de seguridad', 'Inventario Hue no disponible']
+};
+const networkNudges = {ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+const networkStorageKey = 'twinkly-network-positions-v1';
+let networkTimer, networkPending = false, networkLinks = [], networkNodes = new Map();
+let networkRows = [], networkQueued, networkFrame, networkAutoFit = true;
+const networkCamera = {x:0,y:0,scale:1};
+const networkPointers = new Map();
+let networkGesture;
+let networkPositions;
+try { networkPositions = new Map(JSON.parse(localStorage.getItem(networkStorageKey) || '[]')); }
+catch { networkPositions = new Map(); }
+
+function placeNetworkNode(node,x,y) {
+  node.x = x;
+  node.y = y;
+  node.el.style.left = x + 'px';
+  node.el.style.top = y + 'px';
+}
+function saveNetworkPositions() {
+  try { localStorage.setItem(networkStorageKey,JSON.stringify([...networkPositions])); }
+  catch { /* Keep the current layout when storage is unavailable. */ }
+}
+function queueNetworkDraw() {
+  if (networkFrame == null) networkFrame = requestAnimationFrame(() => {
+    networkFrame = null;
+    drawNetwork();
+  });
+}
+function drawNetwork() {
+  if (networkMap.hidden || byId('network-page').hidden) return;
+  const canvas = byId('network-lines');
+  const width = networkMap.clientWidth, height = networkMap.clientHeight;
+  const ratio = window.devicePixelRatio || 1;
+  const pixelsWide = Math.round(width * ratio), pixelsHigh = Math.round(height * ratio);
+  if (canvas.width !== pixelsWide) canvas.width = pixelsWide;
+  if (canvas.height !== pixelsHigh) canvas.height = pixelsHigh;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const {x,y,scale} = networkCamera;
+  networkWorld.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')';
+  byId('network-scale').textContent = Math.round(scale * 100) + '%';
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.clearRect(0,0,width,height);
+  for (const [a,b,peer] of networkLinks) {
+    const x1 = (a.x + a.width / 2) * scale + x, x2 = (b.x + b.width / 2) * scale + x;
+    const y1 = (a.y + a.height / 2) * scale + y, y2 = (b.y + b.height / 2) * scale + y;
+    const curve = Math.abs(y1-y2) < 12 ? y1 - (Math.max(a.height,b.height) / 2 + 35) * scale : (y1+y2)/2;
+    ctx.beginPath();
+    ctx.strokeStyle = peer === 'member' ? '#91e8b5' : peer ? '#d0a4ff' : '#6ccde7a6';
+    ctx.lineWidth = peer ? 2 : 1.25;
+    ctx.setLineDash(peer === true ? [6,4] : []);
+    ctx.moveTo(x1,y1);
+    ctx.bezierCurveTo(x1,curve,x2,curve,x2,y2);
+    ctx.stroke();
+  }
+}
+function fitNetwork() {
+  const width = networkMap.clientWidth, height = networkMap.clientHeight;
+  if (!networkNodes.size || width < 1 || height < 1) return;
+  const nodes = [...networkNodes.values()];
+  const left = Math.min(...nodes.map(node => node.x));
+  const top = Math.min(...nodes.map(node => node.y));
+  const contentWidth = Math.max(...nodes.map(node => node.x + node.width)) - left;
+  const contentHeight = Math.max(...nodes.map(node => node.y + node.height)) - top;
+  const scale = Math.min(1.45,Math.max(1,width-48)/contentWidth,Math.max(1,height-58)/contentHeight);
+  Object.assign(networkCamera,{scale,x:(width-contentWidth*scale)/2-left*scale,y:(height-contentHeight*scale)/2-top*scale});
+  queueNetworkDraw();
+}
+function zoomNetwork(scale,x,y) {
+  scale = Math.max(.05,Math.min(3,scale));
+  const factor = scale / networkCamera.scale;
+  networkCamera.x = x - (x-networkCamera.x)*factor;
+  networkCamera.y = y - (y-networkCamera.y)*factor;
+  networkCamera.scale = scale;
+  networkAutoFit = false;
+  queueNetworkDraw();
+}
+function zoomNetworkCenter(factor) {
+  zoomNetwork(networkCamera.scale*factor,networkMap.clientWidth/2,networkMap.clientHeight/2);
+}
+function positionNetworkRows(hubs, devices, groupChildren) {
+  const columns = Math.max(1,Math.ceil(Math.sqrt(devices.length * 1.25)));
+  const stepX = 232;
+  const stepY = Math.max(130,...devices.map(node => node.height)) + 52;
+  const layout = (nodes,columns,y,stepY,centerX=0) => nodes.forEach((node,i) => {
+    const row = Math.floor(i/columns);
+    const rowSize = Math.min(columns,nodes.length-row*columns);
+    const saved = networkPositions.get(node.id);
+    if (Array.isArray(saved) && saved.length === 2 && saved.every(Number.isFinite)) {
+      placeNetworkNode(node,...saved);
+    } else {
+      placeNetworkNode(node,centerX+(i%columns-(rowSize-1)/2)*stepX,y+row*stepY);
+    }
+  });
+  const hubColumns = Math.max(1,columns);
+  const hubStep = Math.max(40,...hubs.map(node => node.height)) + 35;
+  layout(hubs,hubColumns,0,hubStep);
+  const deviceTop = hubs.length ? Math.ceil(hubs.length/hubColumns)*hubStep+38 : 0;
+  layout(devices,columns,deviceTop,stepY);
+  let childTop = deviceTop + Math.ceil(devices.length/columns)*stepY;
+  for (const [group, children] of groupChildren) {
+    if (!children.length) continue;
+    const childColumns = Math.min(children.length,Math.max(4,columns));
+    const childStep = Math.max(130,...children.map(node => node.height)) + 52;
+    layout(children,childColumns,childTop,childStep,group.x);
+    childTop += Math.ceil(children.length/childColumns)*childStep;
+  }
+}
+new ResizeObserver(() => {
+  if (networkAutoFit) fitNetwork();
+  queueNetworkDraw();
+}).observe(networkMap);
+function networkPointer(event) {
+  const rect = networkMap.getBoundingClientRect();
+  return {x:event.clientX-rect.left,y:event.clientY-rect.top};
+}
+function networkPinch() {
+  const [a,b] = networkPointers.values();
+  return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(a.x-b.x,a.y-b.y)};
+}
+function startNetworkGesture(event) {
+  if (event.button !== 0 || networkPointers.size >= 2 || event.target.closest('button,input')) return;
+  const point = networkPointer(event);
+  networkPointers.set(event.pointerId,point);
+  networkMap.setPointerCapture(event.pointerId);
+  if (networkPointers.size === 2) {
+    if (networkGesture.node && networkGesture.moved) saveNetworkPositions();
+    networkGesture = networkPinch();
+  } else {
+    const id = event.target.closest('[data-network-node]')?.dataset.networkNode;
+    networkGesture = {...point,node:networkNodes.get(id),moved:false};
+  }
+  networkMap.classList.add('is-dragging');
+}
+function moveNetworkGesture(event) {
+  if (!networkPointers.has(event.pointerId)) return;
+  const point = networkPointer(event);
+  networkPointers.set(event.pointerId,point);
+  if (networkPointers.size === 2) {
+    const next = networkPinch();
+    const factor = networkGesture.distance > 0 ? next.distance/networkGesture.distance : 1;
+    zoomNetwork(networkCamera.scale*factor,networkGesture.x,networkGesture.y);
+    networkCamera.x += next.x-networkGesture.x;
+    networkCamera.y += next.y-networkGesture.y;
+    networkGesture = next;
+  } else {
+    const dx = point.x-networkGesture.x, dy = point.y-networkGesture.y;
+    if (!networkGesture.moved && Math.hypot(dx,dy) < 3) return;
+    const node = networkGesture.node;
+    if (node) {
+      placeNetworkNode(node,node.x + dx/networkCamera.scale,node.y + dy/networkCamera.scale);
+      networkPositions.set(node.id,[node.x,node.y]);
+    } else {
+      networkCamera.x += dx;
+      networkCamera.y += dy;
+    }
+    networkGesture = {...point,node,moved:true};
+  }
+  networkAutoFit = false;
+  queueNetworkDraw();
+}
+function endNetworkGesture(event) {
+  if (!networkPointers.delete(event.pointerId)) return;
+  if (networkGesture.node && networkGesture.moved) saveNetworkPositions();
+  if (networkPointers.size) {
+    networkGesture = {...networkPointers.values().next().value,moved:true};
+    return;
+  }
+  networkGesture = null;
+  networkMap.classList.remove('is-dragging');
+  if (networkQueued) {
+    const rows = networkQueued;
+    networkQueued = null;
+    renderNetwork(rows,networkText[lang.value]);
+  }
+}
+networkMap.addEventListener('pointerdown',startNetworkGesture);
+networkMap.addEventListener('pointermove',moveNetworkGesture);
+for (const event of ['pointerup','pointercancel','lostpointercapture']) {
+  networkMap.addEventListener(event,endNetworkGesture);
+}
+networkMap.addEventListener('wheel',event => {
+  event.preventDefault();
+  const {x,y} = networkPointer(event);
+  zoomNetwork(networkCamera.scale*Math.exp(-Math.max(-200,Math.min(200,event.deltaY))*.0025),x,y);
+},{passive:false});
+networkMap.addEventListener('keydown',event => {
+  if (event.target.closest('button,input')) return;
+  const direction = networkNudges[event.key];
+  if (!direction) return;
+  event.preventDefault();
+  const id = event.target.closest('[data-network-node]')?.dataset.networkNode;
+  const node = networkNodes.get(id);
+  const [dx,dy] = direction;
+  if (node) {
+    placeNetworkNode(node,node.x+dx*16,node.y+dy*16);
+    networkPositions.set(id,[node.x,node.y]);
+    saveNetworkPositions();
+  } else {
+    networkCamera.x -= dx*50;
+    networkCamera.y -= dy*50;
+  }
+  networkAutoFit = false;
+  queueNetworkDraw();
+});
+function setNetworkExpanded(expanded) {
+  const page = byId('network-page'), button = byId('network-expand');
+  page.classList.toggle('is-expanded',expanded);
+  button.setAttribute('aria-pressed',String(expanded));
+  button.textContent = networkControls[lang.value][expanded ? 5 : 4];
+}
+byId('network-members').onclick = () => {
+  showNetworkMembers = !showNetworkMembers;
+  byId('network-members').setAttribute('aria-pressed',String(showNetworkMembers));
+  networkAutoFit = true;
+  renderNetwork(networkRows,networkText[lang.value]);
+};
+byId('network-zoom-out').onclick = () => zoomNetworkCenter(.8);
+byId('network-zoom-in').onclick = () => zoomNetworkCenter(1.25);
+byId('network-fit').onclick = () => { networkAutoFit = true; fitNetwork(); };
+byId('network-reset').onclick = () => {
+  networkPositions.clear();
+  saveNetworkPositions();
+  networkAutoFit = true;
+  renderNetwork(networkRows,networkText[lang.value]);
+};
+byId('network-expand').onclick = () => setNetworkExpanded(!byId('network-page').classList.contains('is-expanded'));
+document.addEventListener('keydown',event => {
+  if (event.key === 'Escape' && byId('network-page').classList.contains('is-expanded')) {
+    setNetworkExpanded(false);
+    byId('network-expand').focus();
+  }
+});
+function renderNetwork(rows, labels) {
+  if (networkGesture) {
+    networkQueued = rows;
+    return;
+  }
+  networkRows = rows;
+  const networkFocus = document.activeElement?.dataset.networkNode;
+  networkWorld.replaceChildren();
+  networkLinks = [];
+  networkNodes = new Map();
+  networkMap.hidden = byId('network-tools').hidden = !rows.length;
+  const makeNode = (el,id,label) => {
+    el.dataset.networkNode = id;
+    el.tabIndex = 0;
+    el.setAttribute('aria-label',label);
+    const node = {el,id};
+    networkNodes.set(id,node);
+    networkWorld.append(el);
+    return node;
+  };
+  const hubNodes = new Map(), bridgeNodes = new Map(), deviceNodes = new Map();
+  const byDevice = new Map(rows.map(row => [row.id,row]));
+  const addText = (parent, tag, content) => {
+    const element = document.createElement(tag);
+    element.textContent = content;
+    parent.append(element);
+    return element;
+  };
+  const groupLabels = networkGroupText[lang.value];
+  const groupStatus = networkGroupStatus[lang.value];
+  const groupNodes = [], parents = new Map(), groupChildren = new Map();
+  byId('network-members').hidden = !Object.values(networkGroups).some(group => group.members.length >= 2);
+  if (!showNetworkMembers) {
+    for (const [id,group] of Object.entries(networkGroups)) {
+      const members = group.members.map(key => byDevice.get(key)).filter(Boolean);
+      if (members.length < 2 || members.some(row => parents.has(row.id))) continue;
+      const card = document.createElement('article');
+      card.className = 'network-device network-group';
+      const node = makeNode(card,'group:'+id,group.name);
+      groupNodes.push(node);
+      addText(card,'strong',group.name);
+      const reportedGroup = group.native || id.startsWith('native:');
+      addText(card,'small',group.layout_size ? networkMembership[lang.value][1] + ' · ' +
+        group.layout_size + ' LEDs' : groupStatus[reportedGroup ? 0 : 1]);
+      const offline = members.filter(row => row.kind === 'offline').length;
+      addText(card,'small',members.length + ' ' + groupLabels[1] + (offline ? ' · ' + offline + ' ' + groupLabels[2] : ''));
+      groupChildren.set(node,members.map(row => row.id));
+      for (const row of members) parents.set(row.id,node);
+      const actions = document.createElement('div');
+      actions.className = 'controls';
+      for (const action of ['on','off']) button(actions,action,() => run(undefined,action,undefined,id));
+      const rename = document.createElement('button');
+      rename.type = 'button';
+      rename.textContent = networkNameLabels[lang.value][0];
+      rename.onclick = () => editNetworkGroupName(id,group.name);
+      actions.append(rename);
+      card.append(actions);
+    }
+  }
+  const individualNodes = [];
+  for (const row of rows) {
+    const card = document.createElement('article');
+    card.className = 'network-device';
+    const device = makeNode(card,'device:'+row.id,row.name);
+    deviceNodes.set(row.id,device);
+    if (row.kind === 'hue-bridge') {
+      bridgeNodes.set(row.id, device);
+      groupChildren.set(device, []);
+    } else if (row.kind === 'hue-light') {
+      groupChildren.get(bridgeNodes.get(row.bridge))?.push(row.id);
+    } else if (!parents.has(row.id)) individualNodes.push(device);
+    addText(card,'strong',row.name);
+    if (row.kind === 'hue-light') {
+      addText(card,'small','Philips Hue');
+      if (row.offline) addText(card,'span',labels[8]);
+      continue;
+    }
+    addText(card,'small',row.ip);
+    if (row.kind === 'hue-bridge') {
+      if (row.offline) addText(card,'span',labels[8]);
+      continue;
+    }
+    if (row.group_role) addText(card,'small',groupStatus[row.group_role === 'master' ? 2 : 3]);
+    if (row.kind === 'offline' || row.kind === 'unknown') {
+      addText(card,'span',labels[row.kind === 'offline' ? 8 : 9]);
+      continue;
+    }
+    addText(card,'span',row.kind === 'ap' ? labels[10] + ' · ' + row.ssid : row.ssid);
+    if (row.channel) addText(card,'small',labels[18] + ' ' + row.channel);
+    if (row.kind === 'ap') continue;
+    const quality = row.rssi == null ? 0 : row.rssi >= -60 ? 1 : row.rssi >= -72 ? 2 : 3;
+    const signal = addText(card,'span',labels[11 + quality] + (quality ? ' · ' + row.rssi + ' dBm' : ''));
+    signal.className = 'network-signal';
+    signal.style.setProperty('--signal',['#c2d8e4','#8ff1bd','#ffdb8a','#ffaaa8'][quality]);
+    const minutes = Math.floor(row.seconds / 60);
+    const duration = minutes === 0 ? '< 1 min' : minutes < 60 ? minutes + ' min' :
+      Math.floor(minutes / 60) + ' h ' + minutes % 60 + ' min';
+    addText(card,'small',labels[15] + ' · ' + duration);
+    if (row.peer) addText(card,'small',labels[16] + ' ' + (byDevice.get(row.peer)?.name || row.peer));
+  }
+  const linkKeys = new Set();
+  const link = (source,target,peer) => {
+    if (!source || !target || source === target) return;
+    const key = JSON.stringify([peer,...[source.id,target.id].sort()]);
+    if (linkKeys.has(key)) return;
+    linkKeys.add(key);
+    networkLinks.push([source,target,peer]);
+  };
+  for (const [id, parent] of parents) link(parent,deviceNodes.get(id),'member');
+  for (const row of rows) {
+    if (row.kind === 'hue-light') link(bridgeNodes.get(row.bridge), deviceNodes.get(row.id), 'member');
+  }
+  for (const row of rows) {
+    if (row.kind !== 'wifi') continue;
+    const device = parents.get(row.id) || deviceNodes.get(row.id);
+    if (row.peer) {
+      link(device,parents.get(row.peer) || deviceNodes.get(row.peer),true);
+      continue;
+    }
+    const key = JSON.stringify([row.ssid,row.gateway,row.bssid]);
+    if (!hubNodes.has(key)) {
+      const hub = document.createElement('div');
+      hub.className = 'network-hub';
+      addText(hub,'strong',row.ssid || labels[6]);
+      if (row.bssid || row.gateway) {
+        addText(hub,'small',row.bssid || labels[17] + ' ' + row.gateway);
+      }
+      hubNodes.set(key,makeNode(hub,'wifi:'+key,row.ssid || labels[6]));
+    }
+    link(device,hubNodes.get(key),false);
+  }
+  for (const node of networkNodes.values()) {
+    node.width = node.el.offsetWidth || 190;
+    node.height = node.el.offsetHeight || 130;
+  }
+  const orderedChildren = [...groupChildren].map(([group,ids]) => [group,ids.map(id => deviceNodes.get(id))]);
+  positionNetworkRows([...hubNodes.values()],[...groupNodes,...bridgeNodes.values(),...individualNodes],orderedChildren);
+  byId('network-member-key').hidden = !parents.size && !rows.some(row => row.kind === 'hue-light');
+  if (networkFocus) networkNodes.get(networkFocus)?.el.focus({preventScroll:true});
+  if (networkAutoFit) fitNetwork();
+  queueNetworkDraw();
+}
+async function refreshNetwork() {
+  clearTimeout(networkTimer);
+  if (networkPending || !isNetworkPage() || document.hidden) return;
+  networkPending = true;
+  byId('network-refresh').disabled = true;
+  const message = byId('network-status');
+  if (networkMap.hidden) message.textContent = networkText[lang.value][3];
+  try {
+    const [data, hue] = await Promise.all([
+      request('network'),
+      request('providers/hue/inventory').catch(() => null)
+    ]);
+    const labels = networkText[lang.value];
+    networkGroups = data.groups || {};
+    const hueRows = (hue?.devices || []).flatMap(bridge => {
+      const id = JSON.stringify(['hue', bridge.id]);
+      return [{id, name: 'Philips Hue Bridge', ip: bridge.address,
+        kind: 'hue-bridge', offline: bridge.status !== 'online'},
+        ...(bridge.lights || []).map(light => ({
+          id: JSON.stringify(['hue', bridge.id, light.id]), bridge: id, name: light.name,
+          kind: 'hue-light', offline: light.status === 'unavailable'
+        }))];
+    });
+    const rows = [...data.devices, ...hueRows];
+    renderNetwork(rows,labels);
+    message.textContent = hue ? (rows.length ? '' : labels[5]) : centerLabels[lang.value][2];
+  } catch {
+    message.textContent = networkText[lang.value][4];
+  } finally {
+    networkPending = false;
+    byId('network-refresh').disabled = false;
+    if (isNetworkPage()) networkTimer = setTimeout(refreshNetwork,30000);
+  }
+}
+byId('network-refresh').onclick = refreshNetwork;
+document.addEventListener('visibilitychange',() => { if (!document.hidden) refreshNetwork(); });
+
 function showPage() {
-  const settings = location.hash === '#instellingen';
-  byId('control-page').hidden = settings;
-  byId('settings-page').hidden = !settings;
-  byId('nav-control').setAttribute('aria-current',settings ? 'false' : 'page');
-  byId('nav-settings').setAttribute('aria-current',settings ? 'page' : 'false');
-  if (!settings) schedulePreview();
+  const projectPage = /^(#roadmap|#changelog|#release-[\w.-]+)$/.test(location.hash);
+  const page = projectPage ? 'project' : isNetworkPage() ? 'network' :
+    {'#showbouwer':'shows','#mijn-huis':'house','#google-home':'google','#instellingen':'settings','#testcontrole':'tests','#hue':'hue','#govee':'govee','#bediening':'control','#twinkly':'control'}[location.hash] || 'home';
+  byId('project-page').hidden = page !== 'project';
+  for (const name of ['control','settings','network','tests','google']) {
+    byId(name + '-page').hidden = page !== name;
+    byId('nav-' + name).setAttribute('aria-current',page === name ? 'page' : 'false');
+  }
+  for (const brand of ['home','hue','govee','shows']) {
+    byId('nav-' + brand).setAttribute('aria-current', page === brand ? 'page' : 'false');
+  }
+  byId('nav-tests').textContent = centerLabels[lang.value][0];
+  const labels = networkText[lang.value];
+  byId('nav-network').textContent = byId('security-title').textContent = centerLabels[lang.value][1];
+  byId('network-title').textContent = labels[0];
+  byId('network-refresh').textContent = labels[1];
+  byId('network-help').textContent = labels[2];
+  byId('network-wifi-key').textContent = labels[6];
+  byId('network-peer-key').textContent = labels[7];
+  byId('network-member-key').textContent = networkMembership[lang.value][0];
+  const controls = networkControls[lang.value];
+  byId('network-zoom-out').setAttribute('aria-label',controls[0]);
+  byId('network-zoom-in').setAttribute('aria-label',controls[1]);
+  byId('network-members').textContent = networkGroupText[lang.value][0];
+  byId('network-fit').textContent = controls[2];
+  byId('network-reset').textContent = controls[3];
+  byId('network-help').textContent += ' ' + controls[6];
+  setNetworkExpanded(page === 'network' && byId('network-page').classList.contains('is-expanded'));
+  clearTimeout(networkTimer);
+  if (page === 'network') {
+    queueNetworkDraw();
+    refreshNetwork();
+  }
+  if (page === 'tests') renderTestPage();
+  if (page === 'control') schedulePreview();
+  window.dispatchEvent(new CustomEvent('lighting-page', {detail: page}));
 }
 window.addEventListener('hashchange',showPage);
 const patternTarget = byId('pattern-target');
@@ -1054,7 +1912,7 @@ function renderPatterns() {
     }
     const grid = byId('pattern-grid');
     grid.replaceChildren();
-    const presets = selectedCategory === 'classic' ? Object.entries(patternStyles) :
+    const presets = selectedCategory === 'classic' ? [...Object.entries(patternStyles), ['rgb-test','#ff0000,#00ff00,#0000ff']] :
       Object.entries(extraPatterns).filter(([,item]) => item[0] === selectedCategory).map(([id,item]) => [id,item[2]]);
     presets.forEach(([id,palette]) => {
       const tile = document.createElement('button'), swatch = document.createElement('i');
@@ -1381,7 +2239,8 @@ function translate() {
     key.onclick = () => perform(key,() => run('*','color',color));
     colorRow.append(key);
   });
-  ['nav-control','nav-settings','device-title','settings-general','settings-music','settings-discover','settings-groups','settings-scenes','settings-effects'].forEach((id,index) => {
+  [null,'nav-settings','device-title','settings-general','settings-music','settings-discover','settings-groups','settings-scenes','settings-effects'].forEach((id,index) => {
+    if (!id) return;
     byId(id).textContent = pageLabels[lang.value][index];
   });
   showPage();
@@ -1403,7 +2262,7 @@ function translate() {
   silence.replaceChildren(...['restore','warm','fade'].map((value,index) => new Option(showLabel(6+index),value)));
   silence.value = previousSilence;
   byId('desk-music-title').textContent = detailsText[lang.value][0];
-  byId('group-title').textContent = extra(0);
+  byId('group-member-summary').textContent = groupViewLabels[lang.value][1];
   byId('group-name').placeholder = extra(1);
   byId('group-name').setAttribute('aria-label',extra(1));
   byId('group-save').textContent = extra(2);
@@ -1435,4 +2294,5 @@ pollTrack();
 loadTvSources();
 loadGifLibrary().catch(() => {});
 loadMatrixGallery();
-</script></html>
+</script><script src="lighting-tools.js"></script><script src="lighting.js"></script><script src="security-center.js"></script><script src="govee-cloud.js"></script><script src="google-home.js"></script>
+</html>

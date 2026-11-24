@@ -14,8 +14,6 @@ def main():
     source = Path("twinkly")
     version = yaml.safe_load((source / "config.yaml").read_text(encoding="utf-8"))["version"]
     push = os.environ["GITHUB_EVENT_NAME"] == "push"
-    if push and version != "0.1.45":
-        return
     beta = not push and os.environ.get("CHANNEL") == "beta"
     if beta:
         number = os.environ.get("BETA_NUMBER", "")
@@ -33,7 +31,7 @@ def main():
         remote.check_returncode()
 
     changelog = (source / "CHANGELOG.md").read_text(encoding="utf-8")
-    notes = changelog.split("\n# ", 1)[0].partition("\n")[2].strip()
+    notes = re.split(r"\n#{1,2} ", changelog, maxsplit=1)[0].partition("\n")[2].strip()
     if not notes:
         raise ValueError("De release-opmerkingen ontbreken")
 
