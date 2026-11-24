@@ -46,7 +46,7 @@ jobs:
               ('"Lokale kerstlichtstudio voor lichtshows, groepen en muziekeffecten."', 'self.config["description"]'),
           ])
           edit("twinkly/README.md", [
-              ('De aparte bèta behoudt', 'Met LedFX kun je licht op live audio laten reageren. De aparte bèta behoudt'),
+              ('Met de bèta krijg je vroege toegang tot nieuwe lichtshows, lampgroepen en muziekeffecten via LedFX. De bèta is een aparte installatie met eigen instellingen.\n\nStop de stabiele app tijdelijk als je dezelfde lampen met de bèta test. Open daarna het dashboard van de bèta en kies **Zoeken op netwerk**.', 'Versie 2.0 brengt Twinkly, Philips Hue en Govee samen. Bouw lichtshows met Showbouwer, gebruik Music Assistant voor een soundtrack of laat je verlichting via LedFX reageren op live audio. De afzonderlijke bèta heeft eigen instellingen.'),
           ])
           path = Path("twinkly/test_native_group_mapping.py")
           text = path.read_text(encoding="utf-8")
