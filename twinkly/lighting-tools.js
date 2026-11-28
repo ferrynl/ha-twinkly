@@ -1423,7 +1423,6 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
         room.append(floor);
         const roomWalls = layoutWalls.filter(wall => Math.floor(wall.slot / 4) === roomId);
         const ceiling = node("div", "", "house-3d-floor house-3d-ceiling");
-        ceiling.setAttribute("aria-hidden", "true");
         ceiling.hidden = !showCeilings;
         const ceilingHeight = Math.max(0, ...roomWalls.map(wall => (wall.dimensions?.height_m ?? 160 / wallPixelsPerMeter) * wallPixelsPerMeter));
         Object.assign(ceiling.style, {width: floor.style.width, height: floor.style.height, left: floor.style.left,

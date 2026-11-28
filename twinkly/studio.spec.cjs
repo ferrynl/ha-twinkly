@@ -710,7 +710,7 @@ test('Mijn Huis shows an existing Twinkly group as a single panel and identifies
  await expect.poll(()=>world.evaluate(element=>element.style.transform)).not.toBe(before);
  await scene.focus();
  await scene.press('ArrowUp');
- await expect.poll(()=>world.evaluate(element=>element.style.transform)).toContain('rotateX(-27deg)');
+ await expect.poll(()=>world.evaluate(element=>element.style.transform)).toContain('rotateX(-46deg)');
 });
 
 test('Security Center shows runtime inventory, release links and local checks', async ({page}) => {
