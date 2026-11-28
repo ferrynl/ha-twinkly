@@ -734,7 +734,8 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
   let treeRoom;
   let treeEditorOpen = false;
   let savingPlan = false;
-  const camera = {yaw: 28, pitch: -15, zoom: null};
+  const camera = {yaw: 28, pitch: -34, zoom: null};
+  let alignWalls = false;
   const planPath = "lighting/projects/overview";
   const roomLabel = (room, names) => names?.[room] || v(12) + " " + (room + 1);
   const wallPixelsPerMeter = 65;
@@ -824,7 +825,7 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
         const original = walls.find(wall => wall.id === face.dataset.wall);
         if (!original) continue;
         const editing = original.id === selectedWall && original.slot === Number(destination.value) && validCoordinates();
-        face.style.transform = wallTransform(original.slot, editing ? (custom ? transform() : null) : original.placement,
+        face.style.transform = wallTransform(original.slot, editing && custom ? transform() : alignWalls || editing ? null : original.placement,
           roomFootprint(walls, Math.floor(original.slot / 4)));
       }
     };
@@ -1257,7 +1258,7 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
     });
   }
 
-  function planLight(light, point, pins, save, layer, wallId) {
+  function planLight(light, point, pins, save, surface, wallId) {
     const [x, y, size = defaultSize, advance = 0, angle = 0, customWidth] = point;
     const item = node("span", "", "house-3d-light");
     item.dataset.wall = wallId;
@@ -1276,23 +1277,21 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
       const projection = wallProjection(pins);
       item.hidden = !projection;
       if (!projection) return;
-      const [left, top, width] = placement;
-      const [cx, cy] = projection.toScreen(left, top);
-      const extent = span => {
-        const [ax, ay] = projection.toScreen(left - span / 2, top);
-        const [bx, by] = projection.toScreen(left + span / 2, top);
-        return Math.max(14, Math.hypot(bx - ax, by - ay));
-      };
-      const projectedWidth = extent(customWidth ?? width);
-      const bounds = layer.getBoundingClientRect();
-      Object.assign(item.style, {left: cx - bounds.left + "px", top: cy - bounds.top + "px",
-        width: projectedWidth + "px", aspectRatio: customWidth === undefined ? "1" : String(projectedWidth / extent(width))});
+      const [left, top, size] = placement;
+      const width = surface.clientWidth;
+      const height = surface.clientHeight;
+      Object.assign(item.style, {
+        left: left + "%",
+        top: top + "%",
+        width: (customWidth ?? size) + "%",
+        height: size * width / height + "%",
+      });
     };
     const display = values => {
       placement = values;
       position();
     };
-    layer.append(item);
+    surface.append(item);
     const commit = values => save(light.id, [...values, advance, angle, ...(customWidth === undefined ? [] : [customWidth])]);
     for (const control of [marker, handle]) {
       const resize = control === handle;
@@ -1372,8 +1371,7 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
       scene.tabIndex = 0;
       scene.setAttribute("aria-label", v(0));
       const world = node("div", "", "house-3d-world");
-      const layer = node("div", "", "house-3d-lights");
-      scene.append(world, layer);
+      scene.append(world);
       const lightPositions = [];
       const groups = inventory?.spatial_groups || {};
       const lights = new Map((inventory?.lights || []).map(light => [light.id, light]));
@@ -1425,7 +1423,6 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
         room.append(floor);
         const roomWalls = layoutWalls.filter(wall => Math.floor(wall.slot / 4) === roomId);
         const ceiling = node("div", "", "house-3d-floor house-3d-ceiling");
-        ceiling.setAttribute("aria-hidden", "true");
         ceiling.hidden = !showCeilings;
         const ceilingHeight = Math.max(0, ...roomWalls.map(wall => (wall.dimensions?.height_m ?? 160 / wallPixelsPerMeter) * wallPixelsPerMeter));
         Object.assign(ceiling.style, {width: floor.style.width, height: floor.style.height, left: floor.style.left,
@@ -1436,13 +1433,13 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
         for (const [id, point] of wallPoints(snapshot.ceiling_lights?.[roomId] || [])) {
           const light = lights.get(id);
           if (light) lightPositions.push(planLight(light, point, ceilingPins,
-            (key, next) => saveCeiling(roomId, key, next), layer, "ceiling-" + roomId));
+            (key, next) => saveCeiling(roomId, key, next), ceiling, "ceiling-" + roomId));
         }
         for (const wall of roomWalls) {
           const face = node("div", "", "house-3d-wall");
           face.dataset.wall = wall.id;
-          face.style.transform = wallTransform(wall.slot, wall.placement, footprint);
-          if (roomWalls.length === 4) faces.push([face, wall.placement?.angle ?? wall.slot % 4 * 90]);
+          face.style.transform = wallTransform(wall.slot, alignWalls ? null : wall.placement, footprint);
+          if (roomWalls.length === 4) faces.push([face, (!alignWalls && wall.placement ? wall.placement.angle : wall.slot % 4 * 90)]);
           const name = wall.name || (wallLabels[language()] || wallLabels.nl)[1];
           if (wall.dimensions) {
             const width = wall.dimensions.width_m * wallPixelsPerMeter;
@@ -1485,7 +1482,7 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
             };
             for (const [id, point] of wallPoints(wall.points)) {
               const light = lights.get(id);
-              if (light) lightPositions.push(planLight(light, point, pins, save, layer, wall.id));
+              if (light) lightPositions.push(planLight(light, point, pins, save, face, wall.id));
             }
           }
           room.append(face);
@@ -1505,17 +1502,18 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
       Object.assign(zoom, {type: "range", min: 35, max: 125, value: camera.zoom ?? initialZoom});
       const positionLights = () => lightPositions.forEach(position => position());
       const rotate = () => {
-        camera.pitch = clamp(camera.pitch, -75, 75);
+        camera.pitch = clamp(camera.pitch, -90, 75);
         for (const [face, angle] of faces) {
           face.classList.toggle("house-3d-cutaway", Math.cos((camera.yaw + angle) * Math.PI / 180) > .15);
         }
-        world.style.transform = "rotateX(" + camera.pitch + "deg) rotateY(" + camera.yaw + "deg) scale(" + (Number(zoom.value) / 100 * fit) + ")";
+        const scale = Number(zoom.value) / 100 * fit;
+        world.style.transform = "rotateX(" + camera.pitch + "deg) rotateY(" + camera.yaw + "deg) scale3d(" + [scale, scale, scale].join(",") + ")";
         positionLights();
       };
       zoom.oninput = () => { camera.zoom = Number(zoom.value); rotate(); };
       let drag;
       scene.onpointerdown = event => {
-        if (event.button !== 0) return;
+        if (event.button !== 0 || event.target.closest("button")) return;
         drag = [event.clientX, event.clientY, camera.yaw, camera.pitch];
         scene.setPointerCapture(event.pointerId);
       };
@@ -1561,9 +1559,28 @@ window.createLightingTools = ({mount, house, nav, api, node, field, language, ro
         positionLights();
       };
       controls.append(field(({nl:"Plafond tonen",en:"Show ceiling",de:"Decke anzeigen",es:"Mostrar techo"})[language()] || "Show ceiling", ceilingToggle));
+      const viewLabels = ({
+        nl: ["Bovenaanzicht", "Wanden automatisch uitlijnen"],
+        en: ["Top view", "Automatically align walls"],
+        de: ["Draufsicht", "Wände automatisch ausrichten"],
+        es: ["Vista superior", "Alinear paredes automáticamente"],
+      })[language()] || ["Top view", "Automatically align walls"];
+      controls.append(action(viewLabels[0], () => {
+        Object.assign(camera, {yaw: 0, pitch: -90});
+        rotate();
+      }));
+      if (layoutWalls.some(wall => wall.placement)) {
+        const automatic = Object.assign(node("input"), {type: "checkbox", checked: alignWalls});
+        automatic.onchange = () => {
+          alignWalls = automatic.checked;
+          renderHouse3d(snapshot, undefined, ".house-3d-auto-align");
+        };
+        automatic.className = "house-3d-auto-align";
+        controls.append(field(viewLabels[1], automatic));
+      }
       controls.append(action(v(4), () => { camera.yaw -= 30; rotate(); }), action(v(5), () => { camera.yaw += 30; rotate(); }),
         field(v(3), zoom), action(v(18), () => {
-          Object.assign(camera, {yaw: 28, pitch: -15, zoom: null});
+          Object.assign(camera, {yaw: 28, pitch: -34, zoom: null});
           zoom.value = initialZoom;
           rotate();
         }));
