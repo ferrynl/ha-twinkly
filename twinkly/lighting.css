@@ -159,17 +159,17 @@
   background: radial-gradient(ellipse at center, #2f4559, #121b24 74%); border-radius: 12px;
   touch-action: none; cursor: grab; }
 .house-3d-scene:active { cursor: grabbing; }
-.house-3d-world,.house-3d-room,.house-3d-wall { transform-style: preserve-3d; }
+.house-3d-world,.house-3d-room,.house-3d-wall,.house-3d-floor { transform-style: preserve-3d; }
 .house-3d-world,.house-3d-room { position: relative; width: 260px; height: 160px; }
 .house-3d-room,.house-3d-wall,.house-3d-floor { position: absolute; inset: 0; }
 .house-3d-wall { box-sizing: border-box; border: 1px solid #a7bbcf; background: #26384a; }
 .house-3d-wall img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
 .house-3d-floor { box-sizing: border-box; transform: rotateX(90deg);
   background: #354b60; border: 1px solid #8ca2b9; pointer-events: none; }
+.house-3d-cutaway .house-3d-light { visibility: hidden; }
 .house-3d-wall.house-3d-cutaway { background: #26384a22; border-color: #748ca2aa; pointer-events: none; }
 .house-3d-cutaway > img, .house-3d-cutaway > .house-3d-name { opacity: .22; }
 .house-3d-pin { position: absolute; width: 0; height: 0; pointer-events: none; }
-.house-3d-lights { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .house-3d-light > button { touch-action: none; pointer-events: auto; }
 .house-3d-light > .house-3d-lamp-button { display: block; padding: 0; width: 100%; height: 100%; min-width: 0; min-height: 0;
   border: 1px solid transparent; background: transparent; cursor: move; }
@@ -182,7 +182,8 @@
 @media (pointer: coarse) { .house-3d-light > .house-3d-resize { opacity: 1; } }
 .house-3d-name { position: absolute; bottom: 4px; left: 6px; padding: 3px 6px;
   color: #fff; background: #141c26dd; border-radius: 4px; transform: translateZ(2px); }
-.house-3d-light { position: absolute; transform: translate(-50%, -50%); aspect-ratio: 1; }
+.house-3d-light { position: absolute; transform: translate3d(-50%, -50%, -1px); }
+.house-3d-light[hidden] { display: none; }
 .house-3d-light .house-lamp-art { transform: scale(.65); }
 .house-3d-placement { margin-block: .75rem; }
 .house-3d-placement .lighting-controls { flex-wrap: wrap; align-items: end; }

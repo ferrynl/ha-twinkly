@@ -1030,6 +1030,7 @@ test('Mijn Huis joins 5 m walls and moves and resizes a light on another wall in
  const light = {id:'strip',name:'Lichtstrip',provider:'hue',capabilities:{},state:{},status:'online'};
  const walls = ['default','right','back','left'].map((id,slot) => ({
   id,name:id,slot,revision:id,photo_version:null,dimensions:{width_m:5,height_m:2.5},
+  placement:id === 'right' ? {x_m:3.5,z_m:.5,angle:85} : null,
   points:id === 'back' ? [[light.id,[50,50,16,3,25]]] : [],
  }));
  const updates = [];
@@ -1055,12 +1056,17 @@ test('Mijn Huis joins 5 m walls and moves and resizes a light on another wall in
  await open.click();
  const plan = page.locator('.house-3d');
  const floor = plan.locator('.house-3d-floor:not(.house-3d-ceiling)');
+ await plan.getByLabel('Wanden automatisch uitlijnen').check();
  await expect(plan.locator('.house-3d-ceiling')).toBeHidden();
  await plan.getByLabel('Plafond tonen').check();
  await expect(plan.locator('.house-3d-ceiling')).toBeVisible();
  await plan.getByLabel('Plafond tonen').uncheck();
  await expect(floor).toHaveCSS('width','325px');
  await expect(floor).toHaveCSS('height','325px');
+ await plan.getByRole('button',{name:'Bovenaanzicht'}).click();
+ const topView = await floor.boundingBox();
+ expect(Math.abs(topView.width - topView.height)).toBeLessThan(1);
+ await plan.getByRole('button',{name:'Beginstand'}).click();
  const faces = plan.locator('.house-3d-wall');
  await expect(faces).toHaveCount(4);
  for (const face of await faces.all()) {
@@ -1070,6 +1076,7 @@ test('Mijn Huis joins 5 m walls and moves and resizes a light on another wall in
  }
  const back = plan.locator('.house-3d-wall[data-wall="back"]');
  const lamp = plan.locator('.house-3d-light[data-wall="back"]');
+ await expect(back.locator('.house-3d-light')).toHaveCount(1);
  const marker = lamp.locator('.house-3d-lamp-button');
  await marker.scrollIntoViewIfNeeded();
  const center = await marker.boundingBox();
